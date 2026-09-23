@@ -1,0 +1,472 @@
+"""生成 OpenAI Agents SDK 核心用法 Jupyter Notebook（带看懂版）。
+
+启动命令：
+    .venv/bin/python scripts/build_openai_agents_notebook.py
+"""
+
+from pathlib import Path
+
+import nbformat
+from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
+
+NOTEBOOK_PATH = Path(__file__).resolve().parent.parent / "demo" / "OpenAIAgentsSDK使用方法.ipynb"
+KERNEL_NAME = "openai-agents-sdk-demo"
+KERNEL_DISPLAY_NAME = "Python 3 (OpenAI Agents SDK)"
+
+
+def md(source: str):
+    return new_markdown_cell(source)
+
+
+def code(source: str, tags=None):
+    cell = new_code_cell(source)
+    if tags:
+        cell.metadata["tags"] = list(tags)
+    return cell
+
+
+def build_cells():
+    cells = []
+
+    cells.append(md(
+        "# OpenAI Agents SDK 核心用法（带看懂版）\n\n"
+        "> 目标：带你看懂 OpenAI Agents SDK 的核心机制。全书用客服路由场景贯穿：单 Agent 工具调用、handoff 接管、Agent as tool 委托、context 注入。\n"
+        "> 核心示例使用 Scripted Model，不需要 API Key；真实模型示例单独标记。\n"
+        "> 基于 `openai-agents 0.21.1` / Python 3.12（2026-08-18）验证。"
+    ))
+
+    cells.append(md(
+        "## 框架总览：Agent + Runner + Tools / Handoffs\n\n"
+        "```mermaid\n"
+        "flowchart LR\n"
+        "    A[Runner.run（启动执行）] --> B[Agent（当前配置）]\n"
+        "    B --> C[Model（模型调用）]\n"
+        "    C -->|function call（工具调用）| D[Tool（执行函数）]\n"
+        "    D --> C\n"
+        "    C -->|handoff（转交）| E[Specialist Agent（专家接管）]\n"
+        "    E --> C\n"
+        "    C -->|final output（最终输出）| F[RunResult（运行结果）]\n"
+        "```\n\n"
+        "`Runner` 管循环；`Agent` 只描述当前 Agent 能做什么；模型决定调用工具、转交 Agent，还是直接结束。"
+    ))
+
+    cells.append(md(
+        "## 核心概念速查\n\n"
+        "| 概念 | 作用 | 本 Notebook 的位置 |\n"
+        "| --- | --- | --- |\n"
+        "| `Agent` | 配置 instructions、tools、handoffs、model | 所有例子 |\n"
+        "| `Runner` | 执行模型 → 工具 / handoff → 模型循环 | 所有例子 |\n"
+        "| `function_tool` | 把 Python 函数变成工具 schema | 例子一 |\n"
+        "| `handoffs` | 让另一个 Agent 接管对话 | 例子二 |\n"
+        "| `as_tool()` | 把另一个 Agent 当工具调用，原 Agent 继续掌控 | 例子三 |\n"
+        "| `RunContextWrapper` | 将业务 context 注入工具 | 例子四 |\n"
+        "| `RunResult` | 读取 final_output、last_agent、new_items | 例子一至三 |"
+    ))
+
+    cells.append(md(
+        "## 概念关系：客服路由场景\n\n"
+        "```mermaid\n"
+        "flowchart LR\n"
+        "    U[用户问题] --> R[Runner（执行器）]\n"
+        "    R --> T[TriageAgent（客服分流）]\n"
+        "    T --> W[get_weather（天气工具）]\n"
+        "    T --> H[SpanishAgent（西语客服）]\n"
+        "    T --> A[ResearchAgent（研究 Agent as tool）]\n"
+        "    W --> T\n"
+        "    H --> U\n"
+        "    A --> T\n"
+        "    T --> U\n"
+        "```\n\n"
+        "| SDK 概念 | 客服场景中的位置 |\n"
+        "| --- | --- |\n"
+        "| `Runner` | 接收用户问题并推进整个循环 |\n"
+        "| `Agent` | `TriageAgent`、`SpanishAgent`、`ResearchAgent` |\n"
+        "| `function_tool` | `get_weather`，执行确定性业务动作 |\n"
+        "| `handoff` | Triage 把对话所有权交给 SpanishAgent |\n"
+        "| `as_tool` | Triage 调 ResearchAgent 获取报告，但自己继续回复 |\n"
+        "| `context` | 当前用户 ID、会员等级等业务数据 |"
+    ))
+
+    cells.append(md(
+        "## 先准备一个无 Key 的 Scripted Model\n\n"
+        "真实 SDK 会把模型返回的 Responses API output 交给 `Runner`。为了不依赖 Key，下面的测试模型按预先写好的顺序返回文本或 function call。\n"
+        "它不模拟模型推理，只让我们看清 Runner 后续如何执行。"
+    ))
+
+    cells.append(code(
+        'import json\n'
+        'from dataclasses import dataclass\n'
+        '\n'
+        'from agents import (\n'
+        '    Agent,\n'
+        '    Model,\n'
+        '    ModelResponse,\n'
+        '    RunContextWrapper,\n'
+        '    Runner,\n'
+        '    Usage,\n'
+        '    function_tool,\n'
+        '    set_tracing_disabled,\n'
+        ')\n'
+        'from openai.types.responses import (\n'
+        '    ResponseFunctionToolCall,\n'
+        '    ResponseOutputMessage,\n'
+        '    ResponseOutputText,\n'
+        ')\n'
+        '\n'
+        'set_tracing_disabled(True)\n'
+        '\n'
+        '\n'
+        'class ScriptedModel(Model):\n'
+        '    """测试用模型：按顺序返回固定的 Responses API 输出。"""\n'
+        '\n'
+        '    def __init__(self, responses):\n'
+        '        self.responses = list(responses)\n'
+        '        self.index = 0\n'
+        '\n'
+        '    async def get_response(\n'
+        '        self,\n'
+        '        system_instructions,\n'
+        '        input,\n'
+        '        model_settings,\n'
+        '        tools,\n'
+        '        output_schema,\n'
+        '        handoffs,\n'
+        '        tracing,\n'
+        '        *,\n'
+        '        previous_response_id,\n'
+        '        conversation_id,\n'
+        '        prompt,\n'
+        '    ):\n'
+        '        if self.index >= len(self.responses):\n'
+        '            raise RuntimeError("ScriptedModel 没有预设更多响应")\n'
+        '        response = self.responses[self.index]\n'
+        '        self.index += 1\n'
+        '        return response\n'
+        '\n'
+        '    def stream_response(self, *args, **kwargs):\n'
+        '        raise NotImplementedError("本 Notebook 只验证非流式 Runner 循环")\n'
+        '\n'
+        '\n'
+        'def text_response(text: str, response_id: str) -> ModelResponse:\n'
+        '    return ModelResponse(\n'
+        '        output=[\n'
+        '            ResponseOutputMessage(\n'
+        '                id=response_id,\n'
+        '                content=[\n'
+        '                    ResponseOutputText(\n'
+        '                        annotations=[],\n'
+        '                        text=text,\n'
+        '                        type="output_text",\n'
+        '                    )\n'
+        '                ],\n'
+        '                role="assistant",\n'
+        '                status="completed",\n'
+        '                type="message",\n'
+        '            )\n'
+        '        ],\n'
+        '        usage=Usage(),\n'
+        '        response_id=response_id,\n'
+        '    )\n'
+        '\n'
+        '\n'
+        'def tool_response(name: str, arguments: dict, response_id: str, call_id: str) -> ModelResponse:\n'
+        '    return ModelResponse(\n'
+        '        output=[\n'
+        '            ResponseFunctionToolCall(\n'
+        '                id=f"{call_id}_item",\n'
+        '                call_id=call_id,\n'
+        '                name=name,\n'
+        '                arguments=json.dumps(arguments, ensure_ascii=False),\n'
+        '                type="function_call",\n'
+        '                status="completed",\n'
+        '            )\n'
+        '        ],\n'
+        '        usage=Usage(),\n'
+        '        response_id=response_id,\n'
+        '    )\n'
+        '\n'
+        'print("Scripted Model ready")'
+    ))
+
+    # ---------- 例子一 ----------
+    cells.append(md(
+        "## 例子一：单 Agent + function_tool\n\n"
+        "这是 SDK 最小闭环。`Agent` 声明工具，`Runner` 负责把模型的 function call 变成真正的 Python 函数调用。\n\n"
+        "```mermaid\n"
+        "flowchart LR\n"
+        "    A[用户提问] --> B[Runner.run（启动）]\n"
+        "    B --> C[客服 Agent（模型调用）]\n"
+        "    C -->|get_weather| D[天气工具（函数执行）]\n"
+        "    D --> C\n"
+        "    C --> E[RunResult.final_output（最终回答）]\n"
+        "```"
+    ))
+
+    cells.append(code(
+        '@function_tool\n'
+        'def get_weather(city: str) -> str:\n'
+        '    """查询城市天气。"""\n'
+        '    return f"{city}: 晴朗，25 度"\n'
+        '\n'
+        '\n'
+        'weather_model = ScriptedModel([\n'
+        '    tool_response("get_weather", {"city": "北京"}, "weather-1", "weather-call"),\n'
+        '    text_response("北京天气晴朗，25 度。", "weather-2"),\n'
+        '])\n'
+        '\n'
+        'weather_agent = Agent(\n'
+        '    name="WeatherAgent",\n'
+        '    instructions="使用天气工具回答用户问题。",\n'
+        '    tools=[get_weather],\n'
+        '    model=weather_model,\n'
+        ')\n'
+        '\n'
+        'weather_result = await Runner.run(weather_agent, "北京天气怎么样？")\n'
+        'print("最终回答:", weather_result.final_output)\n'
+        'print("当前 Agent:", weather_result.last_agent.name)\n'
+        'print("运行轨迹:", [type(item).__name__ for item in weather_result.new_items])'
+    ))
+
+    cells.append(md(
+        "#### 例子一：按执行顺序拆解\n\n"
+        "| 顺序 | 发生什么 | SDK 中的对象 |\n"
+        "| --- | --- | --- |\n"
+        "| 1 | `Runner.run(weather_agent, 用户问题)` | Runner 创建一次运行 |\n"
+        "| 2 | Scripted Model 返回 `get_weather` function call | `ModelResponse` |\n"
+        "| 3 | SDK 校验参数并执行 Python 函数 | `FunctionTool` |\n"
+        "| 4 | 工具输出被追加为 function call output | `ToolCallOutputItem` |\n"
+        "| 5 | SDK 再调用模型 | 同一个 `WeatherAgent` |\n"
+        "| 6 | 模型返回文本，循环结束 | `RunResult.final_output` |\n\n"
+        "关键认知：**`Agent` 不等于一次模型调用**。只要模型返回工具调用，`Runner` 就会继续推进；`Agent` 是“配置”，`Runner` 才是“执行循环”。"
+    ))
+
+    # ---------- 例子二 ----------
+    cells.append(md(
+        "## 例子二：handoff（把对话所有权转交给专家）\n\n"
+        "客服分流是 handoff 的典型场景：TriageAgent 判断用户需要西班牙语服务后，把整个对话交给 SpanishAgent。handoff 完成后，目标 Agent 变成当前 Agent。\n\n"
+        "```mermaid\n"
+        "flowchart LR\n"
+        "    A[用户请求西班牙语服务] --> B[TriageAgent（分流）]\n"
+        "    B -->|transfer_to_spanishagent| C[SpanishAgent（接管）]\n"
+        "    C --> D[西语最终回答]\n"
+        "```"
+    ))
+
+    cells.append(code(
+        'spanish_model = ScriptedModel([\n'
+        '    text_response("Hola, ¿en qué puedo ayudarte?", "spanish-1"),\n'
+        '])\n'
+        '\n'
+        'spanish_agent = Agent(\n'
+        '    name="SpanishAgent",\n'
+        '    handoff_description="处理西班牙语客服问题。",\n'
+        '    instructions="始终使用西班牙语回答。",\n'
+        '    model=spanish_model,\n'
+        ')\n'
+        '\n'
+        '# Agent 直接放进 handoffs 后，SDK 自动生成 transfer_to_spanishagent 工具。\n'
+        'triage_model = ScriptedModel([\n'
+        '    tool_response("transfer_to_spanishagent", {}, "triage-1", "handoff-call"),\n'
+        '])\n'
+        '\n'
+        'triage_agent = Agent(\n'
+        '    name="TriageAgent",\n'
+        '    instructions="判断是否需要转交西语客服。",\n'
+        '    handoffs=[spanish_agent],\n'
+        '    model=triage_model,\n'
+        ')\n'
+        '\n'
+        'handoff_result = await Runner.run(triage_agent, "请用西班牙语问候我")\n'
+        'print("最终回答:", handoff_result.final_output)\n'
+        'print("接管后的 Agent:", handoff_result.last_agent.name)\n'
+        'print("运行轨迹:", [type(item).__name__ for item in handoff_result.new_items])'
+    ))
+
+    cells.append(md(
+        "#### 例子二：按执行顺序拆解\n\n"
+        "| 顺序 | 发生什么 | 关键点 |\n"
+        "| --- | --- | --- |\n"
+        "| 1 | Runner 从 `TriageAgent` 开始 | 当前 Agent 是 TriageAgent |\n"
+        "| 2 | 模型调用 `transfer_to_spanishagent` | handoff 对模型表现为一个特殊工具 |\n"
+        "| 3 | SDK 执行 handoff | 目标 Agent 变成 SpanishAgent |\n"
+        "| 4 | SpanishAgent 收到对话上下文并回答 | 新 Agent 继续 Runner 循环 |\n"
+        "| 5 | 返回最终结果 | `last_agent` 是 SpanishAgent |\n\n"
+        "handoff 的本质是：**转移对话控制权**。这和“调用一个工具拿结果”不一样。"
+    ))
+
+    # ---------- 例子三 ----------
+    cells.append(md(
+        "## 例子三：Agent as tool（调用专家，但不交出控制权）\n\n"
+        "如果 Manager 需要先找 ResearchAgent 调研，然后自己统一汇总，就不应该用 handoff，而应该用 `research_agent.as_tool()`。\n\n"
+        "```mermaid\n"
+        "flowchart LR\n"
+        "    A[用户问题] --> B[Manager（主 Agent）]\n"
+        "    B -->|research tool| C[ResearchAgent（嵌套执行）]\n"
+        "    C -->|报告结果| B\n"
+        "    B --> D[Manager 汇总回答]\n"
+        "```"
+    ))
+
+    cells.append(code(
+        'researcher_model = ScriptedModel([\n'
+        '    text_response("研究结果：北京今天晴朗。", "research-1"),\n'
+        '])\n'
+        'research_agent = Agent(\n'
+        '    name="ResearchAgent",\n'
+        '    instructions="研究问题并返回简洁报告。",\n'
+        '    model=researcher_model,\n'
+        ')\n'
+        '\n'
+        'research_tool = research_agent.as_tool(\n'
+        '    tool_name="research",\n'
+        '    tool_description="研究用户问题并返回报告。",\n'
+        ')\n'
+        '\n'
+        'manager_model = ScriptedModel([\n'
+        '    tool_response("research", {"input": "北京天气"}, "manager-1", "research-call"),\n'
+        '    text_response("汇总：北京今天晴朗。", "manager-2"),\n'
+        '])\n'
+        'manager_agent = Agent(\n'
+        '    name="ManagerAgent",\n'
+        '    instructions="必要时调用研究工具，再向用户汇总。",\n'
+        '    tools=[research_tool],\n'
+        '    model=manager_model,\n'
+        ')\n'
+        '\n'
+        'manager_result = await Runner.run(manager_agent, "请调研北京天气")\n'
+        'print("最终回答:", manager_result.final_output)\n'
+        'print("仍由谁控制:", manager_result.last_agent.name)\n'
+        'print("运行轨迹:", [type(item).__name__ for item in manager_result.new_items])'
+    ))
+
+    cells.append(md(
+        "#### 例子三：handoff 和 Agent as tool 对比\n\n"
+        "| 对比项 | handoff | `agent.as_tool()` |\n"
+        "| --- | --- | --- |\n"
+        "| 调用形式 | 特殊 handoff 工具 | 普通 function tool |\n"
+        "| 上下文 | 目标 Agent 默认接收对话历史 | 目标 Agent 接收构造出来的工具输入 |\n"
+        "| 控制权 | 目标 Agent 接管 | 原 Agent 保留 |\n"
+        "| `last_agent` | 变成目标 Agent | 仍是原 Agent |\n"
+        "| 典型场景 | 客服分流、专家接管 | 调研、计算、子任务后统一汇总 |\n\n"
+        "这是 OpenAI Agents SDK 多 Agent 设计里最值得记住的区别。"
+    ))
+
+    # ---------- 例子四 ----------
+    cells.append(md(
+        "## 例子四：context 注入工具\n\n"
+        "业务数据不应该全部拼进用户文本。SDK 可以把一个普通 Python 对象作为 `context` 传给 Runner，再通过 `RunContextWrapper` 注入工具。\n\n"
+        "```mermaid\n"
+        "flowchart LR\n"
+        "    A[Runner.run(context=UserContext)] --> B[Agent]\n"
+        "    B --> C[get_member_level(ctx)]\n"
+        "    C --> D[读取 ctx.context.user_id]\n"
+        "    D --> B\n"
+        "```"
+    ))
+
+    cells.append(code(
+        '@dataclass\n'
+        'class UserContext:\n'
+        '    user_id: str\n'
+        '    member_level: str\n'
+        '\n'
+        '\n'
+        '@function_tool\n'
+        'def get_member_level(ctx: RunContextWrapper[UserContext]) -> str:\n'
+        '    """查询当前用户的会员等级。"""\n'
+        '    return f"用户 {ctx.context.user_id} 是 {ctx.context.member_level} 会员"\n'
+        '\n'
+        '\n'
+        'context_model = ScriptedModel([\n'
+        '    tool_response("get_member_level", {}, "context-1", "context-call"),\n'
+        '    text_response("你是 user-42 的 Gold 会员。", "context-2"),\n'
+        '])\n'
+        'context_agent = Agent(\n'
+        '    name="ContextAgent",\n'
+        '    instructions="使用会员工具回答问题。",\n'
+        '    tools=[get_member_level],\n'
+        '    model=context_model,\n'
+        ')\n'
+        '\n'
+        'context_result = await Runner.run(\n'
+        '    context_agent,\n'
+        '    "我的会员等级是什么？",\n'
+        '    context=UserContext(user_id="user-42", member_level="Gold"),\n'
+        ')\n'
+        'print("最终回答:", context_result.final_output)'
+    ))
+
+    cells.append(md(
+        "#### 例子四：按执行顺序拆解\n\n"
+        "| 顺序 | 发生什么 |\n"
+        "| --- | --- |\n"
+        "| 1 | `Runner.run(..., context=UserContext(...))` 保存本次运行上下文 |\n"
+        "| 2 | 模型请求 `get_member_level` | 工具参数 schema 中不需要暴露 user_id |\n"
+        "| 3 | SDK 把 `RunContextWrapper` 传给工具 | 工具从 `ctx.context` 读取业务对象 |\n"
+        "| 4 | 工具返回会员等级 | 结果回到模型 |\n\n"
+        "`context` 是调用侧传入的运行时依赖，不等同于用户消息，也不需要让模型自己生成。"
+    ))
+
+    # ---------- 真实模型 ----------
+    cells.append(md(
+        "## 真实模型调用（需要 API Key）\n\n"
+        "前面的 Scripted Model 只用于看懂 SDK 的执行机制。接真实模型时，通常不需要自己实现 `Model`：SDK 会使用默认 OpenAI 模型。"
+    ))
+    cells.append(code(
+        'from agents import Agent, Runner\n'
+        '\n'
+        'agent = Agent(\n'
+        '    name="Assistant",\n'
+        '    instructions="你是一个简洁的客服助手。",\n'
+        ')\n'
+        'result = await Runner.run(agent, "请用一句话介绍你自己。")\n'
+        'print(result.final_output)',
+        tags=("requires-api-key",),
+    ))
+
+    cells.append(md(
+        "## 能力总览\n\n"
+        "| 能力 | 关键 API | 本 Notebook |\n"
+        "| --- | --- | --- |\n"
+        "| Agent 循环 | `Runner.run` / `run_sync` | 例子一 |\n"
+        "| 函数工具 | `@function_tool` | 例子一、四 |\n"
+        "| 多 Agent 接管 | `handoffs` / `handoff()` | 例子二 |\n"
+        "| Agent 嵌套调用 | `agent.as_tool()` | 例子三 |\n"
+        "| 运行时业务上下文 | `context` / `RunContextWrapper` | 例子四 |\n"
+        "| 会话记忆 | `SQLiteSession` / `Session` | 进阶 |\n"
+        "| 结构化输出 | `output_type` | 进阶 |\n"
+        "| 防护 | `input_guardrails` / `output_guardrails` | 进阶 |\n"
+        "| 外部工具 | MCP / Hosted Tools | 进阶 |\n"
+        "| 可观测性 | Tracing | 进阶 |"
+    ))
+
+    cells.append(md(
+        "## 小结：什么时候选 OpenAI Agents SDK\n\n"
+        "- 想快速得到一个**单 Agent + 工具**闭环：选它。\n"
+        "- 想做客服分流、专家接管：重点理解 `handoff`。\n"
+        "- 想让主 Agent 调多个子 Agent 后自己汇总：重点理解 `agent.as_tool()`。\n"
+        "- 需要显式状态图、复杂并行、断点恢复和精确路由：回到 LangGraph。\n\n"
+        "核心记忆点：**Agent 是配置，Runner 是循环；handoff 是接管，as_tool 是委托。**"
+    ))
+
+    return cells
+
+
+def main():
+    notebook = new_notebook(
+        cells=build_cells(),
+        metadata={
+            "kernelspec": {
+                "display_name": KERNEL_DISPLAY_NAME,
+                "language": "python",
+                "name": KERNEL_NAME,
+            },
+            "language_info": {"name": "python", "version": "3.12"},
+        },
+    )
+    nbformat.write(notebook, NOTEBOOK_PATH)
+    print(f"notebook written: {NOTEBOOK_PATH}")
+
+
+if __name__ == "__main__":
+    main()

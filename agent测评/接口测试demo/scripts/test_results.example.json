@@ -1,0 +1,25 @@
+{
+  "version": "example-not-a-real-run",
+  "environment": "格式演示数据，不代表实测结果",
+  "targets": ["G1", "G2", "G3", "G4", "G5", "G6", "G7"],
+  "cases": [
+    {"id": "C01", "name": "正常取消待支付订单", "result": "passed", "core": true, "target": "G1"},
+    {"id": "C02", "name": "正常取消待发货订单", "result": "passed", "core": true, "target": "G1"},
+    {"id": "C03", "name": "未登录取消", "result": "passed", "core": true, "target": "G1"},
+    {"id": "C04", "name": "取消他人订单", "result": "passed", "core": true, "target": "G1"},
+    {"id": "C05", "name": "取消已发货订单", "result": "passed", "core": true, "target": "G1"},
+    {"id": "C06", "name": "取消已取消订单", "result": "passed", "core": true, "target": "G1"},
+    {"id": "C07", "name": "幂等键重复请求", "result": "passed", "core": true, "target": "G2"},
+    {"id": "C08", "name": "并发取消", "result": "passed", "core": true, "target": "G4"},
+    {"id": "C09", "name": "数据库故障回滚", "result": "passed", "core": true, "target": "G2"},
+    {"id": "C10", "name": "MQ 故障后恢复", "result": "passed", "core": true, "target": "G3"},
+    {"id": "C11", "name": "查询订单并失效缓存", "result": "passed", "core": true, "target": "G6"},
+    {"id": "C12", "name": "事件进入 RabbitMQ", "result": "passed", "core": true, "target": "G5"}
+  ],
+  "defects": [
+    {"id": "BUG-001", "severity": "major", "status": "closed"},
+    {"id": "BUG-002", "severity": "minor", "status": "open"}
+  ],
+  "performance": null,
+  "operations_ready": true
+}

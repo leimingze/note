@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "skills": {
+    "offerlens-interview-data": {
+      "name": "offerlens-interview-data",
+      "version": "1.0.0",
+      "source": "redskill",
+      "install_dir": "/Users/leimingze/notes/skills/offerlens-interview-data",
+      "installed_at": "1787799625194",
+      "sha256": "fd05f60881021fbb3af057083191dc01f622a4c744c3b3dc3e464c09bc7e4758"
+    }
+  }
+}

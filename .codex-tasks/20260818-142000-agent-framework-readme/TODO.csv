@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,调研 2026 年主流框架生态与实时数据,DONE,"GitHub 实时数据与 2026 年公开资料已收集","ls raw/ 2>/dev/null || true",2026-08-18 14:20 CST,0,GitHub API 星标/最近提交 + 2026 年 5-8 月公开评测
+2,撰写 README 初稿,DONE,"README 存在且包含框架清单、学习重点、快照日期","test -f \"agent主流框架/README.md\"",2026-08-18 14:45 CST,0,已按对齐意见重写定稿
+3,与用户对齐 README 并修订,DONE,"用户确认或修订意见已处理","grep -q \"数据快照\" \"agent主流框架/README.md\"",2026-08-18 14:45 CST,0,用户确认暂时先这样，后续学到再改
+4,保存通用 README 生成提示词,DONE,"提示词模板文件存在且包含占位符","test -f \"agent主流框架/README生成提示词.md\"",2026-08-18 14:50 CST,0,
+5,更新项目记忆,DONE,"调研、产物与用户偏好已写入 memory/","ls memory/research/2026-08-18-agent-frameworks-ecosystem.md memory/artifacts/2026-08-18-agent-framework-readme.md memory/session-notes/2026-08-18-agent-framework-readme.md",2026-08-18 14:50 CST,0,

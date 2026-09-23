@@ -1,0 +1,44 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: api-demo-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: demo_root
+      MYSQL_DATABASE: order_demo
+      MYSQL_USER: demo
+      MYSQL_PASSWORD: demo_pass
+    ports:
+      - "30052:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pdemo_root"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: api-demo-redis
+    ports:
+      - "30054:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: api-demo-rabbitmq
+    ports:
+      - "30055:5672"
+      - "30056:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  mysql_data:

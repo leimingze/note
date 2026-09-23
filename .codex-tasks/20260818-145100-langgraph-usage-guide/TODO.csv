@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,调研 LangGraph 当前版本与 API,DONE,"PyPI 版本与官方文档核心 API 已确认","curl -sS https://pypi.org/pypi/langgraph/json",2026-08-18 14:52 CST,0,当前稳定版 langgraph 1.2.11
+2,安装 venv 与依赖,DONE,"venv 存在且可导入 langgraph",".venv/bin/python -c \"import langgraph\"",2026-08-18 15:05 CST,0,langgraph 1.2.11 导入成功
+3,编写 LangGraph 使用方法文档,DONE,"README 覆盖安装、核心概念、三种用法、常见问题","test -f frameworks/langgraph/README.md",2026-08-18 15:05 CST,0,
+4,编写并运行验证最小 demo,DONE,"hello_graph.py 运行通过；react_agent.py 已按官方 API 编写","bash -c \".venv/bin/python frameworks/langgraph/demo/hello_graph.py\"",2026-08-18 15:05 CST,0,正数与负数两条路由均输出正确
+5,更新项目记忆,DONE,"调研与产物已写入 memory/","ls memory/research/2026-08-18-langgraph-usage.md memory/artifacts/2026-08-18-langgraph-usage.md",2026-08-18 15:06 CST,0,
