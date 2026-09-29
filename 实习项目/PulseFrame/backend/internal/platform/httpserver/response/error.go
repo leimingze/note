@@ -3,11 +3,18 @@ package response
 import "github.com/gin-gonic/gin"
 
 const (
-	RequestIDHeader      = "X-Request-ID"
-	RequestIDContextKey  = "request_id"
-	CodeInternal         = "INTERNAL_ERROR"
-	CodeNotFound         = "RESOURCE_NOT_FOUND"
-	CodeMethodNotAllowed = "METHOD_NOT_ALLOWED"
+	RequestIDHeader           = "X-Request-ID"
+	RequestIDContextKey       = "request_id"
+	CodeInternal              = "INTERNAL_ERROR"
+	CodeNotFound              = "RESOURCE_NOT_FOUND"
+	CodeMethodNotAllowed      = "METHOD_NOT_ALLOWED"
+	CodeInvalidRequest        = "INVALID_REQUEST"
+	CodeInvalidCredentials    = "INVALID_CREDENTIALS"
+	CodeUsernameTaken         = "USERNAME_TAKEN"
+	CodeUnauthenticated       = "UNAUTHENTICATED"
+	CodeRateLimited           = "RATE_LIMITED"
+	CodeCSRFRejected          = "CSRF_REJECTED"
+	CodeDependencyUnavailable = "DEPENDENCY_UNAVAILABLE"
 )
 
 // ErrorSpec 描述对外稳定的 HTTP 错误。

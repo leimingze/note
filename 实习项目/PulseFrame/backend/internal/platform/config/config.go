@@ -57,11 +57,14 @@ type Config struct {
 	Environment string
 	LogLevel    string
 	HTTP        HTTP
+	MySQL       MySQL
+	Redis       Redis
+	Auth        Auth
 }
 
 // Load 从环境变量读取并校验配置。
 // 输入：lookup，环境变量查询函数，不能为 nil。
-// 输出：类型化配置；配置来源缺失或取值非法时返回错误。
+// 输出：HTTP、MySQL、Redis 和网页认证的类型化配置；来源缺失或取值非法时返回错误。
 // 功能：解析并校验环境变量；缺失或空值使用默认值，校验通过后将解析结果写入 Config 返回，失败时返回错误。
 func Load(lookup LookupEnv) (Config, error) {
 	if lookup == nil {
@@ -80,7 +83,18 @@ func Load(lookup LookupEnv) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	return Config{Environment: environment, LogLevel: logLevel, HTTP: httpConfig}, nil
+	mysql, redis, auth, err := loadDependencies(lookup, environment)
+	if err != nil {
+		return Config{}, err
+	}
+	return Config{
+		Environment: environment,
+		LogLevel:    logLevel,
+		HTTP:        httpConfig,
+		MySQL:       mysql,
+		Redis:       redis,
+		Auth:        auth,
+	}, nil
 }
 
 // loadHTTP 读取并校验 HTTP 服务配置。

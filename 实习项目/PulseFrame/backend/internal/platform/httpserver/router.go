@@ -22,10 +22,16 @@ type RouterDependencies struct {
 	Logger      *slog.Logger
 	IDGenerator httpmiddleware.IDGenerator
 	Health      *HealthState
+	Modules     []RouteRegistrar
+}
+
+// RouteRegistrar 定义业务模块注册 Gin HTTP 路由的边界。
+type RouteRegistrar interface {
+	RegisterRoutes(*gin.Engine)
 }
 
 // NewRouter 创建核心 API 的 Gin 路由。
-// 输入：dependencies，日志器、请求标识生成器和健康状态。
+// 输入：dependencies，日志器、请求标识生成器、健康状态和业务路由注册器。
 // 输出：配置完成的 Gin Engine；依赖或中间件初始化失败时返回错误。
 // 功能：集中注册全局中间件、基础路由和统一路由错误。
 func NewRouter(dependencies RouterDependencies) (*gin.Engine, error) {
@@ -55,8 +61,19 @@ func NewRouter(dependencies RouterDependencies) (*gin.Engine, error) {
 	router.HandleMethodNotAllowed = true
 	router.Use(requestID.Handle, accessLog.Handle, recovery.Handle)
 	registerPlatformRoutes(router, dependencies.Health)
+	registerModuleRoutes(router, dependencies.Modules)
 	registerRouteErrors(router)
 	return router, nil
+}
+
+// registerModuleRoutes 按装配顺序注册业务模块 HTTP 路由。
+// 输入：router，Gin 路由器；modules，启动时创建的模块注册器集合。
+// 输出：修改 Gin 路由表，无返回值。
+// 功能：避免平台路由包直接依赖具体业务模块。
+func registerModuleRoutes(router *gin.Engine, modules []RouteRegistrar) {
+	for _, module := range modules {
+		module.RegisterRoutes(router)
+	}
 }
 
 // registerPlatformRoutes 注册工程基础接口。
