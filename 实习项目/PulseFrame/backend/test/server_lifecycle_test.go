@@ -11,7 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"pulseframe/internal/server"
+	"pulseframe/server"
 )
 
 const (

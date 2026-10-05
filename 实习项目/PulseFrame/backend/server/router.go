@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"pulseframe/internal/middleware"
-	"pulseframe/internal/response"
+	"pulseframe/middleware"
+	"pulseframe/response"
 )
 
 var (

@@ -2,6 +2,10 @@
 
 当前目录是 PulseFrame 核心 API 的工程基座。它提供配置校验、结构化日志、请求标识、访问日志、异常恢复、统一错误响应、健康检查、HTTP 超时和优雅退出，不依赖 MySQL 或 Redis。
 
+## 目录
+
+Go 包直接位于 backend/ 下：config、logging、middleware、response 和 server 分别负责配置、日志、HTTP 中间件、错误响应和服务生命周期。cmd/pulseframe-api 是程序入口，test 保存后端测试。后续业务按职责使用 controller、service、repository 和 model 等目录，在实现对应功能时创建。
+
 ## 启动
 
 在 backend/ 目录执行：

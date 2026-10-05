@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"pulseframe/internal/response"
+	"pulseframe/response"
 )
 
 const (

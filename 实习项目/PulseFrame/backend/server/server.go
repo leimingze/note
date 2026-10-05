@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"pulseframe/internal/config"
+	"pulseframe/config"
 )
 
 var (

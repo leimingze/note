@@ -12,10 +12,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"pulseframe/internal/config"
-	"pulseframe/internal/logging"
-	"pulseframe/internal/middleware"
-	"pulseframe/internal/server"
+	"pulseframe/config"
+	"pulseframe/logging"
+	"pulseframe/middleware"
+	"pulseframe/server"
 )
 
 // main 是 PulseFrame 核心 API 的进程入口。

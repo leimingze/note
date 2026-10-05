@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"pulseframe/internal/response"
+	"pulseframe/response"
 )
 
 // errNilAccessLogger 表示访问日志中间件缺少结构化日志器。

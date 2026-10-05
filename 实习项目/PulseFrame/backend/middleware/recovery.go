@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"pulseframe/internal/response"
+	"pulseframe/response"
 )
 
 // errNilRecoveryLogger 表示异常恢复中间件缺少记录 panic 的日志器。
