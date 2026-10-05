@@ -6,8 +6,6 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-optical-sizing: auto;
-  font-weight: 400;
 }
 
 * {
@@ -20,30 +18,16 @@ body {
   margin: 0;
 }
 
-button,
-input {
-  font: inherit;
-}
-
-button {
-  cursor: pointer;
-}
-
-button:disabled {
-  cursor: wait;
-  opacity: 0.68;
-}
-
-.account-shell {
+.foundation-shell {
   display: grid;
   grid-template-columns: minmax(390px, 0.88fr) minmax(0, 1.12fr);
   min-height: 100vh;
 }
 
-.account-panel {
+.project-panel {
   display: flex;
-  flex-direction: column;
   min-height: 100vh;
+  flex-direction: column;
   padding: 34px clamp(28px, 6vw, 88px) 24px;
 }
 
@@ -65,11 +49,10 @@ button:disabled {
   background: #b63f31;
   color: #fff;
   font-size: 17px;
-  font-weight: 700;
 }
 
-.account-content {
-  width: min(100%, 418px);
+.project-content {
+  width: min(100%, 450px);
   margin: auto;
   padding: 54px 0;
 }
@@ -84,132 +67,45 @@ button:disabled {
 h1 {
   margin: 0;
   color: #202c28;
-  font-size: 34px;
-  font-weight: 600;
-  line-height: 1.28;
-}
-
-h1 span {
-  overflow-wrap: anywhere;
-  color: #b94935;
+  font-size: 42px;
+  font-weight: 650;
+  line-height: 1.2;
 }
 
 .intro {
-  margin: 12px 0 30px;
-  color: #6c7771;
-  font-size: 15px;
-  line-height: 1.6;
+  max-width: 420px;
+  margin: 16px 0 34px;
+  color: #5f6d66;
+  font-size: 16px;
+  line-height: 1.7;
 }
 
-.account-form {
-  display: flex;
-  flex-direction: column;
+.foundation-list {
+  margin: 0;
+  border-top: 1px solid #ccd2cc;
 }
 
-.account-form label {
-  margin: 18px 0 8px;
-  color: #34413b;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.account-form input {
-  width: 100%;
-  height: 48px;
-  padding: 0 13px;
-  border: 1px solid #cdd3cd;
-  border-radius: 5px;
-  outline: none;
-  background: #fff;
-  color: #202c28;
-  font-size: 15px;
-}
-
-.account-form input:focus {
-  border-color: #45735e;
-  box-shadow: 0 0 0 3px rgb(69 115 94 / 15%);
-}
-
-.field-hint {
-  margin: 7px 0 0;
-  color: #68746d;
-  font-size: 12px;
-}
-
-.primary-button {
-  display: flex;
-  width: 100%;
-  min-height: 48px;
-  align-items: center;
-  justify-content: center;
-  margin-top: 23px;
-  border: 0;
-  border-radius: 5px;
-  background: #284c3e;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  transition: background-color 120ms ease;
-}
-
-.primary-button:hover:not(:disabled) {
-  background: #1e3e32;
-}
-
-.mode-switch {
-  min-height: 42px;
-  margin-top: 13px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #59665f;
-  font-size: 13px;
-}
-
-.mode-switch:hover:not(:disabled) {
-  color: #c8513d;
-}
-
-.feedback {
-  margin: 16px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.error-feedback {
-  color: #b73e32;
-}
-
-.status-feedback {
-  color: #2c6b4d;
-}
-
-.profile-line {
-  display: flex;
-  min-height: 58px;
-  align-items: center;
-  gap: 12px;
-  margin-top: 28px;
-  color: #334139;
-  font-size: 14px;
-}
-
-.profile-avatar {
+.foundation-list div {
   display: grid;
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
-  place-items: center;
-  border-radius: 50%;
-  background: #d8e5db;
-  color: #284c3e;
-  font-weight: 700;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 18px;
+  padding: 15px 0;
+  border-bottom: 1px solid #ccd2cc;
 }
 
-.active-indicator {
-  margin-left: auto;
-  color: #2c6b4d;
-  font-size: 12px;
+.foundation-list dt,
+.foundation-list dd {
+  margin: 0;
+  font-size: 13px;
+}
+
+.foundation-list dt {
+  color: #768078;
+}
+
+.foundation-list dd {
+  color: #263b32;
+  font-weight: 600;
 }
 
 .panel-footer {
@@ -255,22 +151,22 @@ h1 span {
 }
 
 @media (max-width: 760px) {
-  .account-shell {
+  .foundation-shell {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .account-panel {
-    min-height: 100vh;
+  .project-panel {
+    min-height: 70vh;
     padding: 26px 24px 20px;
   }
 
-  .account-content {
+  .project-content {
     margin: 44px auto;
     padding: 22px 0;
   }
 
   .visual-panel {
-    min-height: 280px;
+    min-height: 30vh;
   }
 
   .visual-image {
@@ -280,14 +176,5 @@ h1 span {
   .visual-caption {
     min-height: 54px;
     padding: 0 20px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
   }
 }
