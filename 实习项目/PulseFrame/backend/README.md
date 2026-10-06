@@ -4,7 +4,7 @@
 
 ## 目录
 
-Go 包直接位于 backend/ 下：config、logging、middleware、response 和 server 分别负责配置、日志、HTTP 中间件、错误响应和服务生命周期。cmd/pulseframe-api 是程序入口，test 保存后端测试。后续业务按职责使用 controller、service、repository 和 model 等目录，在实现对应功能时创建。
+Go 包直接位于 backend/ 下：config、logging、middleware、response 和 server 分别负责配置、日志、HTTP 中间件、错误响应和服务生命周期。cmd/pulseframe-api 是程序入口，test 保存后端测试。controller、service 和 dao 已建立为业务职责目录，业务代码在对应功能实现时加入。
 
 ## 启动
 
