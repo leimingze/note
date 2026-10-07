@@ -11,6 +11,8 @@ const (
 	CodeInternal         = "INTERNAL_ERROR"
 	CodeNotFound         = "RESOURCE_NOT_FOUND"
 	CodeMethodNotAllowed = "METHOD_NOT_ALLOWED"
+	CodeInvalidArgument  = "INVALID_ARGUMENT"
+	CodeUsernameExists   = "USERNAME_EXISTS"
 )
 
 // ErrorSpec 描述对外稳定的 HTTP 错误。

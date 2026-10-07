@@ -1,4 +1,4 @@
-// 程序功能：读取基础配置，并启动 PulseFrame 核心 API。
+// 程序功能：读取基础配置、连接 MySQL，并启动 PulseFrame 核心 API 与注册接口。
 // 启动命令：在 backend 目录执行 go run ./cmd/pulseframe-api；环境变量见 backend/README.md。
 package main
 
@@ -13,15 +13,18 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"pulseframe/config"
+	"pulseframe/controller"
+	"pulseframe/dao"
 	"pulseframe/logging"
 	"pulseframe/middleware"
 	"pulseframe/server"
+	"pulseframe/service"
 )
 
 // main 是 PulseFrame 核心 API 的进程入口。
 // 输入：进程环境变量和操作系统退出信号。
 // 输出：启动 HTTP 服务；初始化或运行失败时记录错误并以非零状态退出。
-// 功能：装配工程基础依赖并运行核心 API。
+// 功能：装配数据库和 HTTP 依赖并运行核心 API。
 func main() {
 	// 入口无法向调用方返回错误，因此记录根因并用非零状态通知进程管理器。
 	if err := run(context.Background(), os.LookupEnv); err != nil {
@@ -33,7 +36,7 @@ func main() {
 // run 构建并运行核心 API。
 // 输入：parent，服务生命周期父上下文；lookup，环境变量查询函数。
 // 输出：服务正常退出时返回 nil，否则返回配置、初始化或运行错误。
-// 功能：完成配置、基础路由、信号监听和 HTTP 服务的依赖装配。
+// 功能：完成配置、MySQL、注册路由、信号监听和 HTTP 服务的依赖装配。
 func run(parent context.Context, lookup config.LookupEnv) error {
 	// 第一阶段只读取和校验配置，配置错误时不创建服务资源。
 	cfg, err := config.Load(lookup)
@@ -41,8 +44,25 @@ func run(parent context.Context, lookup config.LookupEnv) error {
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
+	mysqlConfig, err := config.LoadMySQL(lookup)
+	if err != nil {
+		return fmt.Errorf("load mysql config: %w", err)
+	}
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	db, err := dao.OpenMySQL(ctx, mysqlConfig)
+	if err != nil {
+		return fmt.Errorf("connect mysql: %w", err)
+	}
+	defer db.Close()
+	users, err := dao.NewUsers(db)
+	if err != nil {
+		return fmt.Errorf("create user repository: %w", err)
+	}
+	registrationService, err := service.NewRegistration(users)
+	if err != nil {
+		return fmt.Errorf("create registration service: %w", err)
+	}
 
 	// 日志器和 Gin 模式都只依赖基础配置。
 	logger, err := logging.New(cfg.LogLevel, os.Stdout)
@@ -52,7 +72,7 @@ func run(parent context.Context, lookup config.LookupEnv) error {
 	}
 	gin.SetMode(ginMode(cfg.Environment))
 
-	// 基座只注册健康检查和通用 HTTP 中间件。
+	// 全局中间件仍由核心路由统一注册，业务接口在其后追加。
 	health := server.NewHealthState()
 	router, err := server.NewRouter(server.RouterDependencies{
 		Logger: logger, IDGenerator: middleware.CryptoIDGenerator{}, Health: health,
@@ -61,6 +81,11 @@ func run(parent context.Context, lookup config.LookupEnv) error {
 	if err != nil {
 		return fmt.Errorf("create router: %w", err)
 	}
+	registration, err := controller.NewRegistration(registrationService, logger)
+	if err != nil {
+		return fmt.Errorf("create registration controller: %w", err)
+	}
+	registration.RegisterRoutes(router)
 
 	httpServer, err := server.New(server.OptionsFromConfig(cfg, router, health))
 	// Server 参数非法时仍处于未监听状态，可以安全终止启动。
