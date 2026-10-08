@@ -1,0 +1,100 @@
+{
+  "title": "亿级流量系统架构设计与实战",
+  "source": "/Users/leimingze/notes/开源书籍/亿级流量系统架构设计与实战 (--) (manongshu.com).pdf",
+  "source_sha256": "f461b39d776145790df78ace6223b14927914b00eed551342c7fffafb00abc50",
+  "pymupdf_version": "1.26.7",
+  "pages": 433,
+  "chapters": 13,
+  "headings": 327,
+  "images": 257,
+  "image_only_pages": [
+    179,
+    255
+  ],
+  "sections": [
+    {
+      "title": "书前资料",
+      "start": 1,
+      "end": 18,
+      "file": "00-书前资料.md"
+    },
+    {
+      "title": "第1章 大型互联网公司的基础架构",
+      "start": 19,
+      "end": 104,
+      "file": "第1章 大型互联网公司的基础架构.md"
+    },
+    {
+      "title": "第2章 通用的高并发架构设计",
+      "start": 105,
+      "end": 140,
+      "file": "第2章 通用的高并发架构设计.md"
+    },
+    {
+      "title": "第3章 通用的服务可用性治理手段",
+      "start": 141,
+      "end": 180,
+      "file": "第3章 通用的服务可用性治理手段.md"
+    },
+    {
+      "title": "第4章 唯一ID生成器",
+      "start": 181,
+      "end": 205,
+      "file": "第4章 唯一ID生成器.md"
+    },
+    {
+      "title": "第5章 用户登录服务",
+      "start": 206,
+      "end": 231,
+      "file": "第5章 用户登录服务.md"
+    },
+    {
+      "title": "第6章 海量推送系统",
+      "start": 232,
+      "end": 256,
+      "file": "第6章 海量推送系统.md"
+    },
+    {
+      "title": "第7章 内容发布系统",
+      "start": 257,
+      "end": 284,
+      "file": "第7章 内容发布系统.md"
+    },
+    {
+      "title": "第8章 通用计数系统",
+      "start": 285,
+      "end": 300,
+      "file": "第8章 通用计数系统.md"
+    },
+    {
+      "title": "第9章 排行榜服务",
+      "start": 301,
+      "end": 326,
+      "file": "第9章 排行榜服务.md"
+    },
+    {
+      "title": "第10章 用户关系服务",
+      "start": 327,
+      "end": 346,
+      "file": "第10章 用户关系服务.md"
+    },
+    {
+      "title": "第11章 Timeline Feed服务",
+      "start": 347,
+      "end": 373,
+      "file": "第11章 Timeline Feed服务.md"
+    },
+    {
+      "title": "第12章 评论服务",
+      "start": 374,
+      "end": 404,
+      "file": "第12章 评论服务.md"
+    },
+    {
+      "title": "第13章 IM服务",
+      "start": 405,
+      "end": 433,
+      "file": "第13章 IM服务.md"
+    }
+  ]
+}
