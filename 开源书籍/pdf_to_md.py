@@ -1,4 +1,4 @@
-# 脚本功能：利用已有文字层和书签，将 PDF 按章转换为 Markdown 并导出插图。
+# 脚本功能：将 PDF 按章转换为 Markdown、导出插图并生成 agent 检索索引。
 # 启动命令：
 # python3 -m pip install -r requirements.txt
 # python3 pdf_to_md.py '亿级流量系统架构设计与实战 (--) (manongshu.com).pdf'
@@ -16,6 +16,7 @@ from urllib.parse import quote
 
 import pymupdf
 
+from book_index import build_index
 from pdf_content import render_page, text_lines
 from pdf_headings import filename, locate_headings
 
@@ -78,6 +79,7 @@ def write_index(context):
     lines = [f"# {report['title']}", "", "本地文字层提取，未调用大模型。保留原文字层中的 OCR 识别结果，代码中的符号和复杂表格需要结合原 PDF 核对。", "", "## 目录", ""]
     for section in report["sections"]:
         lines.append(f"- [{section['title']}]({quote(section['file'])})：PDF 第 {section['start']}–{section['end']} 页")
+    lines += ["", "## Agent 阅读", "", "[全书入口](agent-index.md)包含各章标题和关键词。查询命令及续读规则见[目录规则](../AGENTS.md)。转换完成后自动生成小节索引；仅更新 Markdown 时运行 `python3 book_access.py index`。", ""]
     lines += ["", "## 转换信息", "", f"- 页数：{report['pages']}", f"- 章节：{report['chapters']}", f"- 已定位正文标题：{report['headings']}", f"- 图片：{report['images']}", f"- 无文字层、保留为原页图片的页码：{report['image_only_pages']}", "- 多列文字使用等宽文本保留，未推断表格结构。", "- 每页提供原 PDF 链接；文件移动后需要一同保留原 PDF 的相对位置。", ""]
     (output / "README.md").write_text("\n".join(lines), encoding="utf-8")
     (output / "conversion-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -146,7 +148,7 @@ def write_section(document, section, context):
 def convert(options):
     """
     输入：options，包含输入 PDF 和新输出目录的命令行配置。
-    输出：创建章节 Markdown、插图和报告；指定 --overwrite 可更新同一来源的输出。
+    输出：创建章节 Markdown、插图、报告和检索索引；指定 --overwrite 可更新同一来源的输出。
     功能：执行不调用网络服务的整本书转换，并明确检查文字层。
     """
     source = options.pdf.resolve()
@@ -165,6 +167,7 @@ def convert(options):
             image_count += write_section(document, section, context)
         report = build_report(document, {"source": source, "digest": digest, "sections": sections, "bookmarks": bookmarks, "images": image_count, "missing": missing})
         write_index({"report": report, "output": output})
+    build_index(output)
     print(f"转换完成：{output}")
 
 

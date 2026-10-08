@@ -19,6 +19,11 @@
 - [第12章 评论服务](%E7%AC%AC12%E7%AB%A0%20%E8%AF%84%E8%AE%BA%E6%9C%8D%E5%8A%A1.md)：PDF 第 374–404 页
 - [第13章 IM服务](%E7%AC%AC13%E7%AB%A0%20IM%E6%9C%8D%E5%8A%A1.md)：PDF 第 405–433 页
 
+## Agent 阅读
+
+[全书入口](agent-index.md)包含各章标题和关键词。查询命令及续读规则见[目录规则](../AGENTS.md)。转换完成后自动生成小节索引；仅更新 Markdown 时运行 `python3 book_access.py index`。
+
+
 ## 转换信息
 
 - 页数：433
