@@ -1,6 +1,0 @@
-id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
-1,调研 LangChain 当前版本与 API,DONE,"PyPI 版本与官方文档核心 API 已确认","curl -sS https://pypi.org/pypi/langchain/json",2026-08-18 17:52 CST,0,当前稳定版 langchain 1.3.15；官方主推 create_agent，LCEL 仍是基础
-2,安装 venv 与依赖,DONE,"venv 存在且可导入 langchain",".venv/bin/python -c \"import langchain\"",2026-08-18 18:10 CST,0,langchain 1.3.15 / langchain-core 1.5.6
-3,编写内容模块与构建脚本,DONE,"cells 与 build/verify 脚本就绪","test -f frameworks/langchain/scripts/build_langchain_notebook.py",2026-08-18 18:10 CST,0,
-4,生成并验证 Notebook,DONE,"无 Key cell 全部执行通过","bash -c \".venv/bin/python frameworks/langchain/scripts/verify_langchain_notebook.py\"",2026-08-18 18:10 CST,0,32 个无 Key cell 通过，2 个需 Key 标注
-5,更新 README 与记忆,DONE,"顶层 README、frameworks/langchain/README.md、memory 已更新","ls memory/research/2026-08-18-langchain-usage.md memory/artifacts/2026-08-18-langchain-usage.md",2026-08-18 18:10 CST,0,
