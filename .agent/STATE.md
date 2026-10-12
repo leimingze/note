@@ -1,11 +1,11 @@
 # 当前任务
 
-- 任务编号：20261010-git-sync
-- 当前方案：将当前学习笔记、配图及 DNS 任务记录提交到 `main`，推送至 `origin/main`。
+- 任务编号：20261012-network-git-sync
+- 当前方案：将计算机网络笔记及配图提交到 `main`，推送至 `origin/main`。
 - 远程配置：`origin` 为 `git@github.com:leimingze/note.git`。
-- 有效文件：`lvs/lvs.md`、`nginx/常见配置.md`、`nginx/assets/`、`开源书籍/dns以及http dns.md`、`开源书籍/大型互联网公司基础架构服务.md`、两份笔记的配图、`开源书籍/.agent/STATE.md`、`计算机网络/`。
-- 笔记提交：`c611c3a07215e8bd2c645dae076e4d6a764ac3a6`，提交信息为 `[update] 增加负载均衡和计算机网络学习笔记`，包含 14 个文件。
-- 验证情况：已核对当前变更清单及笔记图片引用，`git diff --cached --check` 通过；`git push origin main` 成功，`git ls-remote origin refs/heads/main` 确认远程包含上述笔记提交。
+- 有效文件：`计算机网络/网络模型.md`、`计算机网络/传输层.md`、`计算机网络/应用层.md`、`计算机网络/assets/`。
+- 笔记提交：`7e1440a09eb3854f6eb67162c05bb2d7863773c1`，提交信息为 `[update] 补充计算机网络部分知识`，包含 7 个文件变更；保留用户已有的文件调整，补充 TCP/UDP、应用层与协议封装说明及两张配图。
+- 验证情况：笔记引用的图片均存在，旧文件名引用检查未发现其他引用；清理三处空白格式问题后，`git diff --cached --check` 通过；`git push origin main` 成功，远程报告 `9e6206a..7e1440a main -> main`。
 - 未解决问题：无。
 - 下一步：无。
 - 归档位置：笔记同步任务已完成，未创建过程文件；本记录随仓库同步。
