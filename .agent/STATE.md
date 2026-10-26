@@ -1,14 +1,13 @@
 # 当前任务
 
 - 任务编号：20261026-mysql-transactions
-- 当前方案：`mysql/mysql事务.md` 采用简洁的正式技术笔记，按事务特性、并发读取异常、隔离级别、快照读与当前读、MVCC、锁与幻读组织。字段和判断分支归入所属机制，示例用于解释相应概念，不采用固定知识点计数或口述稿结构。
-- 内容关系：事务特性定义正确性要求，隔离级别规定并发可观察行为，MVCC 与锁提供读取和并发控制机制。
-- 有效文件：成稿 `mysql/mysql事务.md`；引用图片 `mysql/assets/image6.png`、`mysql/assets/image7.png`、`mysql/assets/image8.png`、`mysql/assets/image9.png`。
-- 技术依据：已阅读 MySQL 8.4 官方一致性读、隔离级别、多版本、锁和 ACID 文档，以及 MySQL 8.4.0 的 `read0types.h`、`read0read.cc`，正式链接在成稿末尾。已校正快照时机、串行化等待、活跃名单排除创建者、空集合边界、自身修改可见性、undo 指针及范围锁条件。
-- 验证情况：独立复核确认概念分类合理，未发现新增关键技术错误或明显重复。`git diff --check` 通过；正文共 138 行，固定编号、覆盖计数、口述化标题与过程标记已移除。引用图片路径未改变，此前已确认存在且非空，未进行图像内容核对。
-- 未解决问题：无已知正文问题。
+- 当前方案：已按用户要求，使用文件编辑工具将 `mysql/mysql事务.md` 恢复为本次整理开始前的原文内容。
+- 有效文件：恢复后的 `mysql/mysql事务.md`；原有内嵌图片 `mysql/assets/image6.png`、`mysql/assets/image7.png`、`mysql/assets/image8.png`、`mysql/assets/image9.png`。
+- 恢复依据：会话首次读取的完整原文，以及 `.agent/work/20261026-mysql-transactions/knowledge-outline.md` 中保存的原文引文。
+- 验证情况：独立复核确认正文、标题、原有拼写与四个内嵌图片引用一致；`git diff --check` 通过。当前 82 行、5873 字节，仅比原文件多一个末尾换行。
+- 未解决问题：无正文恢复缺项。
 - 下一步：无。
-- 归档位置：`.agent/work/20261026-mysql-transactions/` 已归档并保留原位置，包含初始核对稿、官方文档下载与两份源码；初始核对稿已被正式成稿替代，不作为当前交付。
+- 归档位置：`.agent/work/20261026-mysql-transactions/` 保留原位置；本次整理产物已停用，当前有效内容以恢复后的原文为准。
 
 # 已完成任务：20261021-notes-git-sync
 
