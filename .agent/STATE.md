@@ -1,10 +1,23 @@
 # 当前任务
 
+- 任务编号：20261028-mindmap-plugin
+- 当前方案：在 Obsidian 1.14.5 中启用 Mappy 0.4.11，停用 Rich Mindmap 0.3.1；当前已打开传输层的 `mappy-map` 视图。
+- 有效文件：`.obsidian/community-plugins.json`、`.obsidian/plugins/mappy/manifest.json`、`.obsidian/plugins/mappy/main.js`、`.obsidian/plugins/mappy/styles.css`、`计算机网络/obsidian/传输层.md`。插件文件及 Obsidian 配置沿用本机管理，未加入 Git。
+- 笔记格式：添加 `mappy: true` frontmatter，主题标题使用 H2，知识树继续使用嵌套列表；其余正文及 `../assets/` 图片引用保持原样。
+- 验证情况：官方发布安装包通过 `node --check`；Obsidian CLI 确认 Mappy 已启用、Rich Mindmap 未加载。当前视图解析为 `list`，有 104 个知识节点及 1 个主题节点，全部展开；15 个 `.mappy-node-attachments img` 的 `complete` 为 true，原图尺寸及显示尺寸均大于零，来源均为 `计算机网络/assets`。`dev:errors` 未捕获错误，`git diff --check` 通过。
+- 使用方式：节点显示标题和图片，节点右键的 `Edit body and links` 可查看完整正文。打开视图没有改写正文。
+- 环境恢复：验证时临时启用的 Obsidian CLI 已通过内置设置接口关闭，全局配置恢复原状。
+- 未解决问题：无插件安装或图片加载问题。
+- 下一步：无。
+- 归档位置：`.agent/work/20261028-mindmap-plugin/` 已归档并保留原位置，目录为空；有效笔记及插件路径如上。
+
+# 已完成任务：20261028-transport-single-note
+
 - 任务编号：20261028-transport-single-note
 - 当前方案：依据当前 `笔记整理/prompt.md`，将传输层内容组织为单份完整的 Markdown 追问笔记，使用在线课堂场景、嵌套列表及四字段引用块。
 - 有效文件：`计算机网络/obsidian/传输层.md`。图片通过 `../assets/` 直接引用 `计算机网络/assets` 中的原有文件。
 - 提示词规则：`笔记整理/prompt.md` 已规定根据输出笔记位置计算相对路径，直接引用原图，不复制或移动图片，不新建图片目录或符号链接；示例使用 `../assets/image16.png`。
-- 输入版本：`计算机网络/传输层.md` 的 SHA-256 为 `4eec069c6a539fcdcd6fccc79bc3b3600b2440249377a5faa10849f14de36790`；`笔记整理/prompt.md` 的 SHA-256 为 `27ac2397450942813178b9ef4cec19baf460ccf6816fd5e427f75b2a60d237a1`。
+- 输入版本：`计算机网络/传输层.md` 的 SHA-256 为 `4eec069c6a539fcdcd6fccc79bc3b3600b2440249377a5faa10849f14de36790`；当前 `笔记整理/prompt.md` 的 SHA-256 为 `da175046816f35c56be0c57e1a4ba9c13c234f41b074e7375f6ede151ef2e5d3`。
 - 验证情况：独立复核确认原文 83 项知识点、20 个 TODO 均已覆盖；MarkdownIt 解析核对 104 个知识节点，每节点具备场景、原理、记忆句、追问，无误缩进代码块或 HTML 残留；15 张图片均直接指向原有非空文件，`obsidian/assets` 链接已移除。SYN 携带数据的序号定义和 2MSL 寿命说明已校正。
 - 未解决问题：目标 Linux 内核与配置未指定，队列压力、异常 SYN、TIME-WAIT 接纳新 SYN 和 tcp_tw_reuse 的环境条件在对应正文节点标记 `[待核]`。
 - 下一步：无。
