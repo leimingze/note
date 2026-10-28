@@ -1,5 +1,16 @@
 # 当前任务
 
+- 任务编号：20261028-transport-single-note
+- 当前方案：依据当前 `笔记整理/prompt.md`，将传输层内容组织为单份完整的 Markdown 追问笔记，使用在线课堂场景、嵌套列表及四字段引用块。
+- 有效文件：`计算机网络/obsidian/传输层.md`。图片引用通过同目录 `assets` 相对符号链接指向 `../assets`。
+- 输入版本：`计算机网络/传输层.md` 的 SHA-256 为 `4eec069c6a539fcdcd6fccc79bc3b3600b2440249377a5faa10849f14de36790`；`笔记整理/prompt.md` 的 SHA-256 为 `27ac2397450942813178b9ef4cec19baf460ccf6816fd5e427f75b2a60d237a1`。
+- 验证情况：独立复核确认原文 83 项知识点、20 个 TODO 均已覆盖；MarkdownIt 解析核对 104 个知识节点，每节点具备场景、原理、记忆句、追问，无误缩进代码块或 HTML 残留；15 张原图路径与原文一致且文件有效。SYN 携带数据的序号定义和 2MSL 寿命说明已校正。
+- 未解决问题：目标 Linux 内核与配置未指定，队列压力、异常 SYN、TIME-WAIT 接纳新 SYN 和 tcp_tw_reuse 的环境条件在对应正文节点标记 `[待核]`。
+- 下一步：无。
+- 归档位置：本次未创建过程目录；正式交付物为上述单份笔记。
+
+# 已完成任务：20261026-mysql-transactions
+
 - 任务编号：20261026-mysql-transactions
 - 当前方案：已按用户要求，使用文件编辑工具将 `mysql/mysql事务.md` 恢复为本次整理开始前的原文内容。
 - 有效文件：恢复后的 `mysql/mysql事务.md`；原有内嵌图片 `mysql/assets/image6.png`、`mysql/assets/image7.png`、`mysql/assets/image8.png`、`mysql/assets/image9.png`。
