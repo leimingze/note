@@ -1,17 +1,5 @@
 # 当前任务
 
-- 任务编号：20261028-transport-obsidian
-- 当前方案：已依据 `笔记整理/prompt.md`，将 `计算机网络/传输层.md` 整理为在线课堂场景的追问知识库。原文保留；知识层级使用标准 Markdown 嵌套列表与引用块，总览使用 Mermaid。
-- 有效文件：入口 `计算机网络/obsidian/传输层.md`；同目录下 `传输层-协议与报文.md`、`传输层-连接建立.md`、`传输层-可靠传输.md`、`传输层-连接关闭.md`、`传输层-异常与保活.md`、`传输层-覆盖检查.md`、`传输层-脱稿记忆.md`。
-- 图片资源：`计算机网络/obsidian/assets` 为指向 `../assets` 的相对符号链接，15 张原图沿用 `assets/image*.png` 引用。
-- 输入版本：原文 SHA-256 为 `4eec069c6a539fcdcd6fccc79bc3b3600b2440249377a5faa10849f14de36790`；提示词 SHA-256 为 `e2db791d3a368b81317c199ef23ee4a3652f5bd3e5ead86e9d92c17661ebf328`。
-- 验证情况：独立内容复核通过；Markdown 解析检查通过，8 份文档、84 个四字段节点、83 项覆盖、20 个原 TODO、15 张原图均已核对，本地链接有效，各文件少于 300 行。检查命令：`python3 .agent/work/20261028-transport-obsidian/verify_notes.py`。
-- 未解决问题：UDP 长度字段的原文历史动机缺少来源；具体 Linux 队列处理、异常 SYN、TIME_WAIT 新 SYN 与 tcp_tw_reuse 配置需要目标内核信息。已在 `传输层-覆盖检查.md` 登记 `[待核]`，正文提供通用机制及适用条件。
-- 下一步：无。
-- 归档位置：`.agent/work/20261028-transport-obsidian/` 已归档，保留原位置，仅包含结构验证脚本；正式知识库以以上 8 份文档为准。
-
-# 已完成任务：20261026-mysql-transactions
-
 - 任务编号：20261026-mysql-transactions
 - 当前方案：已按用户要求，使用文件编辑工具将 `mysql/mysql事务.md` 恢复为本次整理开始前的原文内容。
 - 有效文件：恢复后的 `mysql/mysql事务.md`；原有内嵌图片 `mysql/assets/image6.png`、`mysql/assets/image7.png`、`mysql/assets/image8.png`、`mysql/assets/image9.png`。
