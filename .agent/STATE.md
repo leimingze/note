@@ -1,5 +1,20 @@
 # 当前任务
 
+- 任务编号：20261029-mysql-storage-notes
+- 当前方案：依当前 Mappy 提示词，分别整理 InnoDB 逻辑存储结构、Buffer Pool 与 SELECT 执行过程，保存到 `mysql/obsidian`。
+- 当前进度：三篇均已生成、完成独立内容复核并选定为有效笔记。
+- 有效文件：`mysql/obsidian/InnoDB 逻辑存储结构.md`、`mysql/obsidian/buffer pool.md`、`mysql/obsidian/select过程.md`。源 InnoDB 文件的扩展名前含 U+200B；新文件采用不含该不可见字符的名称，原文件未重命名。
+- 输入版本：InnoDB 源文 SHA-256 为 `d0c8cd3ed1de1c3f0dc994d7f7b044f1479a8fce83f44138d74b5eabbe251e89`；Buffer Pool 为 `8f601e00467e09991dc8e8f9120628d96797c4ca93a94221615bcae0b5ab3f18`；SELECT 为 `84756074676d95d4dc99399566ff68c737dfceba6f15db645a59e798e7a49c16`；提示词为 `a77b40ece7ca178c9e17db3ca6d6b80ce6c5fd44e076860cb5cc23647cba1eea`。
+- 验证情况：三篇分别为 24、34、15 个知识节点，220、316、141 行，共 73 个节点、4 张原图；MarkdownIt/YAML 结构、每节点四字段、正文归属及原图覆盖和路径检查通过。独立内容复核已结合官方文档核对 extent 分配、缓存管理、刷新、不可见列及优化成本的适用条件；最初 32 页的分配说明已限定默认 16 KiB 页。
+- 原文保护：三份源文及提示词的 SHA-256 与输入一致；图片直接引用 `mysql/assets`，未复制或移动图片。已有日志笔记在本次期间出现其他修改，保留当前内容且未纳入本次提交；事务笔记保持原样。
+- 校验入口：`PYTHONPATH=.agent/work/20261028-network-notes/dependencies python3 -c 'import json, runpy; checks = runpy.run_path(".agent/work/20261029-mysql-storage-notes/verify_storage_notes.py"); print(json.dumps([checks["check_note"](name) for name in checks["INPUTS"]], ensure_ascii=False, indent=2))'`。
+- 校验范围：上列命令核验本次三篇成稿、源文及原图。脚本直接运行还检查已有笔记的历史校验值，因 `mysql/obsidian/mysql日志.md` 的其他修改触发保护检查；保留该检查及文件，未修改其校验值。
+- 未解决问题：无本次生成范围内的待核项。
+- 下一步：无。
+- 归档位置：`.agent/work/20261029-mysql-storage-notes/` 已归档并保留原位置，已由 Git 忽略；包含复用既有 MarkdownIt/YAML 检查的过程脚本。
+
+# 已完成任务：20261029-mysql-notes
+
 - 任务编号：20261029-mysql-notes
 - 当前方案：依据当前 `笔记整理/prompt.md`，分别生成事务与日志的 Mappy 追问笔记，保存到 `mysql/obsidian`，直接引用 `mysql/assets` 原图。
 - 当前进度：两篇均已生成、完成独立内容复核并选定；源文件保持原样，相关技术条件按 MySQL 8.0/8.4 的 InnoDB 常见行为说明。
