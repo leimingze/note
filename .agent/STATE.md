@@ -1,5 +1,18 @@
 # 当前任务
 
+- 任务编号：20261029-mysql-log-clarity
+- 当前方案：将日志笔记各节点的场景改为具体操作与故障过程，原理用短句说明动作、原因和结果，并解释必要术语。
+- 当前进度：58 个节点的场景与原理均已改写，完成结构检查及独立内容复核。
+- 有效文件：`mysql/obsidian/mysql日志.md`。
+- 修改范围：仅更新笔记中的 58 处场景和 58 处原理；原有标题、问题层级、记忆句、追问、Mappy 标记及 4 张原图引用保持原样。
+- 验证情况：复用 MarkdownIt/YAML 检查，确认 58 个知识节点、534 行、每节点四字段完整，原图引用及源日志笔记校验值通过；本次文件的 `git diff --check` 通过。独立复核确认 MVCC、WAL、日志同步参数、复制和两阶段提交的关键条件保留。
+- 校验入口：`PYTHONPATH=.agent/work/20261028-network-notes/dependencies python3 -c 'import runpy; checks = runpy.run_path(".agent/work/20261029-mysql-notes/verify_mysql_notes.py"); print(checks["check_note"]("mysql日志.md"))'`。
+- 未解决问题：无。
+- 下一步：无。
+- 归档位置：未新增过程文件；复用 `.agent/work/20261029-mysql-notes/` 中已有校验入口。
+
+# 已完成任务：20261029-mysql-storage-notes
+
 - 任务编号：20261029-mysql-storage-notes
 - 当前方案：依当前 Mappy 提示词，分别整理 InnoDB 逻辑存储结构、Buffer Pool 与 SELECT 执行过程，保存到 `mysql/obsidian`。
 - 当前进度：三篇均已生成、完成独立内容复核并选定为有效笔记。
