@@ -1,5 +1,19 @@
 # 当前任务
 
+- 任务编号：20261029-mvcc-log-notes
+- 当前方案：在日志笔记的 undo 分支补充 MVCC 定义、依赖机制、版本选择过程、隔离级别差异及锁的作用，继续使用改名场景和五字段格式。
+- 当前进度：MVCC 主节点已更新，新增 10 个知识节点，结构检查与独立技术复核通过。
+- 有效文件：`mysql/obsidian/mysql日志.md`。
+- 输入与依据：以 Git 提交 `5eb8688` 中的日志笔记为输入；结合当前 `mysql/obsidian/mysql事务.md` 中已核对的 Read View、隐藏字段、版本链和隔离级别说明组织内容。
+- 内容覆盖：DB_TRX_ID、DB_ROLL_PTR 与 DB_ROW_ID 的区别，undo 逐版还原，Read View 活跃集合和边界，可见性四步判断，SELECT 查找示例，插入删除、自身修改、RC/RR 创建视图时机，以及 MVCC 与 ACID、锁的关系。
+- 验证情况：全文 68 个节点、760 行、4 张原图；五字段、正文归属、17 处下级答案指引和 51 处直接答案通过检查，源日志笔记校验值及原图覆盖检查通过。独立复核检查事务 ID 时序与删除、自身修改规则；`git diff --check` 通过。
+- 校验入口：复用 `.agent/work/20261029-mysql-prompt-refresh/verify_mysql_refresh.py` 的 `TRANSACTION["check_note"]("mysql日志.md")` 和 `check_fields`，解析依赖位于 `.agent/work/20261028-network-notes/dependencies`；本次新增节点，不使用历史任务要求知识树完全不变的检查。
+- 未解决问题：无。
+- 下一步：无。
+- 归档位置：未新增过程文件；原有校验文件保留原位置。
+
+# 已完成任务：20261029-mysql-prompt-refresh
+
 - 任务编号：20261029-mysql-prompt-refresh
 - 当前方案：统一提示词的五字段规则，并按具体场景、自然口述原理和完整追问答案要求更新 `mysql/obsidian` 的五篇笔记。
 - 当前进度：提示词与五篇笔记均已更新并选定，独立内容复核与统一结构检查通过。
