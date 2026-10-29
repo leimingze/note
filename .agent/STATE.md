@@ -1,5 +1,20 @@
 # 当前任务
 
+- 任务编号：20261029-mysql-notes
+- 当前方案：依据当前 `笔记整理/prompt.md`，分别生成事务与日志的 Mappy 追问笔记，保存到 `mysql/obsidian`，直接引用 `mysql/assets` 原图。
+- 当前进度：两篇均已生成、完成独立内容复核并选定；源文件保持原样，相关技术条件按 MySQL 8.0/8.4 的 InnoDB 常见行为说明。
+- 有效文件：`mysql/obsidian/mysql事务.md`、`mysql/obsidian/mysql日志.md`。
+- 输入版本：`mysql/mysql事务.md` 的 SHA-256 为 `b347c03b620f8520462e970608eb2c2b5a0ffdd05bd7c112c22af38519eb9db3`；`mysql/mysql日志.md` 为 `9a2e3d3b3f6ca884ee8a35068eb5708b9cf2d5f7bd17add12913b1155f7b416e`；提示词为 `a77b40ece7ca178c9e17db3ca6d6b80ce6c5fd44e076860cb5cc23647cba1eea`。
+- 验证情况：事务笔记 42 个知识节点、390 行，日志笔记 58 个知识节点、534 行；共 100 个节点，每节点四字段齐全。两篇各 4 张图片，通过 MarkdownIt/YAML 结构、正文归属、原图覆盖与路径检查，未新增图片目录；源文件 SHA-256 与输入一致。技术边界已结合 MySQL 8.4 官方手册、ReadView 源码及半同步历史源码核验，独立内容复核通过。
+- 内容覆盖：事务保留 ACID、三类并发读现象、隔离级别、金额与 V1/V2/V3 示例、MVCC、Read View、幻读及索引锁条件；日志保留 undo、redo、binlog、复制、UPDATE、两阶段提交，并补全异常启动、提交成本和磁盘 I/O 优化三项 TODO。
+- 原文保护：源事务笔记的已有修改、源日志及原图的原有 Git 状态保持原样，本次提交范围为两篇生成稿与本状态索引。
+- 校验入口：`PYTHONPATH=.agent/work/20261028-network-notes/dependencies python3 .agent/work/20261029-mysql-notes/verify_mysql_notes.py`，复用已验证的 MarkdownIt 与 YAML 检查。
+- 未解决问题：无本次生成范围内的待核项。
+- 下一步：无。
+- 归档位置：`.agent/work/20261029-mysql-notes/` 已归档并保留原位置，已由 Git 忽略；校验复用此前目录中的解析依赖及通用检查函数。
+
+# 已完成任务：20261028-network-notes
+
 - 任务编号：20261028-network-notes
 - 当前方案：依据 `笔记整理/prompt.md` 的 Mappy 格式，为 `计算机网络` 中除传输层之外的五份源文各生成一份完整笔记，保存到 `计算机网络/obsidian`。源文件和现有传输层笔记保持原样。
 - 当前进度：五篇均已生成、完成内容复核并选定为有效笔记。
