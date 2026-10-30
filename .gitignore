@@ -13,6 +13,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 /.agent/work/
+/身体数据/
 
 # Independently managed repositories; do not record them as gitlinks.
 /agent测评/原始资料/ai-engineering/
