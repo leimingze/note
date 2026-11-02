@@ -6,7 +6,7 @@ TASK-2026-11-02-AUTH-DESIGN，文档修改已完成。
 
 ## 当前方案
 
-登录与注册设计采用用户名密码及 QQ 登录，短期 JWT 配合 Redis 刷新会话。Access Token 最长15分钟，会话绝对期限7天，Refresh Token 强制原子轮换；用户索引关联稳定 sessionId。MySQL 保存账号状态和 authVersion，登录与刷新检查状态及版本。业务请求只验签 JWT，退出和封禁后已有 Access Token 可继续使用至到期。依据：笔记/登录与注册.md。
+登录与注册设计采用用户名密码及 QQ 登录，短期 JWT 配合 Redis 刷新会话。Access Token 最长15分钟，会话绝对期限7天，Refresh Token 强制原子轮换；用户索引关联稳定 sessionId。MySQL 保存账号状态和 authVersion，登录与刷新检查状态及版本。封禁或全部退出通过账号状态与版本阻止旧会话续期，Redis 数据按原 TTL 到期；刷新发现账号禁用或版本失效时撤销对应会话。业务请求只验签 JWT，退出和封禁后已有 Access Token 可继续使用至到期。依据：笔记/登录与注册.md。
 
 代码当前仅保留项目基座。后端提供配置校验、结构化日志、请求标识、访问日志、异常恢复、统一错误响应、健康探针、HTTP 超时及优雅退出；不注册业务路由，不连接 MySQL 或 Redis。controller、service、dao 保留目录占位。前端保留现有基础工程。
 
@@ -15,7 +15,7 @@ TASK-2026-11-02-AUTH-DESIGN，文档修改已完成。
 ## 有效文件
 
 - 笔记/登录与注册.md：当前认证设计，保留“思考、暂定方案”及客户端、服务端步骤格式。
-- 笔记/登录与注册-数据结构.md：四张 MySQL 表的字段与约束、Redis 会话及令牌映射、用户索引、QQ state 和频率计数。
+- 笔记/登录与注册-数据结构.md：三张 MySQL 表的字段与约束、Redis 会话及令牌映射、用户索引、QQ state 和频率计数。
 - backend/cmd/pulseframe-api/main.go：启动入口。
 - backend/config/、backend/logging/、backend/middleware/、backend/response/、backend/server/：基础能力。
 - backend/controller/.gitkeep、backend/service/.gitkeep、backend/dao/.gitkeep：业务目录占位。
@@ -26,7 +26,7 @@ TASK-2026-11-02-AUTH-DESIGN，文档修改已完成。
 
 ## 验证情况
 
-本次文档：流程267行、数据结构237行，代码块闭合及双向文件引用检查通过。已检查登录、刷新轮换、重放、退出、封禁恢复、并发注册及 QQ 账号关联流程；清理任务按版本保留账号恢复后新建的会话。未执行接口或数据库测试，文档中的流程与表结构尚未编写为业务代码或建表脚本。
+本次文档：已核对封禁、全部退出、刷新版本校验及 Redis 绝对期限的关系。MySQL 仅设计 users、password_credentials、external_identities 三张表。未执行接口或数据库测试，文档中的流程与表结构尚未编写为业务代码或建表脚本。
 
 基座既有验证（2026-10-15）：
 
