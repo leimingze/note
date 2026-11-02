@@ -6,6 +6,8 @@ TASK-2026-11-02-AUTH-DESIGN，文档修改已完成。
 
 ## 当前方案
 
+QQ 授权上下文仅保留 browserBindingDigest、targetUserId、targetAuthVersion。登录只写浏览器绑定摘要，绑定账号时写入全部三个字段。重新认证成功后立即创建上下文并设置5分钟 TTL；应用和跳转地址使用服务端固定配置。绑定事务检查账号状态与版本，失败时直接拒绝。
+
 Redis 刷新会话仅保存 userId、authVersion、currentTokenDigest、absoluteExpiresAt 四个字段，分别用于确定用户、校验账号版本、原子轮换令牌和保持固定到期时间。
 
 refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原子删除旧映射、创建新映射并更新会话摘要；旧令牌查不到映射时拒绝刷新，不连带撤销当前会话。退出使用当前令牌，原子删除映射和会话。
@@ -30,7 +32,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 ## 验证情况
 
-本次文档：已核对当前令牌映射的创建、原子轮换、并发失败和退出行为，以及四个会话字段、账号版本和固定到期时间的用途。MySQL 仅设计 users、password_credentials、external_identities 三张表。未执行接口或数据库测试，文档中的流程与表结构尚未编写为业务代码或建表脚本。
+本次文档：已核对 QQ 登录与绑定的字段来源、流程判定、一次性消费、5分钟 TTL 和绑定事务中的账号状态及版本检查，以及刷新会话的轮换与退出关系。MySQL 仅设计 users、password_credentials、external_identities 三张表。未执行接口或数据库测试，文档中的流程与表结构尚未编写为业务代码或建表脚本。
 
 基座既有验证（2026-10-15）：
 
