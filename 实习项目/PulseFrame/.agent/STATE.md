@@ -2,13 +2,13 @@
 
 ## 当前任务
 
-TASK-2026-11-03-NOTES-ORGANIZE，按已确认清单将笔记分为项目设计和学习笔记，入口为笔记/README.md。
+TASK-2026-11-03-NOTES-ORGANIZE，文档统一保存在 docs/，分为项目设计和学习笔记，入口为 docs/README.md。
 
 ## 当前方案
 
-笔记/设计/ 保存5份项目方案与文件索引；笔记/学习笔记/ 保存2份通用知识文档及 assets/ 中的4张配图，原有文档和图片内容保持不变。
+docs/设计/ 保存5份项目方案与文件索引；docs/学习笔记/ 保存2份通用知识文档及 assets/ 中的4张配图，原有文档和图片内容保持不变。
 
-可用性与高并发治理的职责、进度及连接池讨论范围见笔记/设计/服务可用性与高并发治理.md，该文档引用 MySQL 和 Redis 的独立文件索引。MySQL 通过 go-sql-driver/mysql v1.10.1 和 database/sql 接入；config 读取配置，infra 创建并检查连接，cmd/pulseframe-api/dependencies.go 持有和关闭连接池，main.go 组织启动及退出。单进程默认最多20个连接、5个空闲连接，连接最长存活30分钟、空闲5分钟，均可配置。账号、密码、数据库为显式配置，密码保留原值；启动检查失败直接返回错误。
+可用性与高并发治理的职责、进度及连接池讨论范围见 docs/设计/服务可用性与高并发治理.md，该文档引用 MySQL 和 Redis 的独立文件索引。MySQL 通过 go-sql-driver/mysql v1.10.1 和 database/sql 接入；config 读取配置，infra 创建并检查连接，cmd/pulseframe-api/dependencies.go 持有和关闭连接池，main.go 组织启动及退出。单进程默认最多20个连接、5个空闲连接，连接最长存活30分钟、空闲5分钟，均可配置。账号、密码、数据库为显式配置，密码保留原值；启动检查失败直接返回错误。
 
 MySQL 连接池等待使用操作 Context 的截止时间，网络读写超时单独配置；使用方负责释放查询结果、事务和显式获取的连接。Redis 与外部 HTTP 客户端尚未编写；关闭 Redis 客户端自动重试为建议方案，尚未确认。部署连接预算及监测继续讨论。
 
@@ -16,7 +16,7 @@ MySQL 连接池等待使用操作 Context 的截止时间，网络读写超时�
 
 登录与注册.md 的每个暂定流程已标注相关 MySQL 表、Redis key 及读写操作；登录通过 password_credentials.user_id 关联 users.id，QQ 身份通过 external_identities.user_id 关联 users.id。
 
-登录按账号与 IP 两个维度限流，注册按 IP 限流。Redis ZSET 记录滑动窗口内已允许进入处理的请求，Lua 原子检查并计数；超额返回429，Redis 不可用返回503，窗口和额度通过配置管理。规则见笔记/设计/登录与注册.md 的2.7。
+登录按账号与 IP 两个维度限流，注册按 IP 限流。Redis ZSET 记录滑动窗口内已允许进入处理的请求，Lua 原子检查并计数；超额返回429，Redis 不可用返回503，窗口和额度通过配置管理。规则见 docs/设计/登录与注册.md 的2.7。
 
 QQ 授权上下文仅保留 browserBindingDigest、targetUserId、targetAuthVersion。登录只写浏览器绑定摘要，绑定账号时写入全部三个字段。重新认证成功后立即创建上下文并设置5分钟 TTL；应用和跳转地址使用服务端固定配置。绑定事务检查账号状态与版本，失败时直接拒绝。
 
@@ -24,7 +24,7 @@ Redis 刷新会话仅保存 userId、authVersion、currentTokenDigest、absolute
 
 refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原子删除旧映射、创建新映射并更新会话摘要；旧令牌查不到映射时拒绝刷新，不连带撤销当前会话。退出使用当前令牌，原子删除映射和会话。
 
-登录与注册设计采用用户名密码及 QQ 登录，短期 JWT 配合 Redis 刷新会话。Access Token 最长15分钟，会话绝对期限7天，Refresh Token 强制原子轮换，sessionId 保持不变。MySQL 保存账号状态和 authVersion，登录与刷新检查状态及版本。封禁或全部退出通过账号状态与版本阻止旧会话续期，Redis 数据按原 TTL 到期；刷新发现账号禁用或版本失效时撤销对应会话。业务请求只验签 JWT，退出和封禁后已有 Access Token 可继续使用至到期。依据：笔记/设计/登录与注册.md。
+登录与注册设计采用用户名密码及 QQ 登录，短期 JWT 配合 Redis 刷新会话。Access Token 最长15分钟，会话绝对期限7天，Refresh Token 强制原子轮换，sessionId 保持不变。MySQL 保存账号状态和 authVersion，登录与刷新检查状态及版本。封禁或全部退出通过账号状态与版本阻止旧会话续期，Redis 数据按原 TTL 到期；刷新发现账号禁用或版本失效时撤销对应会话。业务请求只验签 JWT，退出和封禁后已有 Access Token 可继续使用至到期。依据：docs/设计/登录与注册.md。
 
 代码当前为项目基座及 MySQL 连接池。后端提供配置校验、结构化日志、请求标识、访问日志、异常恢复、统一错误响应、健康探针、HTTP 超时及优雅退出；启动时连接 MySQL，不注册业务路由，不连接 Redis。controller、service、dao 保留目录占位。前端保留现有基础工程。
 
@@ -32,13 +32,13 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 ## 有效文件
 
-- 笔记/README.md：项目设计与学习笔记的统一入口。
-- 笔记/设计/服务可用性与高并发治理.md：职责与进度表，引用 MySQL 和 Redis 文件索引。
-- 笔记/设计/MySQL连接池-文件索引.md：仅列 MySQL 连接池配置、创建、启动管理及依赖清单相关文件与职责；Agent 执行时的测试和文档维护要求不列入表格。
-- 笔记/设计/Redis连接池-文件索引.md：Redis 连接池配置、创建、启动管理及依赖清单相关文件与职责。
-- 笔记/设计/登录与注册.md：当前认证设计，保留“思考、暂定方案”及客户端、服务端步骤格式。
-- 笔记/设计/登录与注册-数据结构.md：三张 MySQL 表的字段与约束、Redis 会话及令牌映射、QQ state 和频率计数。
-- 笔记/学习笔记/注册与发现.md、笔记/学习笔记/通用高并发架构设计/高并发架构设计要点.md：通用知识笔记；配图保存在笔记/学习笔记/assets/。
+- docs/README.md：项目设计与学习笔记的统一入口。
+- docs/设计/服务可用性与高并发治理.md：职责与进度表，引用 MySQL 和 Redis 文件索引。
+- docs/设计/MySQL连接池-文件索引.md：仅列 MySQL 连接池配置、创建、启动管理及依赖清单相关文件与职责；Agent 执行时的测试和文档维护要求不列入表格。
+- docs/设计/Redis连接池-文件索引.md：Redis 连接池配置、创建、启动管理及依赖清单相关文件与职责。
+- docs/设计/登录与注册.md：当前认证设计，保留“思考、暂定方案”及客户端、服务端步骤格式。
+- docs/设计/登录与注册-数据结构.md：三张 MySQL 表的字段与约束、Redis 会话及令牌映射、QQ state 和频率计数。
+- docs/学习笔记/注册与发现.md、docs/学习笔记/通用高并发架构设计/高并发架构设计要点.md：通用知识笔记；配图保存在 docs/学习笔记/assets/。
 - backend/cmd/pulseframe-api/main.go：启动入口。
 - backend/config/mysql.go、backend/infra/mysql.go、backend/cmd/pulseframe-api/dependencies.go：MySQL 配置、连接创建及生命周期管理。
 - backend/test/mysql_config_test.go、backend/test/mysql_test.go、backend/cmd/pulseframe-api/dependencies_test.go：配置校验及真实数据库集成测试。
@@ -51,7 +51,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 ## 验证情况
 
-目录整理（2026-11-03）：7份文档和4张图片的 Git 内容校验值与移动前一致；核对索引、文档互链、图片路径及旧路径引用，检查 git diff --check。未修改或运行后端代码。
+目录整理（2026-11-03）：7份文档和4张图片的 Git 内容校验值与移动前一致；目录统一为 docs/，入口索引标题为“文档索引”；核对索引、文档互链、图片路径及旧路径引用，检查 git diff --check。未修改或运行后端代码。
 
 注释更新（2026-11-03）：补充配置分支、批量时长赋值、连接创建与关闭、测试场景的中文说明，并逐项说明配置字段与包级常量的含义、单位和作用范围；仅修改注释及格式。go test -timeout=60s ./...、go vet -tags=mysqlintegration ./... 和 git diff --check 通过；未重复运行真实 MySQL 集成测试。
 
