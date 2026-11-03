@@ -52,6 +52,7 @@ func TestDependenciesLifecycle(t *testing.T) {
 // 输出：监听失败未向启动入口传播时测试失败。
 // 功能：验证 MySQL 初始化成功后的 HTTP 启动失败路径。
 func TestRunListenFailure(t *testing.T) {
+	// 先占用真实监听端口，使应用完成数据库初始化后在 HTTP 监听阶段失败。
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -82,6 +83,7 @@ func TestRunGracefulShutdown(t *testing.T) {
 	result := make(chan error, 1)
 	go func() { result <- run(ctx, appEnvironment(address)) }()
 	readyErr := waitForApplication(ctx, address)
+	// 无论就绪检查成功与否，都通知后台服务退出并等待最终结果。
 	cancel()
 	select {
 	case err := <-result:
@@ -118,6 +120,7 @@ func waitForApplication(ctx context.Context, address string) error {
 	client := &http.Client{Transport: transport, Timeout: appTestTimeout}
 	ticker := time.NewTicker(appPollInterval)
 	defer ticker.Stop()
+	// 等待后台启动期间允许连接尚未建立，只在真实就绪响应或期限结束时返回。
 	for {
 		request, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+address+"/readyz", nil)
 		if err != nil {

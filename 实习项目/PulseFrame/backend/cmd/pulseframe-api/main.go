@@ -52,11 +52,14 @@ func run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 		return fmt.Errorf("create logger: %w", err)
 	}
 	gin.SetMode(ginMode(cfg.Environment))
+	// 数据库启动检查通过后才创建 HTTP 服务，失败时直接结束启动流程。
 	dependencies, err := NewDependencies(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("create dependencies: %w", err)
 	}
+	// 立即登记清理，覆盖后续启动失败和正常退出；正常退出时 HTTP 已完成请求处理。
 	defer func() {
+		// 写入命名返回值，同时保留运行错误和关闭错误，关闭失败也能传回 main。
 		runErr = errors.Join(runErr, dependencies.Close())
 	}()
 

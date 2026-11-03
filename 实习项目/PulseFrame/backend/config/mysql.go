@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// 可选配置缺失时使用这些默认值；每个后端进程分别计算连接数量。
 const (
 	defaultMySQLAddress        = "127.0.0.1:3306"
 	defaultMySQLMaxOpenConns   = 20
@@ -21,13 +22,16 @@ const (
 
 // MySQL 保存单个进程使用的数据库连接池配置。
 type MySQL struct {
-	Address         string
-	User            string
-	Password        string
-	Database        string
-	TLSMode         string
-	MaxOpenConns    int
-	MaxIdleConns    int
+	// 连接目标与认证信息由启动配置提供，密码保留原始字符。
+	Address  string
+	User     string
+	Password string
+	Database string
+	TLSMode  string
+	// 最大连接数包含正在使用和空闲的连接，空闲上限不会预先创建连接。
+	MaxOpenConns int
+	MaxIdleConns int
+	// 网络超时、启动检查期限和连接回收期限分别控制不同阶段。
 	ConnectTimeout  time.Duration
 	ReadTimeout     time.Duration
 	WriteTimeout    time.Duration
@@ -40,6 +44,7 @@ type MySQL struct {
 // 输出：MySQL 配置；必填项缺失或参数非法时返回错误。
 // 功能：读取连接信息和连接池参数，密码始终保留原值。
 func loadMySQL(lookup LookupEnv) (MySQL, error) {
+	// 区分未设置和显式空密码；不清理空白，以免改变数据库认证信息。
 	password, exists := lookup("MYSQL_PASSWORD")
 	if !exists {
 		return MySQL{}, fmt.Errorf("MYSQL_PASSWORD must be explicitly set")
@@ -52,6 +57,7 @@ func loadMySQL(lookup LookupEnv) (MySQL, error) {
 		TLSMode: readValue(lookup, "MYSQL_TLS_MODE", "false"),
 	}
 	var err error
+	// 先解析非负整数，再由统一校验检查最大连接数和空闲数量之间的关系。
 	cfg.MaxOpenConns, err = parseNonNegativeInt(lookup, "MYSQL_MAX_OPEN_CONNS", defaultMySQLMaxOpenConns)
 	if err != nil {
 		return MySQL{}, err
@@ -60,6 +66,7 @@ func loadMySQL(lookup LookupEnv) (MySQL, error) {
 	if err != nil {
 		return MySQL{}, err
 	}
+	// 每项关联环境变量、默认时长和 cfg 字段地址，便于统一读取六项期限。
 	durations := []struct {
 		key      string
 		fallback time.Duration
@@ -73,12 +80,15 @@ func loadMySQL(lookup LookupEnv) (MySQL, error) {
 		{"MYSQL_CONN_MAX_IDLE_TIME", defaultMySQLConnIdleTime, &cfg.ConnMaxIdleTime},
 	}
 	for _, item := range durations {
+		// 任一时长非法就终止加载，防止只配置了一部分期限仍继续启动。
 		value, err := parsePositiveDuration(lookup, item.key, item.fallback)
 		if err != nil {
 			return MySQL{}, err
 		}
+		// target 指向 cfg 内的对应字段，将解析结果写回同一个配置对象。
 		*item.target = value
 	}
+	// 字段全部读取完成后检查整体约束，调用方必须先检查返回的错误。
 	return cfg, cfg.Validate()
 }
 
@@ -86,6 +96,7 @@ func loadMySQL(lookup LookupEnv) (MySQL, error) {
 // 输出：合法时返回 nil，否则返回包含配置名称的错误。
 // 功能：在建立网络连接前拒绝无效地址、无限连接数量和无效超时。
 func (cfg MySQL) Validate() error {
+	// 先确认连接目标有效，再检查容量和期限；供环境加载和直接构造配置共用。
 	if err := cfg.validateConnection(); err != nil {
 		return err
 	}
@@ -96,19 +107,23 @@ func (cfg MySQL) Validate() error {
 // 输出：地址、账号、数据库或 TLS 模式非法时返回错误。
 // 功能：校验连接目标，防止驱动自动补全缺失的必要信息。
 func (cfg MySQL) validateConnection() error {
+	// 空白检查只用于判断必填项，保留原始账号和数据库名称用于连接。
 	for key, value := range map[string]string{"MYSQL_USER": cfg.User, "MYSQL_DATABASE": cfg.Database} {
 		if strings.TrimSpace(value) == "" {
 			return fmt.Errorf("%s is required", key)
 		}
 	}
+	// 标准库同时支持主机名、IPv4 和带方括号的 IPv6 地址。
 	host, portText, err := net.SplitHostPort(cfg.Address)
 	if err != nil || strings.TrimSpace(host) == "" {
 		return fmt.Errorf("MYSQL_ADDR must use a nonempty host:port")
 	}
+	// 端口须为有效范围内的数字，格式正确不代表端口值可用。
 	port, err := strconv.Atoi(portText)
 	if err != nil || port < minimumPort || port > maximumPort {
 		return fmt.Errorf("MYSQL_ADDR port must be between %d and %d", minimumPort, maximumPort)
 	}
+	// 启用 TLS 时使用驱动的证书校验，不接受跳过验证等其他模式。
 	if cfg.TLSMode != "false" && cfg.TLSMode != "true" {
 		return fmt.Errorf("MYSQL_TLS_MODE must be false or true")
 	}
@@ -119,12 +134,15 @@ func (cfg MySQL) validateConnection() error {
 // 输出：容量关系或时长非法时返回错误。
 // 功能：确保连接数量有上限，等待网络与连接回收均具有明确期限。
 func (cfg MySQL) validatePool() error {
+	// sql.DB 将非正上限视为不限制连接数量，此处要求显式限制资源使用。
 	if cfg.MaxOpenConns <= 0 {
 		return fmt.Errorf("MYSQL_MAX_OPEN_CONNS must be greater than zero")
 	}
+	// 零表示不保留空闲连接；超过总上限的配置直接报错，不依赖连接池自动调整。
 	if cfg.MaxIdleConns < 0 || cfg.MaxIdleConns > cfg.MaxOpenConns {
 		return fmt.Errorf("MYSQL_MAX_IDLE_CONNS must be between zero and MYSQL_MAX_OPEN_CONNS")
 	}
+	// 对直接构造的配置也检查所有期限，防止绕过环境变量解析时的校验。
 	for key, value := range map[string]time.Duration{
 		"MYSQL_CONNECT_TIMEOUT":    cfg.ConnectTimeout,
 		"MYSQL_READ_TIMEOUT":       cfg.ReadTimeout,
@@ -144,6 +162,7 @@ func (cfg MySQL) validatePool() error {
 // 输出：非负整数；格式错误、溢出或负数返回错误。
 // 功能：读取连接数量，允许空闲连接数为零以关闭空闲连接保留。
 func parseNonNegativeInt(lookup LookupEnv, key string, fallback int) (int, error) {
+	// 可选值缺失时使用默认值，已提供但格式错误或为负数时明确返回错误。
 	value, err := strconv.Atoi(readValue(lookup, key, strconv.Itoa(fallback)))
 	if err != nil || value < 0 {
 		return 0, fmt.Errorf("%s must be a nonnegative integer", key)

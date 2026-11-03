@@ -15,9 +15,11 @@ import (
 // 输出：已检查连通性的连接池；失败时关闭已创建的连接池并返回错误。
 // 功能：创建可供进程内并发复用的 sql.DB，成功后由调用方负责关闭。
 func NewMySQL(ctx context.Context, cfg config.MySQL) (*sql.DB, error) {
+	// 调用方也可能直接构造配置，因此创建连接前仍检查完整约束。
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("validate mysql config: %w", err)
 	}
+	// 保留驱动的默认行为，仅覆盖项目明确管理的连接选项。
 	driverConfig := mysql.NewConfig()
 	driverConfig.Net = "tcp"
 	driverConfig.Addr = cfg.Address
@@ -25,6 +27,7 @@ func NewMySQL(ctx context.Context, cfg config.MySQL) (*sql.DB, error) {
 	driverConfig.Passwd = cfg.Password
 	driverConfig.DBName = cfg.Database
 	driverConfig.TLSConfig = cfg.TLSMode
+	// 日期时间字段按 time.Time 读取，便于后续模型字段映射。
 	driverConfig.ParseTime = true
 	driverConfig.Timeout = cfg.ConnectTimeout
 	driverConfig.ReadTimeout = cfg.ReadTimeout
@@ -34,13 +37,16 @@ func NewMySQL(ctx context.Context, cfg config.MySQL) (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create mysql connector: %w", err)
 	}
+	// OpenDB 创建连接池对象，真实连接在后续 PingContext 中建立并检查。
 	db := sql.OpenDB(connector)
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.MaxIdleConns)
 	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
 	db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
+	// 启动检查同时受自身期限和父上下文取消控制；返回时释放计时资源。
 	checkContext, cancel := context.WithTimeout(ctx, cfg.StartupTimeout)
 	defer cancel()
+	// 检查失败时不会将连接池交给调用方，因此这里关闭并保留检查及关闭错误。
 	if err := db.PingContext(checkContext); err != nil {
 		return nil, errors.Join(fmt.Errorf("ping mysql: %w", err), db.Close())
 	}

@@ -89,6 +89,7 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 	}
 	// 每组输入只包含一个错误，便于定位校验失效位置。
 	for _, values := range cases {
+		// 补齐有效的数据库配置，确保失败来自本轮待验证的基础配置项。
 		complete := mysqlEnvironment()
 		for key, value := range values {
 			complete[key] = value

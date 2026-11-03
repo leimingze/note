@@ -92,6 +92,7 @@ func Load(lookup LookupEnv) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	// MySQL 是启动所需依赖，认证信息及连接池参数均须在建立连接前通过校验。
 	mysqlConfig, err := loadMySQL(lookup)
 	if err != nil {
 		return Config{}, err

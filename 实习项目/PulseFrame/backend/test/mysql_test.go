@@ -44,6 +44,7 @@ func openMySQL(t *testing.T, cfg config.MySQL) *sql.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// 即使后续断言提前结束测试，也关闭已建立的真实数据库连接。
 	t.Cleanup(func() {
 		if err := db.Close(); err != nil {
 			t.Error(err)
@@ -87,6 +88,7 @@ func TestMySQLReuseAndClose(t *testing.T) {
 // 功能：验证有界连接池的等待取消与连接归还行为。
 func TestMySQLPoolWaitCancellation(t *testing.T) {
 	cfg := integrationMySQLConfig(t)
+	// 保持唯一连接被借用，让后续获取操作必然进入等待状态。
 	cfg.MaxOpenConns, cfg.MaxIdleConns = 1, 1
 	db := openMySQL(t, cfg)
 	conn, err := db.Conn(t.Context())
@@ -104,6 +106,7 @@ func TestMySQLPoolWaitCancellation(t *testing.T) {
 	if stats.InUse != 1 || stats.OpenConnections != 1 || stats.WaitCount == 0 {
 		t.Fatalf("unexpected saturated pool statistics: %+v", stats)
 	}
+	// 归还连接后再次访问，确认等待超时只取消当前获取操作，连接池仍可使用。
 	if err := conn.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -128,6 +131,7 @@ func TestMySQLNoIdleConnections(t *testing.T) {
 // 输出：正在运行的查询未响应取消或连接池不能恢复时测试失败。
 // 功能：验证请求上下文能够中止真实 SQL 查询并释放连接。
 func TestMySQLQueryCancellation(t *testing.T) {
+	// SQL 等待时间长于上下文期限，用真实慢查询验证取消能够传递到驱动。
 	db := openMySQL(t, integrationMySQLConfig(t))
 	ctx, cancel := context.WithTimeout(t.Context(), poolWaitTimeout)
 	defer cancel()
@@ -151,6 +155,7 @@ func TestMySQLReadTimeout(t *testing.T) {
 	defer cancel()
 	started := time.Now()
 	_, err := db.ExecContext(ctx, "SELECT SLEEP(?)", serverSleepSeconds)
+	// 上下文仍有效且 SQL 尚未自然结束，才能确认失败来自驱动的读取超时。
 	if err == nil || ctx.Err() != nil || time.Since(started) >= time.Duration(serverSleepSeconds)*time.Second {
 		t.Fatalf("driver read timeout was not enforced: %v", err)
 	}
@@ -167,6 +172,7 @@ func TestMySQLStartupFailures(t *testing.T) {
 	if db != nil || !errors.Is(err, context.Canceled) {
 		t.Fatalf("canceled startup returned pool=%v error=%v", db != nil, err)
 	}
+	// 保留有效连接配置，仅缩短启动检查期限以验证该期限能独立生效。
 	shortDeadline := cfg
 	shortDeadline.StartupTimeout = time.Nanosecond
 	db, err = infra.NewMySQL(t.Context(), shortDeadline)
@@ -210,6 +216,7 @@ func TestMySQLConnectionLifetime(t *testing.T) {
 	if err := db.QueryRowContext(t.Context(), "SELECT CONNECTION_ID()").Scan(&first); err != nil {
 		t.Fatal(err)
 	}
+	// 等到连接超过存活期限后再次借用，通过连接编号变化检查回收行为。
 	select {
 	case <-t.Context().Done():
 		t.Fatal(t.Context().Err())

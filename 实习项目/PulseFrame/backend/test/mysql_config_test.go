@@ -73,6 +73,7 @@ func TestMySQLOverrides(t *testing.T) {
 // 输出：缺失必填变量未被拒绝时测试失败。
 // 功能：确保数据库必填项不会采用隐含账号或数据库。
 func TestMySQLRequiredVariables(t *testing.T) {
+	// 每轮只移除一个必填项，确认错误能够指出对应变量。
 	for _, key := range []string{"MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_DATABASE"} {
 		values := mysqlEnvironment()
 		delete(values, key)
@@ -96,6 +97,7 @@ func TestMySQLRejectsInvalidValues(t *testing.T) {
 		{"MYSQL_MAX_OPEN_CONNS", "abc"}, {"MYSQL_MAX_OPEN_CONNS", "999999999999999999999"},
 		{"MYSQL_MAX_IDLE_CONNS", "-1"}, {"MYSQL_MAX_IDLE_CONNS", "21"},
 	}
+	// 每轮从有效配置开始，只覆盖当前待验证的非法值，保持各场景相互独立。
 	for _, item := range cases {
 		values := mysqlEnvironment()
 		values[item.key] = item.value
@@ -114,6 +116,7 @@ func TestMySQLRejectsInvalidDurations(t *testing.T) {
 		"MYSQL_CONNECT_TIMEOUT", "MYSQL_READ_TIMEOUT", "MYSQL_WRITE_TIMEOUT",
 		"MYSQL_STARTUP_TIMEOUT", "MYSQL_CONN_MAX_LIFETIME", "MYSQL_CONN_MAX_IDLE_TIME",
 	}
+	// 逐项验证三类错误，防止某个期限遗漏正数和格式校验。
 	for _, key := range keys {
 		for _, raw := range []string{"0s", "-1s", "invalid"} {
 			values := mysqlEnvironment()
