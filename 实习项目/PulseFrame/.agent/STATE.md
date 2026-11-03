@@ -6,6 +6,8 @@ TASK-2026-11-02-AUTH-DESIGN，文档修改已完成。
 
 ## 当前方案
 
+可用性与高并发治理要求见笔记/服务可用性与高并发治理.md：当前明确超时、连接池、重试与幂等、频率及并发限制、资源隔离、有限排队和故障响应；熔断、高可用、自适应限流、缓存及数据分片按目标与监测证据选择。
+
 登录名区分大小写。注册、登录保留原始 username，MySQL 使用 ascii_bin 唯一索引；abc 与 ABC 可分别注册。账号限流 key 直接使用原始 username。IP 限流 key 使用可信来源的 normalizedIp，通过 Go net/netip 解析、Unmap、String 规范化；同一 IPv6 地址的不同写法共用计数。
 
 登录与注册.md 的每个暂定流程已标注相关 MySQL 表、Redis key 及读写操作；登录通过 password_credentials.user_id 关联 users.id，QQ 身份通过 external_identities.user_id 关联 users.id。
@@ -26,6 +28,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 ## 有效文件
 
+- 笔记/服务可用性与高并发治理.md：认证模块的可用性治理、引入条件、指标和验证场景。
 - 笔记/登录与注册.md：当前认证设计，保留“思考、暂定方案”及客户端、服务端步骤格式。
 - 笔记/登录与注册-数据结构.md：三张 MySQL 表的字段与约束、Redis 会话及令牌映射、QQ state 和频率计数。
 - backend/cmd/pulseframe-api/main.go：启动入口。
@@ -38,7 +41,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 ## 验证情况
 
-本次文档：已核对三类限流 key 在登录、注册、公共限流流程和数据结构文档中的一致性，用户名保留原始大小写，IP 使用统一规范字符串。Refresh Token 与 QQ 授权凭据仍采用原有摘要存储。未执行接口或数据库测试，文档中的流程与表结构尚未编写为业务代码或建表脚本。
+本次文档：已核对治理要求与现有认证方案的关系，包括三类限流 key、刷新结果不确定时重新登录、依赖故障返回503，以及认证会话不能从用户表重建。未执行接口、数据库或故障切换测试，治理措施为设计要求。
 
 基座既有验证（2026-10-15）：
 
@@ -59,4 +62,4 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 原注册代码保留在 Git 提交 52812e0；基座版本为 2393c31。过程目录 .agent/work/20261015-pulseframe-base/ 已归档并保留原位置，受 .gitignore 保护。
 
-本次正式文档为笔记/登录与注册.md、笔记/登录与注册-数据结构.md；编辑补丁位于 /Users/leimingze/notes/开源书籍/.agent/work/20261102-auth-design/，已归档并受该目录的 Git 忽略规则保护。
+本次正式文档为笔记/登录与注册.md、笔记/登录与注册-数据结构.md、笔记/服务可用性与高并发治理.md；编辑补丁位于 /Users/leimingze/notes/开源书籍/.agent/work/20261102-auth-design/，已归档并受该目录的 Git 忽略规则保护。
