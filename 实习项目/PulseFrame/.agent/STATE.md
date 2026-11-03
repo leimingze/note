@@ -6,7 +6,7 @@ TASK-2026-11-02-AUTH-DESIGN，文档修改已完成。
 
 ## 当前方案
 
-登录名区分大小写。注册、登录保留原始 username，MySQL 使用 ascii_bin 唯一索引；abc 与 ABC 可分别注册。账号限流摘要按原始大小写计算，两个登录名分别计数，IP 限流仍按来源地址计数。
+登录名区分大小写。注册、登录保留原始 username，MySQL 使用 ascii_bin 唯一索引；abc 与 ABC 可分别注册。账号限流 key 直接使用原始 username。IP 限流 key 使用可信来源的 normalizedIp，通过 Go net/netip 解析、Unmap、String 规范化；同一 IPv6 地址的不同写法共用计数。
 
 登录与注册.md 的每个暂定流程已标注相关 MySQL 表、Redis key 及读写操作；登录通过 password_credentials.user_id 关联 users.id，QQ 身份通过 external_identities.user_id 关联 users.id。
 
@@ -38,7 +38,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 ## 验证情况
 
-本次文档：已核对用户名原始大小写在注册、登录、ascii_bin 唯一约束和账号限流摘要中的一致性；abc 与 ABC 分属不同登录名。MySQL 字段使用 auth_version，会话字段使用 authVersion。未执行接口或数据库测试，文档中的流程与表结构尚未编写为业务代码或建表脚本。
+本次文档：已核对三类限流 key 在登录、注册、公共限流流程和数据结构文档中的一致性，用户名保留原始大小写，IP 使用统一规范字符串。Refresh Token 与 QQ 授权凭据仍采用原有摘要存储。未执行接口或数据库测试，文档中的流程与表结构尚未编写为业务代码或建表脚本。
 
 基座既有验证（2026-10-15）：
 
