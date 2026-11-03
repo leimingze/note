@@ -16,11 +16,11 @@ import (
 )
 
 const (
-	poolTestTimeout       = 2 * time.Second
-	poolWaitTimeout       = 50 * time.Millisecond
-	serverSleepSeconds    = 1
-	connectionRecycleTime = 50 * time.Millisecond
-	connectionRecycleWait = 100 * time.Millisecond
+	poolTestTimeout       = 2 * time.Second        // 查询及读超时测试的外层上下文期限。
+	poolWaitTimeout       = 50 * time.Millisecond  // 等待连接、查询取消和驱动读超时测试使用的短期限。
+	serverSleepSeconds    = 1                      // SQL SLEEP 的等待秒数，须长于被验证的短期限。
+	connectionRecycleTime = 50 * time.Millisecond  // 回收测试中为连接设置的存活期限。
+	connectionRecycleWait = 100 * time.Millisecond // 再次查询前的等待时间，确保超过连接存活期限。
 )
 
 // 输入：t，测试上下文，进程环境需配置独立测试数据库。

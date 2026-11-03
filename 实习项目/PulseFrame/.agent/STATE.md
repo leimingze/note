@@ -2,7 +2,7 @@
 
 ## 当前任务
 
-TASK-2026-11-03-MYSQL-POOL-DESIGN，MySQL 连接池代码及真实连接验证已完成，相关代码已补充必要的函数内部注释。
+TASK-2026-11-03-MYSQL-POOL-DESIGN，MySQL 连接池代码及真实连接验证已完成，相关代码已补充函数内部、配置字段及包级常量注释。
 
 ## 当前方案
 
@@ -47,7 +47,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 ## 验证情况
 
-注释更新（2026-11-03）：补充配置分支、批量时长赋值、连接创建与关闭、测试场景的中文说明；仅修改注释及格式。go test -timeout=60s ./...、go vet -tags=mysqlintegration ./... 和 git diff --check 通过；未重复运行真实 MySQL 集成测试。
+注释更新（2026-11-03）：补充配置分支、批量时长赋值、连接创建与关闭、测试场景的中文说明，并逐项说明配置字段与包级常量的含义、单位和作用范围；仅修改注释及格式。go test -timeout=60s ./...、go vet -tags=mysqlintegration ./... 和 git diff --check 通过；未重复运行真实 MySQL 集成测试。
 
 本次验证（2026-11-03）：独立 MySQL 8.0.44 实例监听本机13316，数据库 pulseframe_pool_test。backend 目录执行 go test -race -tags=mysqlintegration -timeout=60s ./... 及 go vet -tags=mysqlintegration ./... 均通过。覆盖必填配置、密码原值保留、连接复用、容量限制、等待及查询取消、读超时、启动取消与期限、连接回收、连接错误、依赖关闭及真实 HTTP 启动退出；未进行负载及故障切换测试。测试配置使用 MYSQL_* 环境变量，详见 backend/README.md。
 

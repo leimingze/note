@@ -11,7 +11,7 @@ import (
 
 // Dependencies 持有当前 API 进程创建的外部依赖，使用方借用连接池。
 type Dependencies struct {
-	MySQL *sql.DB
+	MySQL *sql.DB // 当前 API 进程共享的连接池，由 Dependencies 统一关闭。
 }
 
 // 输入：ctx，启动上下文；cfg，应用配置。

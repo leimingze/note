@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	appTestTimeout  = 5 * time.Second
-	appPollInterval = 10 * time.Millisecond
+	appTestTimeout  = 5 * time.Second       // 限制测试中的启动等待、HTTP 请求和退出等待。
+	appPollInterval = 10 * time.Millisecond // 等待应用就绪时两次检查之间的间隔。
 )
 
 // 输入：t，测试上下文；进程环境需提供独立测试数据库配置。

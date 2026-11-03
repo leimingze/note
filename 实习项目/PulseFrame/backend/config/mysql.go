@@ -10,34 +10,31 @@ import (
 
 // 可选配置缺失时使用这些默认值；每个后端进程分别计算连接数量。
 const (
-	defaultMySQLAddress        = "127.0.0.1:3306"
-	defaultMySQLMaxOpenConns   = 20
-	defaultMySQLMaxIdleConns   = 5
-	defaultMySQLConnectTimeout = 3 * time.Second
-	defaultMySQLIOTimeout      = 5 * time.Second
-	defaultMySQLStartupTimeout = 5 * time.Second
-	defaultMySQLConnLifetime   = 30 * time.Minute
-	defaultMySQLConnIdleTime   = 5 * time.Minute
+	defaultMySQLAddress        = "127.0.0.1:3306" // 本地开发默认连接目标，格式为主机地址:端口。
+	defaultMySQLMaxOpenConns   = 20               // 单进程默认连接总上限，包含使用中和空闲连接。
+	defaultMySQLMaxIdleConns   = 5                // 单进程默认最多保留的空闲连接数，不代表预先创建数量。
+	defaultMySQLConnectTimeout = 3 * time.Second  // 默认建立一次 TCP 连接最多等待3秒。
+	defaultMySQLIOTimeout      = 5 * time.Second  // 默认单次网络读取或写入最多等待5秒，不是 SQL 总执行期限。
+	defaultMySQLStartupTimeout = 5 * time.Second  // 启动 PingContext 的默认整体期限，包含连接建立和检查。
+	defaultMySQLConnLifetime   = 30 * time.Minute // 连接默认最长存活30分钟，到期后按连接池规则回收。
+	defaultMySQLConnIdleTime   = 5 * time.Minute  // 连接默认最多持续空闲5分钟，之后由连接池清理。
 )
 
 // MySQL 保存单个进程使用的数据库连接池配置。
 type MySQL struct {
-	// 连接目标与认证信息由启动配置提供，密码保留原始字符。
-	Address  string
-	User     string
-	Password string
-	Database string
-	TLSMode  string
-	// 最大连接数包含正在使用和空闲的连接，空闲上限不会预先创建连接。
-	MaxOpenConns int
-	MaxIdleConns int
-	// 网络超时、启动检查期限和连接回收期限分别控制不同阶段。
-	ConnectTimeout  time.Duration
-	ReadTimeout     time.Duration
-	WriteTimeout    time.Duration
-	StartupTimeout  time.Duration
-	ConnMaxLifetime time.Duration
-	ConnMaxIdleTime time.Duration
+	Address         string        // 数据库连接目标，使用 host:port，IPv6 地址需带方括号。
+	User            string        // 数据库认证账号，保留配置中的原始字符。
+	Password        string        // 数据库认证密码，保留空白，不用于日志输出。
+	Database        string        // 连接后使用的数据库名称，启动前须已存在。
+	TLSMode         string        // "true" 启用 TLS 并校验证书；"false" 使用普通连接。
+	MaxOpenConns    int           // 当前进程连接池的总容量上限，必须大于零。
+	MaxIdleConns    int           // 最多保留的空闲连接数，零表示归还后不保留空闲连接。
+	ConnectTimeout  time.Duration // TCP 建连期限，不包含连接池满载时的排队时间。
+	ReadTimeout     time.Duration // 单次网络读取的等待期限。
+	WriteTimeout    time.Duration // 单次网络写入的等待期限。
+	StartupTimeout  time.Duration // 启动连通性检查的整体期限，父上下文可提前取消。
+	ConnMaxLifetime time.Duration // 连接从创建起可复用的最长时间，不强行中断正在执行的操作。
+	ConnMaxIdleTime time.Duration // 连接连续空闲的最长时间，清理由连接池调度。
 }
 
 // 输入：lookup，已确认非 nil 的环境变量查询函数。
