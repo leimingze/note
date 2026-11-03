@@ -37,15 +37,15 @@ type HTTP struct {
 // 输出：HTTP 配置；地址或超时非法时返回错误。
 // 功能：集中加载 HTTP 配置，在创建服务前确认监听参数及各阶段期限有效。
 func loadHTTP(lookup LookupEnv) (HTTP, error) {
-	// readValue 通过 lookup 读取 HTTP_ADDR，缺失或为空时返回默认地址 :8080。
+	// 先读取服务要监听的地址；没有设置 HTTP_ADDR 或内容为空时，使用 :8080。
 	address := readValue(lookup, envHTTPAddress, defaultHTTPAddress)
-	// validateAddress 检查 host:port 格式及端口范围，合法时返回 nil，否则返回错误。
+	// 地址必须包含有效端口，检查通过后才继续读取超时配置。
 	if err := validateAddress(address); err != nil {
 		return HTTP{}, err
 	}
 
-	// 以下 parsePositiveDuration 调用均传入读取函数、变量名和默认时长，得到正数 time.Duration。
-	// 第一项读取请求头超时，缺失时采用5秒；后续各项使用各自的变量名和默认值。
+	// 接下来逐项读取请求头、完整请求、响应写入、连接空闲和退出等待的期限。
+	// 每一项都先取环境变量或默认值，再把文字换算成时间长度；任意一项有问题就停止加载。
 	readHeader, err := parsePositiveDuration(lookup, envReadHeaderTimeout, defaultReadHeaderTime)
 	if err != nil {
 		return HTTP{}, err
@@ -81,13 +81,14 @@ func loadHTTP(lookup LookupEnv) (HTTP, error) {
 // 输出：地址合法时返回 nil，否则返回包含配置名称的错误。
 // 功能：在监听端口前暴露地址格式和端口范围问题。
 func validateAddress(address string) error {
-	// SplitHostPort 返回主机、端口文本和错误；这里只需要端口，用 _ 忽略主机返回值。
+	// 从地址中分别取出主机和端口，例如 "localhost:8080" 中的端口是 "8080"。
+	// 这里主要检查端口，主机部分允许为空，表示监听所有网卡。
 	_, portText, err := net.SplitHostPort(address)
 	// 监听地址允许空主机表示所有网卡，同时支持带方括号的 IPv6 地址。
 	if err != nil {
 		return fmt.Errorf("%s must use host:port format: %w", envHTTPAddress, err)
 	}
-	// Atoi 将端口文本转换为整数，例如 "8080" 转为 8080，供下一步检查数值范围。
+	// 取得的端口还是文字，先转换成整数，才能检查它有没有超出允许的范围。
 	port, err := strconv.Atoi(portText)
 	// 配置端口须为有效的非零数字，不在启动时自动选择端口。
 	if err != nil || port < minimumPort || port > maximumPort {

@@ -41,23 +41,23 @@ type MySQL struct {
 // 输出：MySQL 配置；必填项缺失或参数非法时返回错误。
 // 功能：读取连接信息和连接池参数，密码始终保留原值。
 func loadMySQL(lookup LookupEnv) (MySQL, error) {
-	// lookup("MYSQL_PASSWORD") 返回原始密码和存在标记，以区分未设置与显式空密码。
+	// 先读取密码，并确认密码变量有没有设置；没有设置时停止加载，显式空密码则允许继续。
 	password, exists := lookup("MYSQL_PASSWORD")
 	if !exists {
 		return MySQL{}, fmt.Errorf("MYSQL_PASSWORD must be explicitly set")
 	}
-	// 直接查询账号及数据库名称，保留原始字符；_ 忽略存在标记，空值由 Validate 检查。
+	// 再读取账号和数据库名称，保留原来的内容；是否为空会在最后统一检查。
 	user, _ := lookup("MYSQL_USER")
 	database, _ := lookup("MYSQL_DATABASE")
-	// readValue 读取地址和 TLS 模式，缺失或为空时采用各自的默认文本。
+	// 继续读取连接地址和加密模式，这两项没有设置或内容为空时使用各自的默认值。
 	cfg := MySQL{
 		Address: readValue(lookup, "MYSQL_ADDR", defaultMySQLAddress),
 		User:    user, Password: password, Database: database,
 		TLSMode: readValue(lookup, "MYSQL_TLS_MODE", "false"),
 	}
 	var err error
-	// parseNonNegativeInt 使用 lookup 读取指定变量，缺失时使用第三个参数，返回非负 int 或错误。
-	// 两次调用分别读取连接总上限和空闲上限，数量之间的关系由 Validate 检查。
+	// 接下来读取连接总上限和空闲连接上限，将配置中的文字转换为非负整数。
+	// 先确认每项能表示一个数量，最后再检查空闲连接上限有没有超过总上限。
 	cfg.MaxOpenConns, err = parseNonNegativeInt(lookup, "MYSQL_MAX_OPEN_CONNS", defaultMySQLMaxOpenConns)
 	if err != nil {
 		return MySQL{}, err
@@ -66,7 +66,7 @@ func loadMySQL(lookup LookupEnv) (MySQL, error) {
 	if err != nil {
 		return MySQL{}, err
 	}
-	// 每项关联环境变量、默认时长和 cfg 字段地址，便于统一读取六项期限。
+	// 为六项时长分别列出环境变量名、默认值和保存位置，下面按这张表逐项读取。
 	durations := []struct {
 		key      string
 		fallback time.Duration
@@ -80,16 +80,16 @@ func loadMySQL(lookup LookupEnv) (MySQL, error) {
 		{"MYSQL_CONN_MAX_IDLE_TIME", defaultMySQLConnIdleTime, &cfg.ConnMaxIdleTime},
 	}
 	for _, item := range durations {
-		// 按 item.key 读取时长文本，缺失时采用 item.fallback；解析成功后 value 是 time.Duration。
+		// 每轮读取一项配置；没有设置或内容为空时使用它的默认值，再换算成时间长度。
 		value, err := parsePositiveDuration(lookup, item.key, item.fallback)
 		// 任一时长非法就终止加载，防止只配置了一部分期限仍继续启动。
 		if err != nil {
 			return MySQL{}, err
 		}
-		// target 指向 cfg 内的对应字段，将解析结果写回同一个配置对象。
+		// 根据前面记录的字段地址，把得到的时间长度存入对应配置项，例如连接超时。
 		*item.target = value
 	}
-	// Validate 检查连接信息、容量及期限，返回 nil 或错误；与读取完成的 cfg 一起交给调用方。
+	// 所有内容读取完后，统一检查连接信息和参数之间的关系，再交给上层决定能否继续启动。
 	return cfg, cfg.Validate()
 }
 
@@ -97,11 +97,11 @@ func loadMySQL(lookup LookupEnv) (MySQL, error) {
 // 输出：合法时返回 nil，否则返回包含配置名称的错误。
 // 功能：在建立网络连接前拒绝无效地址、无限连接数量和无效超时。
 func (cfg MySQL) Validate() error {
-	// validateConnection 检查账号、数据库名称、地址及 TLS 模式，发现错误就立即返回。
+	// 先确认账号、数据库名称、地址和加密模式可用，发现问题就停止本次检查。
 	if err := cfg.validateConnection(); err != nil {
 		return err
 	}
-	// validatePool 检查连接数量和各项期限，结果作为本次完整校验的返回值。
+	// 连接信息通过后，再检查连接数量和各项期限，完成整份配置的检查。
 	return cfg.validatePool()
 }
 
@@ -109,19 +109,19 @@ func (cfg MySQL) Validate() error {
 // 输出：地址、账号、数据库或 TLS 模式非法时返回错误。
 // 功能：校验连接目标，防止驱动自动补全缺失的必要信息。
 func (cfg MySQL) validateConnection() error {
-	// TrimSpace 去除首尾空白后判断必填项是否为空，仅用于检查，不改写配置字段。
+	// 逐项检查账号和数据库名称，完全没填或只填空白都算缺失；检查过程保留原来的内容。
 	for key, value := range map[string]string{"MYSQL_USER": cfg.User, "MYSQL_DATABASE": cfg.Database} {
 		if strings.TrimSpace(value) == "" {
 			return fmt.Errorf("%s is required", key)
 		}
 	}
-	// SplitHostPort 将地址解析为主机和端口文本，例如 "localhost:3306" 得到 "localhost" 和 "3306"。
-	// 它也支持带方括号的 IPv6；格式错误返回 err，空主机由下一行单独拒绝。
+	// 接着从连接地址中取出主机和端口，例如 "localhost:3306" 对应主机 localhost 和端口3306。
+	// 连接数据库必须知道具体主机，所以地址格式不正确或主机没填时，都停止检查并报错。
 	host, portText, err := net.SplitHostPort(cfg.Address)
 	if err != nil || strings.TrimSpace(host) == "" {
 		return fmt.Errorf("MYSQL_ADDR must use a nonempty host:port")
 	}
-	// Atoi 将端口文本转换为 int，便于检查它是否处于有效端口范围。
+	// 端口读出来还是文字，要先转换成整数，再检查数值是否有效。
 	port, err := strconv.Atoi(portText)
 	if err != nil || port < minimumPort || port > maximumPort {
 		return fmt.Errorf("MYSQL_ADDR port must be between %d and %d", minimumPort, maximumPort)

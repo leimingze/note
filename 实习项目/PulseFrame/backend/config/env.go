@@ -22,11 +22,11 @@ type LookupEnv func(string) (string, bool)
 // 输出：清理空白后的环境变量值或默认值。
 // 功能：统一可选配置的读取规则；需要保留原值的密码由模块直接调用 lookup。
 func readValue(lookup LookupEnv, key string, fallback string) string {
-	// 调用传入的 lookup 查询 key 指定的变量，得到原始文本及变量是否存在。
+	// 按指定的名称读取环境变量，同时确认这个变量有没有设置。
 	value, exists := lookup(key)
-	// TrimSpace 去除文本首尾空白，例如将 " 5s " 变为 "5s"，保留中间字符。
+	// 去掉内容首尾的空白，例如把 " 5s " 整理成 "5s"，方便后面识别。
 	value = strings.TrimSpace(value)
-	// 缺失、空字符串和仅含空白的可选值都采用调用方提供的默认值。
+	// 如果没有设置，或者去掉空白后没有内容，就使用事先给定的默认值。
 	if !exists || value == "" {
 		return fallback
 	}
@@ -37,16 +37,16 @@ func readValue(lookup LookupEnv, key string, fallback string) string {
 // 输出：正数时长；格式非法、溢出或不大于零时返回错误。
 // 功能：为 HTTP 和 MySQL 等模块提供统一的时长解析与边界校验。
 func parsePositiveDuration(lookup LookupEnv, key string, fallback time.Duration) (time.Duration, error) {
-	// fallback.String() 将默认时长转为文本，例如 5*time.Second 转为 "5s"。
-	// readValue 用 lookup 查询 key；缺失或为空时返回默认文本，raw 保存尚未解析的字符串。
+	// 环境变量读出来都是文字，所以先把默认时长也变成文字，例如把5秒变成 "5s"。
+	// 然后读取需要的环境变量；如果没有设置或内容为空，就采用这份默认值。
 	raw := readValue(lookup, key, fallback.String())
-	// ParseDuration 将 "5s"、"250ms" 等文本转换为 time.Duration，无法解析时返回错误。
+	// 此时拿到的仍是 "5s" 这样的文字，这里将它转换为程序能计算的时间长度。
 	value, err := time.ParseDuration(raw)
-	// Errorf 将变量名加入错误信息；%w 保留原始错误，方便调用方继续检查原因。
+	// 如果写成了 "abc" 等无法识别的内容，就指出哪个环境变量有问题，并保留原因。
 	if err != nil {
 		return 0, fmt.Errorf("%s must be a duration: %w", key, err)
 	}
-	// 统一要求正数，防止零值关闭超时或回收机制，以及立即触发启动取消。
+	// 能识别为时长还不够，结果必须大于零，才能作为有效的超时或连接回收期限。
 	if value <= 0 {
 		return 0, fmt.Errorf("%s must be greater than zero", key)
 	}
@@ -57,9 +57,10 @@ func parsePositiveDuration(lookup LookupEnv, key string, fallback time.Duration)
 // 输出：非负整数；格式错误、溢出或负数返回错误。
 // 功能：提供通用整数解析，零值是否允许及字段间的约束由各模块校验。
 func parseNonNegativeInt(lookup LookupEnv, key string, fallback int) (int, error) {
-	// Itoa 将默认整数转为文本；readValue 读取 key 对应的文本，缺失或为空时采用默认值。
-	// Atoi 再将读取结果转为 int，例如 "20" 转为 20；格式错误或溢出时返回错误。
+	// 先把默认整数写成文字，再读取需要的环境变量；没有设置或内容为空时采用默认值。
+	// 最后将取得的文字转换成整数，例如把 "20" 变成数字20，供后面设置连接数量。
 	value, err := strconv.Atoi(readValue(lookup, key, strconv.Itoa(fallback)))
+	// 内容无法转换为整数、超出整数范围或小于零时，直接报告配置错误。
 	if err != nil || value < 0 {
 		return 0, fmt.Errorf("%s must be a nonnegative integer", key)
 	}
