@@ -6,7 +6,7 @@ TASK-2026-11-03-MYSQL-POOL-DESIGN，文件修改计划已记录，连接池设�
 
 ## 当前方案
 
-可用性与高并发治理的职责表及 MySQL 连接池文件计划见笔记/服务可用性与高并发治理.md。基础配置管理框架已完成；当前讨论 MySQL 配置扩展、infra 客户端创建及启动入口的依赖装配与关闭。文档中的新增文件为计划，尚未创建；Redis 和外部 HTTP 客户端后续讨论。
+可用性与高并发治理的职责及进度表见笔记/服务可用性与高并发治理.md，该表引用笔记/MySQL连接池-文件索引.md 中的文件计划。基础配置管理框架已完成；当前讨论 MySQL 配置扩展、infra 客户端创建及启动入口的依赖装配与关闭。索引中的新增代码文件为计划，尚未创建；Redis 和外部 HTTP 客户端后续讨论。
 
 登录名区分大小写。注册、登录保留原始 username，MySQL 使用 ascii_bin 唯一索引；abc 与 ABC 可分别注册。账号限流 key 直接使用原始 username。IP 限流 key 使用可信来源的 normalizedIp，通过 Go net/netip 解析、Unmap、String 规范化；同一 IPv6 地址的不同写法共用计数。
 
@@ -28,7 +28,8 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 ## 有效文件
 
-- 笔记/服务可用性与高并发治理.md：职责与进度表、MySQL 连接池预计新增或修改的文件及职责。
+- 笔记/服务可用性与高并发治理.md：职责与进度表，引用 MySQL 连接池文件索引。
+- 笔记/MySQL连接池-文件索引.md：MySQL 连接池预计新增或修改的文件及职责。
 - 笔记/登录与注册.md：当前认证设计，保留“思考、暂定方案”及客户端、服务端步骤格式。
 - 笔记/登录与注册-数据结构.md：三张 MySQL 表的字段与约束、Redis 会话及令牌映射、QQ state 和频率计数。
 - backend/cmd/pulseframe-api/main.go：启动入口。
@@ -41,7 +42,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 ## 验证情况
 
-本次文档：按现有 backend 目录盘点配置、启动入口、测试和说明文件，标明 MySQL 连接池所需的新增项与修改项。未修改代码，未执行接口、数据库或故障切换测试。
+本次文档：MySQL 文件计划集中至独立索引，治理文档保留职责与进度表；检查清单完整性、相对链接及 git diff --check。未修改代码，未执行接口、数据库或故障切换测试。
 
 基座既有验证（2026-10-15）：
 
@@ -62,4 +63,4 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 原注册代码保留在 Git 提交 52812e0；基座版本为 2393c31。过程目录 .agent/work/20261015-pulseframe-base/ 已归档并保留原位置，受 .gitignore 保护。
 
-本次正式文档为笔记/登录与注册.md、笔记/登录与注册-数据结构.md、笔记/服务可用性与高并发治理.md；编辑补丁位于 /Users/leimingze/notes/开源书籍/.agent/work/20261102-auth-design/，已归档并受该目录的 Git 忽略规则保护。
+本次正式文档为笔记/登录与注册.md、笔记/登录与注册-数据结构.md、笔记/服务可用性与高并发治理.md、笔记/MySQL连接池-文件索引.md；编辑补丁位于 /Users/leimingze/notes/开源书籍/.agent/work/20261102-auth-design/，已归档并受该目录的 Git 忽略规则保护。
