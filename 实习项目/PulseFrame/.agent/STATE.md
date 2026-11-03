@@ -2,9 +2,11 @@
 
 ## 当前任务
 
-TASK-2026-11-03-NOTES-ORGANIZE，文档统一保存在 docs/，分为项目设计和学习笔记，入口为 docs/README.md。
+TASK-2026-11-03-CONFIG-ORGANIZATION，config 包已按统一入口、环境读取、HTTP 配置和 MySQL 配置组织，并通过验证。
 
 ## 当前方案
+
+backend/config/config.go 定义总配置并组织加载；env.go 保存 LookupEnv、可选环境变量读取、整数与时长解析和共用端口范围；http.go 与 mysql.go 各自负责模块配置。运行环境及日志级别校验保留在统一入口文件，公共解析函数不调用模块加载函数。配置接口、默认值及校验行为保持一致，说明见 backend/README.md。
 
 docs/设计/ 保存5份项目方案与文件索引；docs/学习笔记/ 保存2份通用知识文档及 assets/ 中的4张配图，原有文档和图片内容保持不变。
 
@@ -40,6 +42,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 - docs/设计/登录与注册-数据结构.md：三张 MySQL 表的字段与约束、Redis 会话及令牌映射、QQ state 和频率计数。
 - docs/学习笔记/注册与发现.md、docs/学习笔记/通用高并发架构设计/高并发架构设计要点.md：通用知识笔记；配图保存在 docs/学习笔记/assets/。
 - backend/cmd/pulseframe-api/main.go：启动入口。
+- backend/config/config.go、backend/config/env.go、backend/config/http.go、backend/config/mysql.go：统一加载、公共环境解析及各模块配置。
 - backend/config/mysql.go、backend/infra/mysql.go、backend/cmd/pulseframe-api/dependencies.go：MySQL 配置、连接创建及生命周期管理。
 - backend/test/mysql_config_test.go、backend/test/mysql_test.go、backend/cmd/pulseframe-api/dependencies_test.go：配置校验及真实数据库集成测试。
 - backend/config/、backend/logging/、backend/middleware/、backend/response/、backend/server/：基础能力。
@@ -50,6 +53,8 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 - frontend/：前端基础工程。
 
 ## 验证情况
+
+配置组织调整（2026-11-03）：复用现有配置及后端测试，go test -race -timeout=60s ./...、go vet -tags=mysqlintegration ./... 通过；检查格式及文件职责。此次未重复运行真实 MySQL 集成测试。
 
 目录整理（2026-11-03）：7份文档和4张图片的 Git 内容校验值与移动前一致；目录统一为 docs/，入口索引标题为“文档索引”；核对索引、文档互链、图片路径及旧路径引用，检查 git diff --check。未修改或运行后端代码。
 

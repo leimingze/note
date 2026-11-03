@@ -3,66 +3,29 @@ package config
 import (
 	"errors"
 	"fmt"
-	"net"
-	"strconv"
 	"strings"
-	"time"
 )
 
 const (
-	// Environment* 是部署配置允许使用的四种运行环境名称。
-	EnvironmentLocal      = "local"
-	EnvironmentTest       = "test"
-	EnvironmentStaging    = "staging"
-	EnvironmentProduction = "production"
+	EnvironmentLocal      = "local"      // 本地开发环境，入口使用 Gin 调试模式。
+	EnvironmentTest       = "test"       // 自动化测试环境，入口使用 Gin 测试模式。
+	EnvironmentStaging    = "staging"    // 预发布环境，入口使用 Gin 发布模式。
+	EnvironmentProduction = "production" // 生产环境，入口使用 Gin 发布模式。
 
-	// env* 是基础运行配置对应的环境变量名称。
-	envAppEnvironment    = "APP_ENV"
-	envHTTPAddress       = "HTTP_ADDR"
-	envLogLevel          = "LOG_LEVEL"
-	envReadHeaderTimeout = "HTTP_READ_HEADER_TIMEOUT"
-	envReadTimeout       = "HTTP_READ_TIMEOUT"
-	envWriteTimeout      = "HTTP_WRITE_TIMEOUT"
-	envIdleTimeout       = "HTTP_IDLE_TIMEOUT"
-	envShutdownTimeout   = "HTTP_SHUTDOWN_TIMEOUT"
-
-	// default* 是本地缺省配置，端口范围用于启动前校验监听地址。
-	defaultHTTPAddress    = ":8080"
-	defaultLogLevel       = "info"
-	minimumPort           = 1
-	maximumPort           = 65535
-	defaultReadHeaderTime = 5 * time.Second
-	defaultReadTime       = 15 * time.Second
-	defaultWriteTime      = 15 * time.Second
-	defaultIdleTime       = 60 * time.Second
-	defaultShutdownTime   = 10 * time.Second
+	envAppEnvironment = "APP_ENV"   // 选择应用运行环境的变量名。
+	envLogLevel       = "LOG_LEVEL" // 设置结构化日志级别的变量名。
+	defaultLogLevel   = "info"      // 未配置日志级别时记录 info 及以上级别。
 )
 
 // errNilEnvironmentLookup 表示调用方没有提供环境变量读取函数。
 var errNilEnvironmentLookup = errors.New("environment lookup is required")
 
-// LookupEnv 表示读取单个环境变量的函数。
-// 输入：环境变量名称。
-// 输出：环境变量值以及该变量是否存在。
-// 功能：允许配置加载在测试中注入确定的环境来源。
-type LookupEnv func(string) (string, bool)
-
-// HTTP 保存 HTTP 服务生命周期配置。
-type HTTP struct {
-	Address           string
-	ReadHeaderTimeout time.Duration
-	ReadTimeout       time.Duration
-	WriteTimeout      time.Duration
-	IdleTimeout       time.Duration
-	ShutdownTimeout   time.Duration
-}
-
 // Config 保存核心 API 基座启动所需的工程配置。
 type Config struct {
-	Environment string
-	LogLevel    string
-	HTTP        HTTP
-	MySQL       MySQL
+	Environment string // 经过校验的运行环境，供启动入口选择 Gin 模式。
+	LogLevel    string // 经过校验的日志级别，供日志器初始化使用。
+	HTTP        HTTP   // HTTP 模块加载的监听地址和生命周期期限。
+	MySQL       MySQL  // MySQL 模块加载的连接信息和连接池参数。
 }
 
 // Load 从环境变量读取并校验配置。
@@ -105,68 +68,6 @@ func Load(lookup LookupEnv) (Config, error) {
 	}, nil
 }
 
-// loadHTTP 读取并校验 HTTP 服务配置。
-// 输入：lookup，已经确认非 nil 的环境变量查询函数。
-// 输出：HTTP 配置；地址或超时非法时返回错误。
-// 功能：将 HTTP 相关配置集中构造成不可变的值对象。
-func loadHTTP(lookup LookupEnv) (HTTP, error) {
-	address := readValue(lookup, envHTTPAddress, defaultHTTPAddress)
-	// 在创建 Server 前验证监听地址，让错误稳定出现在配置阶段。
-	if err := validateAddress(address); err != nil {
-		return HTTP{}, err
-	}
-
-	// 各阶段超时分别解析，避免一个宽泛超时掩盖慢请求来源。
-	readHeader, err := parsePositiveDuration(lookup, envReadHeaderTimeout, defaultReadHeaderTime)
-	// 每项解析失败都保留对应环境变量名称，方便直接定位部署配置。
-	if err != nil {
-		return HTTP{}, err
-	}
-	read, err := parsePositiveDuration(lookup, envReadTimeout, defaultReadTime)
-	// 请求体读取超时非法时不能继续构造 HTTP 配置。
-	if err != nil {
-		return HTTP{}, err
-	}
-	write, err := parsePositiveDuration(lookup, envWriteTimeout, defaultWriteTime)
-	// 响应写入超时必须有效，防止慢客户端长期占用连接。
-	if err != nil {
-		return HTTP{}, err
-	}
-	idle, err := parsePositiveDuration(lookup, envIdleTimeout, defaultIdleTime)
-	// 空闲连接超时非法时不能保证连接池资源及时回收。
-	if err != nil {
-		return HTTP{}, err
-	}
-	shutdown, err := parsePositiveDuration(lookup, envShutdownTimeout, defaultShutdownTime)
-	// 关闭期限必须有效，确保进程退出不会无限等待。
-	if err != nil {
-		return HTTP{}, err
-	}
-
-	return HTTP{
-		Address:           address,
-		ReadHeaderTimeout: readHeader,
-		ReadTimeout:       read,
-		WriteTimeout:      write,
-		IdleTimeout:       idle,
-		ShutdownTimeout:   shutdown,
-	}, nil
-}
-
-// readValue 获取经过空白清理的配置值。
-// 输入：lookup，环境查询函数；key，变量名；fallback，变量缺失或为空时的默认值。
-// 输出：清理后的环境变量值或明确的默认值。
-// 功能：统一环境变量的空值处理规则。
-func readValue(lookup LookupEnv, key string, fallback string) string {
-	value, exists := lookup(key)
-	value = strings.TrimSpace(value)
-	// 缺失和空字符串采用同一默认值，避免环境注入空值改变行为。
-	if !exists || value == "" {
-		return fallback
-	}
-	return value
-}
-
 // parseEnvironment 校验运行环境名称。
 // 输入：value，待校验的环境名称。
 // 输出：规范化环境名称；不支持的环境返回错误。
@@ -195,40 +96,4 @@ func parseLogLevel(value string) (string, error) {
 	default:
 		return "", fmt.Errorf("%s has unsupported value %q", envLogLevel, value)
 	}
-}
-
-// parsePositiveDuration 读取正数时长配置。
-// 输入：lookup，环境查询函数；key，变量名；fallback，变量缺失时使用的时长。
-// 输出：正数时长；格式非法或不大于零时返回错误。
-// 功能：统一 HTTP 超时配置的解析与边界校验。
-func parsePositiveDuration(lookup LookupEnv, key string, fallback time.Duration) (time.Duration, error) {
-	raw := readValue(lookup, key, fallback.String())
-	value, err := time.ParseDuration(raw)
-	// 解析失败时保留原配置键名，而不是交给 HTTP Server 产生模糊错误。
-	if err != nil {
-		return 0, fmt.Errorf("%s must be a duration: %w", key, err)
-	}
-	// 零值或负值会关闭超时保护，因此不允许进入运行配置。
-	if value <= 0 {
-		return 0, fmt.Errorf("%s must be greater than zero", key)
-	}
-	return value, nil
-}
-
-// validateAddress 校验 HTTP 监听地址和端口。
-// 输入：address，符合 host:port 形式的监听地址。
-// 输出：地址合法时返回 nil，否则返回包含配置名称的错误。
-// 功能：在监听端口前暴露地址格式和端口范围问题。
-func validateAddress(address string) error {
-	_, portText, err := net.SplitHostPort(address)
-	// 监听地址必须显式符合 host:port，空主机仍可表示监听所有网卡。
-	if err != nil {
-		return fmt.Errorf("%s must use host:port format: %w", envHTTPAddress, err)
-	}
-	port, err := strconv.Atoi(portText)
-	// 解析端口并限制有效范围，避免启动监听时才暴露错误。
-	if err != nil || port < minimumPort || port > maximumPort {
-		return fmt.Errorf("%s port must be between %d and %d", envHTTPAddress, minimumPort, maximumPort)
-	}
-	return nil
 }

@@ -6,6 +6,17 @@
 
 Go 包直接位于 backend/ 下：config、infra、logging、middleware、response 和 server 分别负责配置、外部客户端创建、日志、HTTP 中间件、错误响应和服务生命周期。cmd/pulseframe-api 是程序入口，其中 dependencies.go 持有并关闭进程共享的 MySQL 连接池。test 保存后端测试。controller、service 和 dao 已建立为业务职责目录。
 
+config 包按职责组织：
+
+| 文件 | 职责 |
+| --- | --- |
+| `config/config.go` | 总配置 Config、统一加载入口 Load，以及应用环境和日志级别校验 |
+| `config/env.go` | LookupEnv、可选环境变量读取、整数与时长解析，以及共用端口范围 |
+| `config/http.go` | HTTP 配置类型、默认值、加载和监听参数校验 |
+| `config/mysql.go` | MySQL 配置类型、默认值、加载和连接池参数校验 |
+
+Load 组织各模块加载；HTTP 和 MySQL 模块使用 env.go 中的公共解析函数。所有文件属于同一个 config 包，包外通过 config.Load 获取总配置。
+
 ## 启动
 
 先创建数据库并配置 MYSQL_USER、MYSQL_PASSWORD、MYSQL_DATABASE，应用不会自动建库或建表。在 backend/ 目录执行：

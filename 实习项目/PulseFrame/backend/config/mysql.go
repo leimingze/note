@@ -154,15 +154,3 @@ func (cfg MySQL) validatePool() error {
 	}
 	return nil
 }
-
-// 输入：lookup，环境查询函数；key，变量名；fallback，缺省整数。
-// 输出：非负整数；格式错误、溢出或负数返回错误。
-// 功能：读取连接数量，允许空闲连接数为零以关闭空闲连接保留。
-func parseNonNegativeInt(lookup LookupEnv, key string, fallback int) (int, error) {
-	// 可选值缺失时使用默认值，已提供但格式错误或为负数时明确返回错误。
-	value, err := strconv.Atoi(readValue(lookup, key, strconv.Itoa(fallback)))
-	if err != nil || value < 0 {
-		return 0, fmt.Errorf("%s must be a nonnegative integer", key)
-	}
-	return value, nil
-}
