@@ -2,7 +2,7 @@
 
 ## 当前任务
 
-TASK-2026-11-03-CONFIG-ORGANIZATION，config 包已按统一入口、环境读取、HTTP 配置和 MySQL 配置组织，并通过验证。
+TASK-2026-11-03-CONFIG-ORGANIZATION，config 包已按职责组织，关键函数调用已补充用途、参数和返回值说明，并通过验证。
 
 ## 当前方案
 
@@ -53,6 +53,8 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 - frontend/：前端基础工程。
 
 ## 验证情况
+
+调用注释更新（2026-11-03）：补充四个配置文件中环境读取、时长与整数转换、模块加载和校验调用的说明；仅修改注释。go test -timeout=60s ./...、gofmt 格式检查及 git diff --check 通过。
 
 配置组织调整（2026-11-03）：复用现有配置及后端测试，go test -race -timeout=60s ./...、go vet -tags=mysqlintegration ./... 通过；检查格式及文件职责。此次未重复运行真实 MySQL 集成测试。
 

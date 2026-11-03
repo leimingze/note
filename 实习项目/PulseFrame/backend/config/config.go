@@ -38,24 +38,26 @@ func Load(lookup LookupEnv) (Config, error) {
 		return Config{}, errNilEnvironmentLookup
 	}
 
-	// 运行环境会影响 Gin 模式，因此最先解析。
+	// readValue 通过 lookup 读取 APP_ENV，缺失或为空时采用 local。
+	// parseEnvironment 将读取的文本规范化并检查允许的环境名称，返回环境名或错误。
 	environment, err := parseEnvironment(readValue(lookup, envAppEnvironment, EnvironmentLocal))
 	// 环境非法时立即停止，避免框架进入错误模式。
 	if err != nil {
 		return Config{}, err
 	}
+	// 读取 LOG_LEVEL，默认使用 info；parseLogLevel 返回通过校验的日志级别文本。
 	logLevel, err := parseLogLevel(readValue(lookup, envLogLevel, defaultLogLevel))
 	// 日志级别错误也属于启动配置错误，不在运行期静默修正。
 	if err != nil {
 		return Config{}, err
 	}
-	// HTTP 配置独立构造，任一参数非法都直接阻止服务启动。
+	// loadHTTP 使用同一个 lookup 读取地址和超时，返回完整 HTTP 配置或校验错误。
 	httpConfig, err := loadHTTP(lookup)
 	// HTTP 配置不完整时服务不能安全监听端口。
 	if err != nil {
 		return Config{}, err
 	}
-	// MySQL 是启动所需依赖，认证信息及连接池参数均须在建立连接前通过校验。
+	// loadMySQL 读取认证信息和连接池参数，返回 MySQL 配置；此调用不会连接数据库。
 	mysqlConfig, err := loadMySQL(lookup)
 	if err != nil {
 		return Config{}, err
@@ -73,6 +75,7 @@ func Load(lookup LookupEnv) (Config, error) {
 // 输出：规范化环境名称；不支持的环境返回错误。
 // 功能：限制运行环境集合，避免拼写错误改变服务行为。
 func parseEnvironment(value string) (string, error) {
+	// TrimSpace 去除首尾空白，ToLower 转为小写，使 " LOCAL " 可以匹配 local。
 	value = strings.ToLower(strings.TrimSpace(value))
 	// 只接受显式支持的环境集合，default 分支负责暴露拼写错误。
 	switch value {
@@ -88,6 +91,7 @@ func parseEnvironment(value string) (string, error) {
 // 输出：规范化日志级别；不支持的级别返回错误。
 // 功能：在日志器创建前阻止错误配置进入运行阶段。
 func parseLogLevel(value string) (string, error) {
+	// 先去除首尾空白再转为小写，使 " INFO " 可以匹配 info。
 	value = strings.ToLower(strings.TrimSpace(value))
 	// 日志级别使用固定白名单，避免未知值进入 slog 配置。
 	switch value {
