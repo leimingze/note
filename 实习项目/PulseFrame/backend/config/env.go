@@ -35,7 +35,7 @@ func readValue(lookup LookupEnv, key string, fallback string) string {
 
 // 输入：lookup，环境查询函数；key，变量名；fallback，可选值缺失时的默认时长。
 // 输出：正数时长；格式非法、溢出或不大于零时返回错误。
-// 功能：为 HTTP 和 MySQL 等模块提供统一的时长解析与边界校验。
+// 功能：读取时长配置，将文本转换为时长，并确保结果大于零。
 func parsePositiveDuration(lookup LookupEnv, key string, fallback time.Duration) (time.Duration, error) {
 	// 环境变量读出来都是文字，所以先把默认时长也变成文字，例如把5秒变成 "5s"。
 	// 然后读取需要的环境变量；如果没有设置或内容为空，就采用这份默认值。
