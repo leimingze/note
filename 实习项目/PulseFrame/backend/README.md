@@ -4,7 +4,7 @@
 
 ## 目录
 
-Go 包直接位于 backend/ 下：config、infra、logging、middleware、response 和 server 分别负责配置、外部客户端创建、日志、HTTP 中间件、错误响应和服务生命周期。cmd/pulseframe-api 是程序入口，其中 dependencies.go 持有并关闭进程共享的 MySQL 连接池。test 保存后端测试。controller、service 和 dao 已建立为业务职责目录。
+config、infra、logging、middleware、response 和 server 分别负责配置、外部客户端创建、日志、HTTP 中间件、错误响应和服务生命周期。cmd/pulseframe-api/main.go 是程序入口，调用 internal/app.Run；internal/app/run.go 组织启动与退出，internal/app/dependencies.go 持有并关闭进程共享的 MySQL 连接池。所有后端测试统一保存在 test/，通过可导入的应用包验证启动和依赖管理。controller、service 和 dao 已建立为业务职责目录。
 
 config 包按职责组织：
 
@@ -91,4 +91,4 @@ go test -race -tags=mysqlintegration -timeout=60s ./...
 go vet -tags=mysqlintegration ./...
 ~~~
 
-启动调用说明见 docs/run-lifecycle.md。
+启动调用顺序为 cmd/pulseframe-api/main.go → internal/app.Run → NewDependencies → infra.NewMySQL；数据库检查成功后启动 HTTP 服务，服务退出时统一关闭依赖。

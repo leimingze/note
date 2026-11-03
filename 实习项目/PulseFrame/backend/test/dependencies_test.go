@@ -1,6 +1,6 @@
 //go:build mysqlintegration
 
-package main
+package test
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"pulseframe/config"
+	"pulseframe/internal/app"
 )
 
 const (
@@ -28,7 +29,7 @@ func TestDependenciesLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dependencies, err := NewDependencies(t.Context(), cfg)
+	dependencies, err := app.NewDependencies(t.Context(), cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +53,7 @@ func TestDependenciesLifecycle(t *testing.T) {
 // 输入：t，测试上下文。
 // 输出：占用本机端口并启动含数据库连接的应用，结束后释放资源；监听错误未传回入口时测试失败。
 // 功能：验证 MySQL 初始化成功后的 HTTP 启动失败路径。
-// 例如先占用应用要使用的端口，run 应在数据库连接成功后返回 HTTP 监听错误。
+// 例如先占用应用要使用的端口，app.Run 应在数据库连接成功后返回 HTTP 监听错误。
 func TestRunListenFailure(t *testing.T) {
 	// 先占用真实监听端口，使应用完成数据库初始化后在 HTTP 监听阶段失败。
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -62,7 +63,7 @@ func TestRunListenFailure(t *testing.T) {
 	defer listener.Close()
 	ctx, cancel := context.WithTimeout(t.Context(), appTestTimeout)
 	defer cancel()
-	err = run(ctx, appEnvironment(listener.Addr().String()))
+	err = app.Run(ctx, appEnvironment(listener.Addr().String()))
 	if err == nil || !strings.Contains(err.Error(), "run http server: listen") {
 		t.Fatalf("expected HTTP listen failure after MySQL initialization: %v", err)
 	}
@@ -71,7 +72,7 @@ func TestRunListenFailure(t *testing.T) {
 // 输入：t，测试上下文。
 // 输出：启动连接测试数据库的 HTTP 服务，发送就绪请求后通知退出；无法就绪或退出时测试失败。
 // 功能：通过真实数据库和 HTTP 请求验证完整启动退出流程。
-// 例如 /readyz 返回200后取消上下文，run 应在等待期限内正常返回。
+// 例如 /readyz 返回200后取消上下文，app.Run 应在等待期限内正常返回。
 func TestRunGracefulShutdown(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -84,7 +85,7 @@ func TestRunGracefulShutdown(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), appTestTimeout)
 	defer cancel()
 	result := make(chan error, 1)
-	go func() { result <- run(ctx, appEnvironment(address)) }()
+	go func() { result <- app.Run(ctx, appEnvironment(address)) }()
 	readyErr := waitForApplication(ctx, address)
 	// 无论就绪检查成功与否，都通知后台服务退出并等待最终结果。
 	cancel()

@@ -2,7 +2,7 @@
 
 ## 当前任务
 
-TASK-2026-11-03-PROJECT-COMMENTS，已更新29份前后端代码文件的注释：功能说明附有具体例子，关键流程使用自然语言说明，并补充字段用途；仅调整注释和格式。
+TASK-2026-11-03-TEST-DIRECTORY，8份后端测试文件统一保存在 backend/test；启动逻辑和依赖管理迁至 backend/internal/app，main.go 保留入口。迁移后的启动、关闭与数据库连接行为已通过验证。
 
 ## 当前方案
 
@@ -10,7 +10,7 @@ backend/config/config.go 定义总配置并组织加载；env.go 保存 LookupEn
 
 docs/设计/ 保存5份项目方案与文件索引；docs/学习笔记/ 保存2份通用知识文档及 assets/ 中的4张配图，原有文档和图片内容保持不变。
 
-可用性与高并发治理的职责、进度及连接池讨论范围见 docs/设计/服务可用性与高并发治理.md，该文档引用 MySQL 和 Redis 的独立文件索引。MySQL 通过 go-sql-driver/mysql v1.10.1 和 database/sql 接入；config 读取配置，infra 创建并检查连接，cmd/pulseframe-api/dependencies.go 持有和关闭连接池，main.go 组织启动及退出。单进程默认最多20个连接、5个空闲连接，连接最长存活30分钟、空闲5分钟，均可配置。账号、密码、数据库为显式配置，密码保留原值；启动检查失败直接返回错误。
+可用性与高并发治理的职责、进度及连接池讨论范围见 docs/设计/服务可用性与高并发治理.md，该文档引用 MySQL 和 Redis 的独立文件索引。MySQL 通过 go-sql-driver/mysql v1.10.1 和 database/sql 接入；config 读取配置，infra 创建并检查连接，internal/app/dependencies.go 持有和关闭连接池，internal/app/run.go 组织启动及退出，main.go 调用 app.Run。单进程默认最多20个连接、5个空闲连接，连接最长存活30分钟、空闲5分钟，均可配置。账号、密码、数据库为显式配置，密码保留原值；启动检查失败直接返回错误。
 
 MySQL 连接池等待使用操作 Context 的截止时间，网络读写超时单独配置；使用方负责释放查询结果、事务和显式获取的连接。Redis 与外部 HTTP 客户端尚未编写；关闭 Redis 客户端自动重试为建议方案，尚未确认。部署连接预算及监测继续讨论。
 
@@ -42,17 +42,20 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 - docs/设计/登录与注册-数据结构.md：三张 MySQL 表的字段与约束、Redis 会话及令牌映射、QQ state 和频率计数。
 - docs/学习笔记/注册与发现.md、docs/学习笔记/通用高并发架构设计/高并发架构设计要点.md：通用知识笔记；配图保存在 docs/学习笔记/assets/。
 - backend/cmd/pulseframe-api/main.go：启动入口。
+- backend/internal/app/run.go：可由入口和后端测试调用的应用启动与退出流程。
 - backend/config/config.go、backend/config/env.go、backend/config/http.go、backend/config/mysql.go：统一加载、公共环境解析及各模块配置。
-- backend/config/mysql.go、backend/infra/mysql.go、backend/cmd/pulseframe-api/dependencies.go：MySQL 配置、连接创建及生命周期管理。
-- backend/test/mysql_config_test.go、backend/test/mysql_test.go、backend/cmd/pulseframe-api/dependencies_test.go：配置校验及真实数据库集成测试。
+- backend/config/mysql.go、backend/infra/mysql.go、backend/internal/app/dependencies.go：MySQL 配置、连接创建及生命周期管理。
+- backend/test/mysql_config_test.go、backend/test/mysql_test.go、backend/test/dependencies_test.go：配置校验及真实数据库集成测试。
 - backend/config/、backend/logging/、backend/middleware/、backend/response/、backend/server/：基础能力。
 - backend/controller/.gitkeep、backend/service/.gitkeep、backend/dao/.gitkeep：业务目录占位。
 - backend/test/：基座测试，其中 scaffold_test.go 验证路由集合与原注册路径的 404 响应。
-- backend/README.md、backend/docs/run-lifecycle.md：启动、配置与生命周期说明。
+- backend/README.md：启动、配置与生命周期说明。
 - backend/go.mod、backend/go.sum：依赖清单。
 - frontend/：前端基础工程。
 
 ## 验证情况
+
+测试目录整理（2026-11-03）：go test -timeout=60s ./...、go test -race -tags=mysqlintegration -timeout=60s ./...、go vet -tags=mysqlintegration ./... 均通过；测试使用本机13316端口的独立 MySQL 8.0.44 和 pulseframe_pool_test 数据库，测试实例已关闭。核对8份后端测试文件均位于 backend/test，相关索引无旧路径，修改文件的 gofmt 和 git diff --check 通过。既有测试场景保留，入口通过 app.Run 调用相同启动流程。
 
 项目注释更新（2026-11-03）：后端 go test -timeout=60s ./...、go vet -tags=mysqlintegration ./...，前端 npm test 和 npm run build 均通过；gofmt 和本次文件的 git diff --check 通过。标准库扫描器确认23份 Go 文件修改前后的代码词法单元一致，所有具名函数文档包含输入、输出、功能和示例；前端6份文件差异均为注释。未重新运行 MySQL 集成测试。验证脚本：/Users/leimingze/notes/开源书籍/.agent/work/20261102-auth-design/verify_go_comments.go，以修改前 Git HEAD 和工作区文件为输入。
 
