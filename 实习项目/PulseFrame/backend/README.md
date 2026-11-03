@@ -1,14 +1,14 @@
 # PulseFrame Backend
 
-当前目录是 PulseFrame 核心 API 的工程基座。它提供配置校验、结构化日志、请求标识、访问日志、异常恢复、统一错误响应、健康检查、HTTP 超时和优雅退出，不依赖 MySQL 或 Redis。
+当前目录是 PulseFrame 核心 API 的工程基座。它提供配置校验、MySQL 连接池、结构化日志、请求标识、访问日志、异常恢复、统一错误响应、健康检查、HTTP 超时和优雅退出。启动需要 MySQL 连通，Redis 尚未接入。
 
 ## 目录
 
-Go 包直接位于 backend/ 下：config、logging、middleware、response 和 server 分别负责配置、日志、HTTP 中间件、错误响应和服务生命周期。cmd/pulseframe-api 是程序入口，test 保存后端测试。controller、service 和 dao 已建立为业务职责目录，业务代码在对应功能实现时加入。
+Go 包直接位于 backend/ 下：config、infra、logging、middleware、response 和 server 分别负责配置、外部客户端创建、日志、HTTP 中间件、错误响应和服务生命周期。cmd/pulseframe-api 是程序入口，其中 dependencies.go 持有并关闭进程共享的 MySQL 连接池。test 保存后端测试。controller、service 和 dao 已建立为业务职责目录。
 
 ## 启动
 
-在 backend/ 目录执行：
+先创建数据库并配置 MYSQL_USER、MYSQL_PASSWORD、MYSQL_DATABASE，应用不会自动建库或建表。在 backend/ 目录执行：
 
 ~~~bash
 go run ./cmd/pulseframe-api
@@ -35,11 +35,28 @@ go run ./cmd/pulseframe-api
 | HTTP_WRITE_TIMEOUT | 15s | 响应写入超时 |
 | HTTP_IDLE_TIMEOUT | 1m | 空闲连接超时 |
 | HTTP_SHUTDOWN_TIMEOUT | 10s | 优雅退出期限 |
+| MYSQL_ADDR | 127.0.0.1:3306 | MySQL 的 host:port，IPv6 使用 [地址]:端口 |
+| MYSQL_USER | 必填 | 数据库账号，按原值读取 |
+| MYSQL_PASSWORD | 必须显式设置 | 密码按原值读取；允许显式空字符串，是否允许连接由数据库认证决定 |
+| MYSQL_DATABASE | 必填 | 已存在且账号有权访问的数据库 |
+| MYSQL_TLS_MODE | false | false 使用普通连接；true 启用 TLS 并验证服务器证书及主机名 |
+| MYSQL_MAX_OPEN_CONNS | 20 | 每个进程的最大连接数，必须大于零 |
+| MYSQL_MAX_IDLE_CONNS | 5 | 最大空闲连接数，允许零，不得超过最大连接数 |
+| MYSQL_CONNECT_TIMEOUT | 3s | 建立网络连接的超时 |
+| MYSQL_READ_TIMEOUT | 5s | 单次网络读取超时 |
+| MYSQL_WRITE_TIMEOUT | 5s | 单次网络写入超时 |
+| MYSQL_STARTUP_TIMEOUT | 5s | 启动 PingContext 的整体期限，父上下文可以提前取消 |
+| MYSQL_CONN_MAX_LIFETIME | 30m | 连接最长存活时间，到期连接由连接池回收 |
+| MYSQL_CONN_MAX_IDLE_TIME | 5m | 连接最长空闲时间，由连接池清理空闲连接 |
+
+所有 MySQL 时长必须为正数，支持 Go 时长格式，如 250ms、3s、5m。可选参数未设置或为空时使用默认值。多个后端实例各自创建连接池，部署时按实例数乘以单实例上限计算连接预算，并为管理和其他程序预留连接。
+
+sql.DB 本身管理连接池，DAO 借用共享对象，不自行创建或关闭。查询、执行和事务应使用带截止时间的 Context；连接池满载时，等待连接的期限也由该 Context 控制，网络读写超时不限制排队时间。查询结果、事务和显式获取的连接由使用方及时释放。
 
 ## 接口
 
 - GET /livez：进程可以响应时返回 200。
-- GET /readyz：服务完成启动后返回 200。
+- GET /readyz：MySQL 启动检查成功且 HTTP 服务开始运行后返回 200；该探针不持续查询数据库。
 - 未知路径和不支持的方法使用统一 JSON 错误结构。
 
 本地检查：
@@ -54,6 +71,13 @@ curl -i http://127.0.0.1:8080/readyz
 ~~~bash
 go test -timeout=60s ./...
 go vet ./...
+~~~
+
+真实 MySQL 集成测试需要配置一个独立测试数据库，沿用上表的 MYSQL_* 环境变量；缺失配置或无法连接时直接失败。测试会建立连接、执行只读查询与 SLEEP，不创建业务表。
+
+~~~bash
+go test -race -tags=mysqlintegration -timeout=60s ./...
+go vet -tags=mysqlintegration ./...
 ~~~
 
 启动调用说明见 docs/run-lifecycle.md。

@@ -62,12 +62,13 @@ type Config struct {
 	Environment string
 	LogLevel    string
 	HTTP        HTTP
+	MySQL       MySQL
 }
 
 // Load 从环境变量读取并校验配置。
 // 输入：lookup，环境变量查询函数，不能为 nil。
-// 输出：环境、日志和 HTTP 类型化配置；来源缺失或取值非法时返回错误。
-// 功能：解析并校验环境变量；缺失或空值使用默认值，校验通过后将解析结果写入 Config 返回，失败时返回错误。
+// 输出：环境、日志、HTTP 和 MySQL 配置；必填项缺失或取值非法时返回错误。
+// 功能：加载启动配置，可选参数使用默认值，数据库认证信息按原值读取。
 func Load(lookup LookupEnv) (Config, error) {
 	// 配置来源是必需依赖，缺失时无法区分“变量不存在”和读取失败。
 	if lookup == nil {
@@ -91,10 +92,15 @@ func Load(lookup LookupEnv) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	mysqlConfig, err := loadMySQL(lookup)
+	if err != nil {
+		return Config{}, err
+	}
 	return Config{
 		Environment: environment,
 		LogLevel:    logLevel,
 		HTTP:        httpConfig,
+		MySQL:       mysqlConfig,
 	}, nil
 }
 

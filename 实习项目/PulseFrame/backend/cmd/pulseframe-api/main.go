@@ -1,9 +1,10 @@
-// 程序功能：读取基础配置，并启动 PulseFrame 核心 API。
+// 程序功能：读取配置，创建 MySQL 连接池，并启动 PulseFrame 核心 API。
 // 启动命令：在 backend 目录执行 go run ./cmd/pulseframe-api；环境变量见 backend/README.md。
 package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -32,9 +33,9 @@ func main() {
 
 // run 构建并运行核心 API。
 // 输入：parent，服务生命周期父上下文；lookup，环境变量查询函数。
-// 输出：服务正常退出时返回 nil，否则返回配置、初始化或运行错误。
-// 功能：完成配置、基础路由、信号监听和 HTTP 服务的依赖装配。
-func run(parent context.Context, lookup config.LookupEnv) error {
+// 输出：运行 HTTP 服务并在退出时关闭 MySQL；配置、初始化、运行或关闭失败时返回错误。
+// 功能：组织配置、依赖、基础路由及 HTTP 生命周期，保证初始化后的资源得到释放。
+func run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 	// 第一阶段只读取和校验配置，配置错误时不创建服务资源。
 	cfg, err := config.Load(lookup)
 	// 配置不完整时立即返回，避免用错误参数启动监听。
@@ -51,6 +52,13 @@ func run(parent context.Context, lookup config.LookupEnv) error {
 		return fmt.Errorf("create logger: %w", err)
 	}
 	gin.SetMode(ginMode(cfg.Environment))
+	dependencies, err := NewDependencies(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("create dependencies: %w", err)
+	}
+	defer func() {
+		runErr = errors.Join(runErr, dependencies.Close())
+	}()
 
 	// 基座只注册健康检查和通用 HTTP 中间件。
 	health := server.NewHealthState()

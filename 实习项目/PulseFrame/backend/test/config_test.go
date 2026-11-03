@@ -31,18 +31,18 @@ func (values envMap) Lookup(key string) (string, bool) {
 	return value, exists
 }
 
-// TestLoadDefaults 验证无环境变量时的默认配置。
+// TestLoadDefaults 验证仅提供数据库必填项时的基础默认配置。
 // 输入：Go 测试框架提供的测试上下文。
 // 输出：默认配置不符合预期时使测试失败。
 // 功能：保护本地启动所需的基础默认值。
 func TestLoadDefaults(t *testing.T) {
-	cfg, err := config.Load(envMap{}.Lookup)
-	// 空环境应采用明确的本地默认值。
+	cfg, err := config.Load(mysqlEnvironment().Lookup)
+	// 未指定基础可选参数时采用明确的本地默认值。
 	if err != nil {
 		t.Fatalf("load defaults: %v", err)
 	}
 	if cfg.Environment != config.EnvironmentLocal || cfg.LogLevel != expectedLogLevel {
-		t.Fatalf("unexpected base config: %+v", cfg)
+		t.Fatalf("unexpected environment or log level: %s %s", cfg.Environment, cfg.LogLevel)
 	}
 	// HTTP 地址和关闭期限是本地运行的关键默认项。
 	if cfg.HTTP.Address != expectedHTTPAddress || cfg.HTTP.ShutdownTimeout != expectedShutdownTime {
@@ -56,6 +56,7 @@ func TestLoadDefaults(t *testing.T) {
 // 功能：确认运行环境、监听地址、日志级别和时长均可配置。
 func TestLoadOverrides(t *testing.T) {
 	values := envMap{
+		"MYSQL_USER": "config-test", "MYSQL_PASSWORD": "", "MYSQL_DATABASE": "config-test",
 		envAppEnvironment:  config.EnvironmentStaging,
 		envHTTPAddress:     "127.0.0.1:18080",
 		envLogLevel:        "debug",
@@ -68,7 +69,7 @@ func TestLoadOverrides(t *testing.T) {
 		t.Fatalf("load overrides: %v", err)
 	}
 	if cfg.Environment != config.EnvironmentStaging || cfg.LogLevel != "debug" || cfg.HTTP.Address != "127.0.0.1:18080" {
-		t.Fatalf("unexpected override config: %+v", cfg)
+		t.Fatal("environment, log level or HTTP address did not match overrides")
 	}
 	// 各 HTTP 时长保持独立解析。
 	if cfg.HTTP.ReadTimeout != 3*time.Second || cfg.HTTP.ShutdownTimeout != 6*time.Second {
@@ -79,7 +80,7 @@ func TestLoadOverrides(t *testing.T) {
 // TestLoadRejectsInvalidValues 验证非法基础配置会阻止启动。
 // 输入：Go 测试框架提供的测试上下文。
 // 输出：任一非法配置未返回错误时使测试失败。
-// 功能：覆盖环境名称、监听地址和正数时长的校验边界。
+// 功能：在 MySQL 必填配置有效时覆盖基础配置的校验边界。
 func TestLoadRejectsInvalidValues(t *testing.T) {
 	cases := []envMap{
 		{envAppEnvironment: "prod"},
@@ -88,7 +89,11 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 	}
 	// 每组输入只包含一个错误，便于定位校验失效位置。
 	for _, values := range cases {
-		if _, err := config.Load(values.Lookup); err == nil {
+		complete := mysqlEnvironment()
+		for key, value := range values {
+			complete[key] = value
+		}
+		if _, err := config.Load(complete.Lookup); err == nil {
 			t.Fatalf("expected invalid config to fail: %+v", values)
 		}
 	}

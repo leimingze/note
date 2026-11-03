@@ -2,11 +2,13 @@
 
 ## 当前任务
 
-TASK-2026-11-03-MYSQL-POOL-DESIGN，文件修改计划已记录，连接池设计继续讨论。
+TASK-2026-11-03-MYSQL-POOL-DESIGN，MySQL 连接池代码及真实连接验证已完成。
 
 ## 当前方案
 
-可用性与高并发治理的职责及进度表见笔记/服务可用性与高并发治理.md，该表引用笔记/MySQL连接池-文件索引.md 中的文件计划。基础配置管理框架已完成；当前讨论 MySQL 配置扩展、infra 客户端创建及启动入口的依赖装配与关闭。索引中的新增代码文件为计划，尚未创建；Redis 和外部 HTTP 客户端后续讨论。
+可用性与高并发治理的职责、进度及连接池讨论范围见笔记/服务可用性与高并发治理.md，该文档引用 MySQL 和 Redis 的独立文件索引。MySQL 通过 go-sql-driver/mysql v1.10.1 和 database/sql 接入；config 读取配置，infra 创建并检查连接，cmd/pulseframe-api/dependencies.go 持有和关闭连接池，main.go 组织启动及退出。单进程默认最多20个连接、5个空闲连接，连接最长存活30分钟、空闲5分钟，均可配置。账号、密码、数据库为显式配置，密码保留原值；启动检查失败直接返回错误。
+
+MySQL 连接池等待使用操作 Context 的截止时间，网络读写超时单独配置；使用方负责释放查询结果、事务和显式获取的连接。Redis 与外部 HTTP 客户端尚未编写；关闭 Redis 客户端自动重试为建议方案，尚未确认。部署连接预算及监测继续讨论。
 
 登录名区分大小写。注册、登录保留原始 username，MySQL 使用 ascii_bin 唯一索引；abc 与 ABC 可分别注册。账号限流 key 直接使用原始 username。IP 限流 key 使用可信来源的 normalizedIp，通过 Go net/netip 解析、Unmap、String 规范化；同一 IPv6 地址的不同写法共用计数。
 
@@ -22,17 +24,20 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 登录与注册设计采用用户名密码及 QQ 登录，短期 JWT 配合 Redis 刷新会话。Access Token 最长15分钟，会话绝对期限7天，Refresh Token 强制原子轮换，sessionId 保持不变。MySQL 保存账号状态和 authVersion，登录与刷新检查状态及版本。封禁或全部退出通过账号状态与版本阻止旧会话续期，Redis 数据按原 TTL 到期；刷新发现账号禁用或版本失效时撤销对应会话。业务请求只验签 JWT，退出和封禁后已有 Access Token 可继续使用至到期。依据：笔记/登录与注册.md。
 
-代码当前仅保留项目基座。后端提供配置校验、结构化日志、请求标识、访问日志、异常恢复、统一错误响应、健康探针、HTTP 超时及优雅退出；不注册业务路由，不连接 MySQL 或 Redis。controller、service、dao 保留目录占位。前端保留现有基础工程。
+代码当前为项目基座及 MySQL 连接池。后端提供配置校验、结构化日志、请求标识、访问日志、异常恢复、统一错误响应、健康探针、HTTP 超时及优雅退出；启动时连接 MySQL，不注册业务路由，不连接 Redis。controller、service、dao 保留目录占位。前端保留现有基础工程。
 
 依据：工程基座提交 2393c31、backend/cmd/pulseframe-api/main.go、backend/server/router.go、backend/go.mod。注册处理、数据库接入、建表脚本及对应测试已移除。
 
 ## 有效文件
 
-- 笔记/服务可用性与高并发治理.md：职责与进度表，引用 MySQL 连接池文件索引。
-- 笔记/MySQL连接池-文件索引.md：MySQL 连接池预计新增或修改的文件及职责。
+- 笔记/服务可用性与高并发治理.md：职责、进度及连接池讨论范围，引用 MySQL 和 Redis 文件索引。
+- 笔记/MySQL连接池-文件索引.md：仅列 MySQL 连接池配置、创建、启动管理及依赖清单相关文件与职责；Agent 执行时的测试和文档维护要求不列入表格。
+- 笔记/Redis连接池-文件索引.md：Redis 连接池配置、创建、启动管理及依赖清单相关文件与职责。
 - 笔记/登录与注册.md：当前认证设计，保留“思考、暂定方案”及客户端、服务端步骤格式。
 - 笔记/登录与注册-数据结构.md：三张 MySQL 表的字段与约束、Redis 会话及令牌映射、QQ state 和频率计数。
 - backend/cmd/pulseframe-api/main.go：启动入口。
+- backend/config/mysql.go、backend/infra/mysql.go、backend/cmd/pulseframe-api/dependencies.go：MySQL 配置、连接创建及生命周期管理。
+- backend/test/mysql_config_test.go、backend/test/mysql_test.go、backend/cmd/pulseframe-api/dependencies_test.go：配置校验及真实数据库集成测试。
 - backend/config/、backend/logging/、backend/middleware/、backend/response/、backend/server/：基础能力。
 - backend/controller/.gitkeep、backend/service/.gitkeep、backend/dao/.gitkeep：业务目录占位。
 - backend/test/：基座测试，其中 scaffold_test.go 验证路由集合与原注册路径的 404 响应。
@@ -42,7 +47,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 ## 验证情况
 
-本次文档：MySQL 文件计划集中至独立索引，治理文档保留职责与进度表；检查清单完整性、相对链接及 git diff --check。未修改代码，未执行接口、数据库或故障切换测试。
+本次验证（2026-11-03）：独立 MySQL 8.0.44 实例监听本机13316，数据库 pulseframe_pool_test。backend 目录执行 go test -race -tags=mysqlintegration -timeout=60s ./... 及 go vet -tags=mysqlintegration ./... 均通过。覆盖必填配置、密码原值保留、连接复用、容量限制、等待及查询取消、读超时、启动取消与期限、连接回收、连接错误、依赖关闭及真实 HTTP 启动退出；未进行负载及故障切换测试。测试配置使用 MYSQL_* 环境变量，详见 backend/README.md。
 
 基座既有验证（2026-10-15）：
 
@@ -57,10 +62,10 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 ## 下一步
 
-继续讨论 MySQL 连接池配置、客户端创建、启动检查和退出关闭行为。
+继续讨论 Redis 连接池配置、客户端创建、启动检查、重试与关闭行为，并逐项确定连接池讨论表中的其余内容。
 
 ## 归档位置
 
 原注册代码保留在 Git 提交 52812e0；基座版本为 2393c31。过程目录 .agent/work/20261015-pulseframe-base/ 已归档并保留原位置，受 .gitignore 保护。
 
-本次正式文档为笔记/登录与注册.md、笔记/登录与注册-数据结构.md、笔记/服务可用性与高并发治理.md、笔记/MySQL连接池-文件索引.md；编辑补丁位于 /Users/leimingze/notes/开源书籍/.agent/work/20261102-auth-design/，已归档并受该目录的 Git 忽略规则保护。
+正式文件见上方有效文件索引；MySQL 测试实例数据与日志保留在 .agent/work/mysql-pool/，编辑补丁保留在 /Users/leimingze/notes/开源书籍/.agent/work/20261102-auth-design/，均作为已归档过程目录保留，受 Git 忽略规则保护。
