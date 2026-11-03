@@ -2,7 +2,7 @@
 
 ## 当前任务
 
-TASK-2026-11-03-CONFIG-ORGANIZATION，config 包已按职责组织，内部注释使用自然语言描述读取、转换和校验的处理顺序；env.go 的功能说明附有具体输入和结果示例，并通过验证。
+TASK-2026-11-03-PROJECT-COMMENTS，已更新29份前后端代码文件的注释：功能说明附有具体例子，关键流程使用自然语言说明，并补充字段用途；仅调整注释和格式。
 
 ## 当前方案
 
@@ -53,6 +53,8 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 - frontend/：前端基础工程。
 
 ## 验证情况
+
+项目注释更新（2026-11-03）：后端 go test -timeout=60s ./...、go vet -tags=mysqlintegration ./...，前端 npm test 和 npm run build 均通过；gofmt 和本次文件的 git diff --check 通过。标准库扫描器确认23份 Go 文件修改前后的代码词法单元一致，所有具名函数文档包含输入、输出、功能和示例；前端6份文件差异均为注释。未重新运行 MySQL 集成测试。验证脚本：/Users/leimingze/notes/开源书籍/.agent/work/20261102-auth-design/verify_go_comments.go，以修改前 Git HEAD 和工作区文件为输入。
 
 调用注释更新（2026-11-03）：四个配置文件的内部注释按处理顺序说明环境读取、默认值选择、类型转换和配置校验，并使用具体输入示例帮助理解；仅修改注释。go test -timeout=60s ./...、gofmt 格式检查及本次文件的 git diff --check 通过。
 

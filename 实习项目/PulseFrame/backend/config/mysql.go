@@ -14,7 +14,7 @@ const (
 	defaultMySQLMaxOpenConns   = 20               // 单进程默认连接总上限，包含使用中和空闲连接。
 	defaultMySQLMaxIdleConns   = 5                // 单进程默认最多保留的空闲连接数，不代表预先创建数量。
 	defaultMySQLConnectTimeout = 3 * time.Second  // 默认建立一次 TCP 连接最多等待3秒。
-	defaultMySQLIOTimeout      = 5 * time.Second  // 默认单次网络读取或写入最多等待5秒，不是 SQL 总执行期限。
+	defaultMySQLIOTimeout      = 5 * time.Second  // 默认单次网络读取或写入最多等待5秒，SQL 整体期限由调用方的上下文控制。
 	defaultMySQLStartupTimeout = 5 * time.Second  // 启动 PingContext 的默认整体期限，包含连接建立和检查。
 	defaultMySQLConnLifetime   = 30 * time.Minute // 连接默认最长存活30分钟，到期后按连接池规则回收。
 	defaultMySQLConnIdleTime   = 5 * time.Minute  // 连接默认最多持续空闲5分钟，之后由连接池清理。
@@ -40,6 +40,7 @@ type MySQL struct {
 // 输入：lookup，已确认非 nil 的环境变量查询函数。
 // 输出：MySQL 配置；必填项缺失或参数非法时返回错误。
 // 功能：读取连接信息和连接池参数，密码始终保留原值。
+// 例如必填项有效，连接总上限配置为 "3"、空闲上限为 "1" 时，得到最多3个连接且保留至多1个空闲连接的配置。
 func loadMySQL(lookup LookupEnv) (MySQL, error) {
 	// 先读取密码，并确认密码变量有没有设置；没有设置时停止加载，显式空密码则允许继续。
 	password, exists := lookup("MYSQL_PASSWORD")
@@ -68,9 +69,9 @@ func loadMySQL(lookup LookupEnv) (MySQL, error) {
 	}
 	// 为六项时长分别列出环境变量名、默认值和保存位置，下面按这张表逐项读取。
 	durations := []struct {
-		key      string
-		fallback time.Duration
-		target   *time.Duration
+		key      string         // 本轮要读取的环境变量名称。
+		fallback time.Duration  // 没有设置或内容为空时使用的默认时长。
+		target   *time.Duration // 保存转换结果的配置字段地址。
 	}{
 		{"MYSQL_CONNECT_TIMEOUT", defaultMySQLConnectTimeout, &cfg.ConnectTimeout},
 		{"MYSQL_READ_TIMEOUT", defaultMySQLIOTimeout, &cfg.ReadTimeout},
@@ -96,6 +97,7 @@ func loadMySQL(lookup LookupEnv) (MySQL, error) {
 // 输入：cfg，环境读取或调用方直接构造的 MySQL 配置。
 // 输出：合法时返回 nil，否则返回包含配置名称的错误。
 // 功能：在建立网络连接前拒绝无效地址、无限连接数量和无效超时。
+// 例如其他参数有效但连接总上限为0时返回错误，避免连接数量不受限制。
 func (cfg MySQL) Validate() error {
 	// 先确认账号、数据库名称、地址和加密模式可用，发现问题就停止本次检查。
 	if err := cfg.validateConnection(); err != nil {
@@ -108,6 +110,7 @@ func (cfg MySQL) Validate() error {
 // 输入：cfg，MySQL 连接配置。
 // 输出：地址、账号、数据库或 TLS 模式非法时返回错误。
 // 功能：校验连接目标，防止驱动自动补全缺失的必要信息。
+// 例如账号和数据库名称有效时，127.0.0.1:3306 可通过地址检查，缺少主机的 :3306 会报错。
 func (cfg MySQL) validateConnection() error {
 	// 逐项检查账号和数据库名称，完全没填或只填空白都算缺失；检查过程保留原来的内容。
 	for key, value := range map[string]string{"MYSQL_USER": cfg.User, "MYSQL_DATABASE": cfg.Database} {
@@ -136,6 +139,7 @@ func (cfg MySQL) validateConnection() error {
 // 输入：cfg，连接池容量及期限配置。
 // 输出：容量关系或时长非法时返回错误。
 // 功能：确保连接数量有上限，等待网络与连接回收均具有明确期限。
+// 例如总上限为20、空闲上限为5且各项时长大于零时通过；空闲上限为21时返回错误。
 func (cfg MySQL) validatePool() error {
 	// sql.DB 将非正上限视为不限制连接数量，此处要求显式限制资源使用。
 	if cfg.MaxOpenConns <= 0 {

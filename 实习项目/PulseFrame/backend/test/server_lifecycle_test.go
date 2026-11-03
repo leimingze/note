@@ -23,16 +23,17 @@ const (
 
 // serverTestRun 保存后台服务测试所需参数。
 type serverTestRun struct {
-	server   *server.Server
-	ctx      context.Context
-	listener net.Listener
-	results  chan<- error
+	server   *server.Server  // 在后台接收请求的服务。
+	ctx      context.Context // 测试通过取消此上下文通知服务退出。
+	listener net.Listener    // 已绑定本机临时端口的监听器。
+	results  chan<- error    // 服务退出后写入结果，供测试等待。
 }
 
 // TestServerLifecycle 验证真实监听端口下的请求和优雅退出。
 // 输入：Go 测试框架提供的测试上下文。
-// 输出：服务无法接收请求、更新就绪状态或按时退出时使测试失败。
-// 功能：使用真实网络生命周期验证工程骨架，而非只测试 Handler。
+// 输出：启动本机 HTTP 服务并在检查后关闭；无法接收请求、更新就绪状态或按时退出时使测试失败。
+// 功能：通过本机网络请求检查服务从启动、就绪到退出的完整过程。
+// 例如 /readyz 返回200后取消上下文，检查服务结束且健康状态恢复为未就绪。
 func TestServerLifecycle(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	health := server.NewHealthState()
@@ -59,7 +60,7 @@ func TestServerLifecycle(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	results := make(chan error, 1)
 	run := serverTestRun{server: httpServer, ctx: ctx, listener: listener, results: results}
-	// Serve 会阻塞，后台启动后通过健康状态同步，而不是依赖固定 sleep。
+	// 服务在后台接收请求；测试等待就绪状态出现后才发送请求。
 	go run.Serve()
 	waitForReady(t, health)
 
@@ -77,10 +78,10 @@ func TestServerLifecycle(t *testing.T) {
 
 	// 取消上下文触发优雅退出，并等待后台 Serve 返回最终结果。
 	cancel()
-	// 在返回结果和硬超时之间等待，防止生命周期测试永久阻塞。
+	// 同时等待服务结束和超时通知，超过期限仍未结束就报告测试失败。
 	select {
 	case err := <-results:
-		// 上下文取消应产生正常关闭结果，而不是 Serve 故障。
+		// 主动取消上下文应使服务正常关闭，因此返回值应为 nil。
 		if err != nil {
 			t.Fatalf("serve: %v", err)
 		}
@@ -96,7 +97,8 @@ func TestServerLifecycle(t *testing.T) {
 // lifecycleTestOptions 创建生命周期测试使用的 HTTP Server 参数。
 // 输入：handler，测试路由；health，共享健康状态。
 // 输出：使用短超时和临时地址的 Options。
-// 功能：集中测试配置，避免生命周期测试散落魔法数。
+// 功能：为生命周期测试统一设置监听地址和各项等待期限。
+// 例如返回127.0.0.1:0作为地址，由系统分配端口，退出等待期限设置为1秒。
 func lifecycleTestOptions(handler http.Handler, health *server.HealthState) server.Options {
 	return server.Options{
 		Address:           "127.0.0.1:0",
@@ -112,8 +114,9 @@ func lifecycleTestOptions(handler http.Handler, health *server.HealthState) serv
 
 // Serve 在后台运行测试服务并返回结果。
 // 输入：使用 serverTestRun 中的服务、上下文、监听器和结果通道。
-// 输出：将服务的 Serve 返回值写入结果通道。
+// 输出：运行 HTTP 服务，并将服务的 Serve 返回值写入结果通道。
 // 功能：让测试能够并发发送真实 HTTP 请求并触发退出。
+// 例如测试取消上下文后，服务正常退出并向结果通道写入 nil。
 func (run serverTestRun) Serve() {
 	run.results <- run.server.Serve(run.ctx, run.listener)
 }
@@ -122,13 +125,14 @@ func (run serverTestRun) Serve() {
 // 输入：t，测试上下文；health，共享健康状态。
 // 输出：服务在期限内就绪则返回，否则使测试失败。
 // 功能：以显式超时同步服务启动，避免使用固定睡眠时间。
+// 例如2秒内观察到 Ready 为 true 就返回；一直未就绪则报告测试失败。
 func waitForReady(t *testing.T, health *server.HealthState) {
 	t.Helper()
 	deadline := time.NewTimer(testHTTPTimeout)
 	ticker := time.NewTicker(time.Millisecond)
 	defer deadline.Stop()
 	defer ticker.Stop()
-	// 使用轮询和硬超时，既避免竞态，也避免失败时测试永久阻塞。
+	// 每毫秒读取一次并发安全的就绪标记，同时用整体期限限制等待时间。
 	for {
 		// 每次循环同时监听状态检查节拍和整体截止时间。
 		select {

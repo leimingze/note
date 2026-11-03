@@ -26,6 +26,7 @@ const (
 // 输入：t，测试上下文，进程环境需配置独立测试数据库。
 // 输出：完整 MySQL 配置；缺失配置时测试失败。
 // 功能：让集成测试连接真实数据库，不跳过缺失依赖。
+// 例如进程已设置有效 MYSQL_* 环境变量时返回数据库配置，缺少 MYSQL_USER 时使测试失败。
 func integrationMySQLConfig(t *testing.T) config.MySQL {
 	t.Helper()
 	cfg, err := config.Load(os.LookupEnv)
@@ -36,8 +37,9 @@ func integrationMySQLConfig(t *testing.T) config.MySQL {
 }
 
 // 输入：t，测试上下文；cfg，测试数据库配置。
-// 输出：可查询的连接池，并登记测试结束时的关闭操作。
+// 输出：连接数据库并返回可查询的连接池，登记测试结束时的关闭操作；连接失败时结束测试。
 // 功能：统一真实连接创建和错误检查。
+// 例如传入测试数据库配置后可执行 SELECT 1，测试结束时自动关闭连接池。
 func openMySQL(t *testing.T, cfg config.MySQL) *sql.DB {
 	t.Helper()
 	db, err := infra.NewMySQL(t.Context(), cfg)
@@ -54,8 +56,9 @@ func openMySQL(t *testing.T, cfg config.MySQL) *sql.DB {
 }
 
 // 输入：t，测试上下文。
-// 输出：连接未复用、数据库选择错误或关闭后仍可查询时测试失败。
+// 输出：访问测试数据库并关闭连接池；连接未复用、数据库选择错误或关闭后仍可查询时测试失败。
 // 功能：验证启动检查、连接复用和关闭的可观察行为。
+// 例如连续两次查询 CONNECTION_ID() 应得到相同编号，关闭连接池后 Ping 应返回错误。
 func TestMySQLReuseAndClose(t *testing.T) {
 	cfg := integrationMySQLConfig(t)
 	db := openMySQL(t, cfg)
@@ -84,8 +87,9 @@ func TestMySQLReuseAndClose(t *testing.T) {
 }
 
 // 输入：t，测试上下文。
-// 输出：满载时未遵守上限和取消期限，或归还连接后不能恢复时测试失败。
+// 输出：建立并占用测试连接，结束后释放；未遵守上限和取消期限，或归还后不能恢复时测试失败。
 // 功能：验证有界连接池的等待取消与连接归还行为。
+// 例如总上限为1且唯一连接已被借出时，第二次获取应在50毫秒期限后返回超时。
 func TestMySQLPoolWaitCancellation(t *testing.T) {
 	cfg := integrationMySQLConfig(t)
 	// 保持唯一连接被借用，让后续获取操作必然进入等待状态。
@@ -116,8 +120,9 @@ func TestMySQLPoolWaitCancellation(t *testing.T) {
 }
 
 // 输入：t，测试上下文。
-// 输出：禁用空闲连接后仍保留连接时测试失败。
+// 输出：连接测试数据库并检查连接池统计，结束后关闭；禁用空闲连接后仍保留连接时测试失败。
 // 功能：验证最大空闲连接数配置作用于真实连接。
+// 例如空闲上限设为0，启动检查用完连接后，连接池中的打开连接数应为0。
 func TestMySQLNoIdleConnections(t *testing.T) {
 	cfg := integrationMySQLConfig(t)
 	cfg.MaxIdleConns = 0
@@ -128,8 +133,9 @@ func TestMySQLNoIdleConnections(t *testing.T) {
 }
 
 // 输入：t，测试上下文。
-// 输出：正在运行的查询未响应取消或连接池不能恢复时测试失败。
+// 输出：执行测试数据库查询并触发取消，结束后关闭连接池；查询未响应取消或连接池不能恢复时测试失败。
 // 功能：验证请求上下文能够中止真实 SQL 查询并释放连接。
+// 例如 SQL 等待1秒而上下文只有50毫秒时，查询应返回超时，后续 Ping 仍能成功。
 func TestMySQLQueryCancellation(t *testing.T) {
 	// SQL 等待时间长于上下文期限，用真实慢查询验证取消能够传递到驱动。
 	db := openMySQL(t, integrationMySQLConfig(t))
@@ -145,8 +151,9 @@ func TestMySQLQueryCancellation(t *testing.T) {
 }
 
 // 输入：t，测试上下文。
-// 输出：读取超时配置未中止慢查询时测试失败。
+// 输出：连接测试数据库并执行慢查询，结束后关闭；读取超时配置未中止查询时测试失败。
 // 功能：通过真实 SQL 等待验证驱动的读超时配置。
+// 例如读取期限为50毫秒、SQL 等待1秒时，应在外层2秒期限到来前因读取超时报错。
 func TestMySQLReadTimeout(t *testing.T) {
 	cfg := integrationMySQLConfig(t)
 	cfg.ReadTimeout = poolWaitTimeout
@@ -162,8 +169,9 @@ func TestMySQLReadTimeout(t *testing.T) {
 }
 
 // 输入：t，测试上下文。
-// 输出：已取消上下文或不存在的数据库未导致初始化失败时测试失败。
+// 输出：尝试连接测试数据库；取消、启动超时或数据库不存在时未报错则测试失败。
 // 功能：确认初始化不会返回尚未连通的连接池。
+// 例如先取消上下文再创建连接池，应返回 context.Canceled 且连接池为 nil。
 func TestMySQLStartupFailures(t *testing.T) {
 	cfg := integrationMySQLConfig(t)
 	ctx, cancel := context.WithCancel(t.Context())
@@ -187,8 +195,9 @@ func TestMySQLStartupFailures(t *testing.T) {
 }
 
 // 输入：t，测试上下文。
-// 输出：连接拒绝未作为初始化错误返回时测试失败。
+// 输出：绑定后关闭本机端口，再尝试数据库连接；连接拒绝未作为初始化错误返回时测试失败。
 // 功能：使用已关闭的本机端口验证真实连接错误传播。
+// 例如监听器关闭后把该端口作为 MySQL 地址，创建连接池应失败。
 func TestMySQLConnectionRefused(t *testing.T) {
 	cfg := integrationMySQLConfig(t)
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -206,8 +215,9 @@ func TestMySQLConnectionRefused(t *testing.T) {
 }
 
 // 输入：t，测试上下文。
-// 输出：超过存活期限的连接仍被复用时测试失败。
+// 输出：访问测试数据库并等待连接到期，结束后关闭连接池；到期连接仍被复用时测试失败。
 // 功能：通过真实连接编号变化验证连接回收参数已生效。
+// 例如连接存活期限为50毫秒，等待100毫秒后再次查询，连接编号应变化。
 func TestMySQLConnectionLifetime(t *testing.T) {
 	cfg := integrationMySQLConfig(t)
 	cfg.ConnMaxLifetime = connectionRecycleTime

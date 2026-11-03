@@ -12,8 +12,9 @@ import (
 )
 
 // 输入：ctx，启动上下文；cfg，MySQL 连接信息及连接池配置。
-// 输出：已检查连通性的连接池；失败时关闭已创建的连接池并返回错误。
+// 输出：访问数据库并返回已检查连通性的连接池；失败时关闭已创建的连接池并返回错误。
 // 功能：创建可供进程内并发复用的 sql.DB，成功后由调用方负责关闭。
+// 例如提供有效数据库配置且总上限为20时，返回最多同时持有20个连接的连接池，不会预先建立20个连接。
 func NewMySQL(ctx context.Context, cfg config.MySQL) (*sql.DB, error) {
 	// 调用方也可能直接构造配置，因此创建连接前仍检查完整约束。
 	if err := cfg.Validate(); err != nil {
@@ -37,7 +38,7 @@ func NewMySQL(ctx context.Context, cfg config.MySQL) (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create mysql connector: %w", err)
 	}
-	// OpenDB 创建连接池对象，真实连接在后续 PingContext 中建立并检查。
+	// 先创建管理连接的对象，再设置数量和回收期限；后面的连通性检查才会建立数据库连接。
 	db := sql.OpenDB(connector)
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.MaxIdleConns)

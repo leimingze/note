@@ -22,15 +22,16 @@ var (
 
 // RouterDependencies 保存创建核心路由所需依赖。
 type RouterDependencies struct {
-	Logger      *slog.Logger
-	IDGenerator middleware.IDGenerator
-	Health      *HealthState
+	Logger      *slog.Logger           // 访问日志和异常记录共用的日志器。
+	IDGenerator middleware.IDGenerator // 请求未携带合法标识时，用它生成新标识。
+	Health      *HealthState           // 生命周期更新、就绪接口读取的共享状态。
 }
 
 // NewRouter 创建核心 API 的 Gin 路由。
 // 输入：dependencies，日志器、请求标识生成器和健康状态。
 // 输出：配置完成的 Gin Engine；依赖或中间件初始化失败时返回错误。
 // 功能：集中注册全局中间件、基础路由和统一路由错误。
+// 例如请求 GET /livez 会经过请求标识、日志和异常恢复中间件，再返回存活状态。
 func NewRouter(dependencies RouterDependencies) (*gin.Engine, error) {
 	// 全局访问日志和异常恢复都依赖同一个结构化日志器。
 	if dependencies.Logger == nil {
@@ -59,7 +60,7 @@ func NewRouter(dependencies RouterDependencies) (*gin.Engine, error) {
 
 	// 不使用 gin.Default，确保中间件及日志格式完全由项目控制。
 	router := gin.New()
-	// 禁用默认代理信任，确保访问日志中的客户端地址来自实际连接。
+	// 不信任请求头中代理转发的 IP；后续读取客户端地址时以连接来源为准。
 	if err := router.SetTrustedProxies(nil); err != nil {
 		return nil, errors.Join(errConfigureProxyPolicy, err)
 	}
@@ -75,6 +76,7 @@ func NewRouter(dependencies RouterDependencies) (*gin.Engine, error) {
 // 输入：router，Gin 路由；health，共享健康状态。
 // 输出：修改路由注册表，无返回值。
 // 功能：提供存活和就绪探针，不注册任何业务接口。
+// 例如注册后可通过 GET /livez 查询进程存活状态，通过 GET /readyz 查询就绪状态。
 func registerPlatformRoutes(router *gin.Engine, health *HealthState) {
 	ready := readyHandler{health: health}
 	router.GET("/livez", handleLive)
@@ -85,6 +87,7 @@ func registerPlatformRoutes(router *gin.Engine, health *HealthState) {
 // 输入：router，Gin 路由。
 // 输出：修改路由错误处理器，无返回值。
 // 功能：保证框架级路由错误也使用统一响应结构。
+// 例如 GET /missing 返回 JSON 格式的404错误，POST /livez 返回 JSON 格式的405错误。
 func registerRouteErrors(router *gin.Engine) {
 	router.NoRoute(routeNotFound)
 	router.NoMethod(methodNotAllowed)
@@ -93,7 +96,8 @@ func registerRouteErrors(router *gin.Engine) {
 // routeNotFound 返回统一的资源不存在错误。
 // 输入：c，当前 Gin 请求上下文。
 // 输出：写入 404 错误并终止请求链路。
-// 功能：避免 Gin 默认文本响应破坏错误契约。
+// 功能：把未注册路径的请求转换为统一的 JSON 错误响应。
+// 例如 GET /missing 返回404，错误码为 RESOURCE_NOT_FOUND。
 func routeNotFound(c *gin.Context) {
 	response.WriteError(c, response.ErrorSpec{
 		Status:  http.StatusNotFound,
@@ -106,6 +110,7 @@ func routeNotFound(c *gin.Context) {
 // 输入：c，当前 Gin 请求上下文。
 // 输出：写入 405 错误并终止请求链路。
 // 功能：让客户端能够稳定区分路径不存在和请求方法错误。
+// 例如 /livez 只支持 GET，使用 POST 访问时返回405和 METHOD_NOT_ALLOWED。
 func methodNotAllowed(c *gin.Context) {
 	response.WriteError(c, response.ErrorSpec{
 		Status:  http.StatusMethodNotAllowed,

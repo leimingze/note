@@ -23,6 +23,7 @@ import (
 // 输入：进程环境变量和操作系统退出信号。
 // 输出：启动 HTTP 服务；初始化或运行失败时记录错误并以非零状态退出。
 // 功能：装配工程基础依赖并运行核心 API。
+// 例如数据库配置有效且端口可用时启动服务；数据库无法连接时记录错误并以状态码1退出。
 func main() {
 	// 入口无法向调用方返回错误，因此记录根因并用非零状态通知进程管理器。
 	if err := run(context.Background(), os.LookupEnv); err != nil {
@@ -35,6 +36,7 @@ func main() {
 // 输入：parent，服务生命周期父上下文；lookup，环境变量查询函数。
 // 输出：运行 HTTP 服务并在退出时关闭 MySQL；配置、初始化、运行或关闭失败时返回错误。
 // 功能：组织配置、依赖、基础路由及 HTTP 生命周期，保证初始化后的资源得到释放。
+// 例如收到 SIGTERM 后，先等待 HTTP 请求处理结束，再关闭共享的 MySQL 连接池。
 func run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 	// 第一阶段只读取和校验配置，配置错误时不创建服务资源。
 	cfg, err := config.Load(lookup)
@@ -43,6 +45,7 @@ func run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 		return fmt.Errorf("load config: %w", err)
 	}
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
+	// 退出信号或父上下文取消都会通知服务结束；函数返回时停止接收这些信号。
 	defer stop()
 
 	// 日志器和 Gin 模式都只依赖基础配置。
@@ -93,6 +96,7 @@ func run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 // 输入：environment，已经校验过的环境名称。
 // 输出：Gin 支持的 debug、test 或 release 模式。
 // 功能：集中维护项目环境与 Gin 模式之间的映射。
+// 例如 test 对应测试模式，production 对应发布模式，local 对应调试模式。
 func ginMode(environment string) string {
 	// 测试和部署环境使用各自模式，本地环境保留调试输出。
 	switch environment {

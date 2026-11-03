@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	minimumPort = 1     // HTTP 和 MySQL 显式配置端口的最小值，不接受自动分配端口的零值。
+	minimumPort = 1     // 显式配置端口的最小值；零表示自动分配端口，此处不接受。
 	maximumPort = 65535 // TCP 端口的最大有效值，供各模块地址校验共用。
 )
 
@@ -49,7 +49,7 @@ func parsePositiveDuration(lookup LookupEnv, key string, fallback time.Duration)
 	if err != nil {
 		return 0, fmt.Errorf("%s must be a duration: %w", key, err)
 	}
-	// 能识别为时长还不够，结果必须大于零，才能作为有效的超时或连接回收期限。
+	// 转换成功后继续检查数值，只接受大于零的时长。
 	if value <= 0 {
 		return 0, fmt.Errorf("%s must be greater than zero", key)
 	}
@@ -62,7 +62,7 @@ func parsePositiveDuration(lookup LookupEnv, key string, fallback time.Duration)
 // 例如配置为 "20" 时返回整数20，配置为 "0" 时返回0，配置为 "-1" 或 "abc" 时返回错误。
 func parseNonNegativeInt(lookup LookupEnv, key string, fallback int) (int, error) {
 	// 先把默认整数写成文字，再读取需要的环境变量；没有设置或内容为空时采用默认值。
-	// 最后将取得的文字转换成整数，例如把 "20" 变成数字20，供后面设置连接数量。
+	// 最后将取得的文字转换成整数，例如把 "20" 变成数字20，供调用方使用。
 	value, err := strconv.Atoi(readValue(lookup, key, strconv.Itoa(fallback)))
 	// 内容无法转换为整数、超出整数范围或小于零时，直接报告配置错误。
 	if err != nil || value < 0 {

@@ -14,6 +14,7 @@ import (
 // 输入：Go 测试框架提供的测试上下文。
 // 输出：业务路由出现或未知路径响应异常时使测试失败。
 // 功能：验证工程基座仅提供健康探针，并使用真实请求标识生成器处理请求。
+// 例如 POST /api/v1/auth/register 应返回404和请求标识，确认该业务路由尚未注册。
 func TestScaffoldRoutes(t *testing.T) {
 	router, err := server.NewRouter(server.RouterDependencies{
 		Logger:      slog.New(slog.NewJSONHandler(io.Discard, nil)),
@@ -24,6 +25,7 @@ func TestScaffoldRoutes(t *testing.T) {
 		t.Fatalf("create router: %v", err)
 	}
 	expected := map[string]string{"/livez": http.MethodGet, "/readyz": http.MethodGet}
+	// 逐条核对路由的方法和路径，匹配后移除期望项；最后检查是否还有遗漏。
 	routes := router.Routes()
 	if len(routes) != len(expected) {
 		t.Fatalf("unexpected route count: got %d want %d", len(routes), len(expected))

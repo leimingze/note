@@ -36,6 +36,7 @@ type HTTP struct {
 // 输入：lookup，已确认非 nil 的环境变量查询函数。
 // 输出：HTTP 配置；地址或超时非法时返回错误。
 // 功能：集中加载 HTTP 配置，在创建服务前确认监听参数及各阶段期限有效。
+// 例如 HTTP_ADDR 为 :9090、HTTP_READ_TIMEOUT 为 "3s" 时，得到9090端口和3秒读取期限。
 func loadHTTP(lookup LookupEnv) (HTTP, error) {
 	// 先读取服务要监听的地址；没有设置 HTTP_ADDR 或内容为空时，使用 :8080。
 	address := readValue(lookup, envHTTPAddress, defaultHTTPAddress)
@@ -80,11 +81,12 @@ func loadHTTP(lookup LookupEnv) (HTTP, error) {
 // 输入：address，符合 host:port 形式的监听地址。
 // 输出：地址合法时返回 nil，否则返回包含配置名称的错误。
 // 功能：在监听端口前暴露地址格式和端口范围问题。
+// 例如 :8080 检查通过；缺少冒号的 "8080" 或端口为零的 :0 返回错误。
 func validateAddress(address string) error {
 	// 从地址中分别取出主机和端口，例如 "localhost:8080" 中的端口是 "8080"。
 	// 这里主要检查端口，主机部分允许为空，表示监听所有网卡。
 	_, portText, err := net.SplitHostPort(address)
-	// 监听地址允许空主机表示所有网卡，同时支持带方括号的 IPv6 地址。
+	// 无法从地址中分出主机和端口时，说明格式有误，立即报告配置名称和原因。
 	if err != nil {
 		return fmt.Errorf("%s must use host:port format: %w", envHTTPAddress, err)
 	}

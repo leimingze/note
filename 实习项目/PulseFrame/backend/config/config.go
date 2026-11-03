@@ -32,6 +32,7 @@ type Config struct {
 // 输入：lookup，环境变量查询函数，不能为 nil。
 // 输出：环境、日志、HTTP 和 MySQL 配置；必填项缺失或取值非法时返回错误。
 // 功能：加载启动配置，可选参数使用默认值，数据库认证信息按原值读取。
+// 例如数据库必填项已提供、HTTP_ADDR 未设置时，得到的 HTTP 监听地址为 :8080。
 func Load(lookup LookupEnv) (Config, error) {
 	// 配置来源是必需依赖，缺失时无法区分“变量不存在”和读取失败。
 	if lookup == nil {
@@ -74,6 +75,7 @@ func Load(lookup LookupEnv) (Config, error) {
 // 输入：value，待校验的环境名称。
 // 输出：规范化环境名称；不支持的环境返回错误。
 // 功能：限制运行环境集合，避免拼写错误改变服务行为。
+// 例如传入 " LOCAL " 返回 "local"，传入不支持的 "prod" 返回错误。
 func parseEnvironment(value string) (string, error) {
 	// 去掉名称首尾的空白并转为小写，例如把 " LOCAL " 整理成 "local"，再检查是否支持。
 	value = strings.ToLower(strings.TrimSpace(value))
@@ -90,6 +92,7 @@ func parseEnvironment(value string) (string, error) {
 // 输入：value，待校验的日志级别。
 // 输出：规范化日志级别；不支持的级别返回错误。
 // 功能：在日志器创建前阻止错误配置进入运行阶段。
+// 例如传入 " INFO " 返回 "info"，传入不支持的 "verbose" 返回错误。
 func parseLogLevel(value string) (string, error) {
 	// 先去除首尾空白再转为小写，使 " INFO " 可以匹配 info。
 	value = strings.ToLower(strings.TrimSpace(value))
