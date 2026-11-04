@@ -2,17 +2,17 @@
 
 ## 当前任务
 
-TASK-2026-11-03-TEST-DIRECTORY，8份后端测试文件统一保存在 backend/test；启动逻辑和依赖管理迁至 backend/internal/app，main.go 保留入口。迁移后的启动、关闭与数据库连接行为已通过验证。
+TASK-2026-11-04-REDIS-POOL，10份后端测试文件统一保存在 backend/test；启动逻辑和依赖管理位于 backend/internal/app，main.go 保留入口。Redis 配置、客户端创建和依赖生命周期已实现，真实 MySQL 8.4 与 Redis 7 服务验证已通过。
 
 ## 当前方案
 
-backend/config/config.go 定义总配置并组织加载；env.go 保存 LookupEnv、可选环境变量读取、整数与时长解析和共用端口范围；http.go 与 mysql.go 各自负责模块配置。运行环境及日志级别校验保留在统一入口文件，公共解析函数不调用模块加载函数。配置接口、默认值及校验行为保持一致，说明见 backend/README.md。
+backend/config/config.go 定义总配置并组织加载；env.go 保存 LookupEnv、可选环境变量读取、整数与时长解析和共用端口范围；http.go、mysql.go 与 redis.go 各自负责模块配置。运行环境及日志级别校验保留在统一入口文件，公共解析函数不调用模块加载函数。配置接口、默认值及校验行为保持一致，说明见 backend/README.md。
 
 docs/设计/ 保存5份项目方案与文件索引；docs/学习笔记/ 保存2份通用知识文档及 assets/ 中的4张配图，原有文档和图片内容保持不变。
 
-可用性与高并发治理的职责、进度及连接池讨论范围见 docs/设计/服务可用性与高并发治理.md，该文档引用 MySQL 和 Redis 的独立文件索引。MySQL 通过 go-sql-driver/mysql v1.10.1 和 database/sql 接入；config 读取配置，infra 创建并检查连接，internal/app/dependencies.go 持有和关闭连接池，internal/app/run.go 组织启动及退出，main.go 调用 app.Run。单进程默认最多20个连接、5个空闲连接，连接最长存活30分钟、空闲5分钟，均可配置。账号、密码、数据库为显式配置，密码保留原值；启动检查失败直接返回错误。
+可用性与高并发治理的职责、进度及连接池讨论范围见 docs/设计/服务可用性与高并发治理.md，该文档引用 MySQL 和 Redis 的独立文件索引。MySQL 通过 go-sql-driver/mysql v1.10.1 和 database/sql 接入，Redis 通过 github.com/redis/go-redis/v9 v9.7.0 接入；config 读取配置，infra 创建并检查连接，internal/app/dependencies.go 持有和关闭客户端，internal/app/run.go 组织启动及退出，main.go 调用 app.Run。MySQL 单进程默认最多20个连接、5个空闲连接；Redis 默认基础连接10个、最大同时分配20个连接、最小空闲2个，均可配置。两者连接最长存活30分钟、空闲5分钟，启动检查失败直接返回错误。账号、密码、数据库为显式配置，密码保留原值。
 
-MySQL 连接池等待使用操作 Context 的截止时间，网络读写超时单独配置；使用方负责释放查询结果、事务和显式获取的连接。Redis 与外部 HTTP 客户端尚未编写；关闭 Redis 客户端自动重试为建议方案，尚未确认。部署连接预算及监测继续讨论。
+MySQL 连接池等待使用操作 Context 的截止时间，网络读写超时单独配置；Redis 连接池等待使用 PoolTimeout 和操作 Context，客户端默认每条命令最多自动重试3次；写操作是否允许重试仍由业务语义决定。使用方负责释放查询结果、事务和显式获取的连接。外部 HTTP 客户端已建立文件索引、QQ 授权码登录流程和通用 HTTPS 客户端边界，代码尚未编写。部署连接预算及监测继续讨论。
 
 登录名区分大小写。注册、登录保留原始 username，MySQL 使用 ascii_bin 唯一索引；abc 与 ABC 可分别注册。账号限流 key 直接使用原始 username。IP 限流 key 使用可信来源的 normalizedIp，通过 Go net/netip 解析、Unmap、String 规范化；同一 IPv6 地址的不同写法共用计数。
 
@@ -28,7 +28,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 登录与注册设计采用用户名密码及 QQ 登录，短期 JWT 配合 Redis 刷新会话。Access Token 最长15分钟，会话绝对期限7天，Refresh Token 强制原子轮换，sessionId 保持不变。MySQL 保存账号状态和 authVersion，登录与刷新检查状态及版本。封禁或全部退出通过账号状态与版本阻止旧会话续期，Redis 数据按原 TTL 到期；刷新发现账号禁用或版本失效时撤销对应会话。业务请求只验签 JWT，退出和封禁后已有 Access Token 可继续使用至到期。依据：docs/设计/登录与注册.md。
 
-代码当前为项目基座及 MySQL 连接池。后端提供配置校验、结构化日志、请求标识、访问日志、异常恢复、统一错误响应、健康探针、HTTP 超时及优雅退出；启动时连接 MySQL，不注册业务路由，不连接 Redis。controller、service、dao 保留目录占位。前端保留现有基础工程。
+代码当前为项目基座及 MySQL、Redis 连接池。后端提供配置校验、结构化日志、请求标识、访问日志、异常恢复、统一错误响应、健康探针、HTTP 超时及优雅退出；启动时检查 MySQL 和 Redis，不注册业务路由。controller、service、dao 保留目录占位。前端保留现有基础工程。
 
 依据：工程基座提交 2393c31、backend/cmd/pulseframe-api/main.go、backend/server/router.go、backend/go.mod。注册处理、数据库接入、建表脚本及对应测试已移除。
 
@@ -38,14 +38,15 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 - docs/设计/服务可用性与高并发治理.md：职责与进度表，引用 MySQL 和 Redis 文件索引。
 - docs/设计/MySQL连接池-文件索引.md：仅列 MySQL 连接池配置、创建、启动管理及依赖清单相关文件与职责；Agent 执行时的测试和文档维护要求不列入表格。
 - docs/设计/Redis连接池-文件索引.md：Redis 连接池配置、创建、启动管理及依赖清单相关文件与职责。
+- docs/设计/外部HTTP客户端-文件索引.md：外部 HTTP 客户端的文件职责、通用边界和后续实现计划。
 - docs/设计/登录与注册.md：当前认证设计，保留“思考、暂定方案”及客户端、服务端步骤格式。
 - docs/设计/登录与注册-数据结构.md：三张 MySQL 表的字段与约束、Redis 会话及令牌映射、QQ state 和频率计数。
 - docs/学习笔记/注册与发现.md、docs/学习笔记/通用高并发架构设计/高并发架构设计要点.md：通用知识笔记；配图保存在 docs/学习笔记/assets/。
 - backend/cmd/pulseframe-api/main.go：启动入口。
 - backend/internal/app/run.go：可由入口和后端测试调用的应用启动与退出流程。
-- backend/config/config.go、backend/config/env.go、backend/config/http.go、backend/config/mysql.go：统一加载、公共环境解析及各模块配置。
-- backend/config/mysql.go、backend/infra/mysql.go、backend/internal/app/dependencies.go：MySQL 配置、连接创建及生命周期管理。
-- backend/test/mysql_config_test.go、backend/test/mysql_test.go、backend/test/dependencies_test.go：配置校验及真实数据库集成测试。
+- backend/config/config.go、backend/config/env.go、backend/config/http.go、backend/config/mysql.go、backend/config/redis.go：统一加载、公共环境解析及各模块配置。
+- backend/config/mysql.go、backend/config/redis.go、backend/infra/mysql.go、backend/infra/redis.go、backend/internal/app/dependencies.go：MySQL/Redis 配置、客户端创建及生命周期管理。
+- backend/test/mysql_config_test.go、backend/test/mysql_test.go、backend/test/redis_config_test.go、backend/test/redis_test.go、backend/test/dependencies_test.go：配置校验及真实数据库、Redis 集成测试。
 - backend/config/、backend/logging/、backend/middleware/、backend/response/、backend/server/：基础能力。
 - backend/controller/.gitkeep、backend/service/.gitkeep、backend/dao/.gitkeep：业务目录占位。
 - backend/test/：基座测试，其中 scaffold_test.go 验证路由集合与原注册路径的 404 响应。
@@ -56,6 +57,8 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 ## 验证情况
 
 测试目录整理（2026-11-03）：go test -timeout=60s ./...、go test -race -tags=mysqlintegration -timeout=60s ./...、go vet -tags=mysqlintegration ./... 均通过；测试使用本机13316端口的独立 MySQL 8.0.44 和 pulseframe_pool_test 数据库，测试实例已关闭。核对8份后端测试文件均位于 backend/test，相关索引无旧路径，修改文件的 gofmt 和 git diff --check 通过。既有测试场景保留，入口通过 app.Run 调用相同启动流程。
+
+Redis 连接池实现（2026-11-04）：config/redis.go 读取并校验 Redis 地址、认证、逻辑数据库、连接池容量、等待期限、读写期限、启动检查期限和连接回收期限；infra/redis.go 使用 go-redis/v9 创建客户端并执行带超时的 PING；internal/app/dependencies.go 在 Redis 初始化失败时关闭已创建的 MySQL 连接池，并在退出时只关闭一次两个客户端。新增 redis_config_test.go 和 redis_test.go；普通测试、带标签编译检查及真实 Redis 服务读写均通过。
 
 项目注释更新（2026-11-03）：后端 go test -timeout=60s ./...、go vet -tags=mysqlintegration ./...，前端 npm test 和 npm run build 均通过；gofmt 和本次文件的 git diff --check 通过。标准库扫描器确认23份 Go 文件修改前后的代码词法单元一致，所有具名函数文档包含输入、输出、功能和示例；前端6份文件差异均为注释。未重新运行 MySQL 集成测试。验证脚本：/Users/leimingze/notes/开源书籍/.agent/work/20261102-auth-design/verify_go_comments.go，以修改前 Git HEAD 和工作区文件为输入。
 
@@ -82,7 +85,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 ## 下一步
 
-继续讨论 Redis 连接池配置、客户端创建、启动检查、重试与关闭行为，并逐项确定连接池讨论表中的其余内容。
+继续确定外部 HTTP 客户端的连接参数、超时层次、响应体限制、故障处理和监测指标，再进入配置与客户端代码实现。
 
 ## 归档位置
 

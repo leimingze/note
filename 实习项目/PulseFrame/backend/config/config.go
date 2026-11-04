@@ -26,11 +26,12 @@ type Config struct {
 	LogLevel    string // 经过校验的日志级别，供日志器初始化使用。
 	HTTP        HTTP   // HTTP 模块加载的监听地址和生命周期期限。
 	MySQL       MySQL  // MySQL 模块加载的连接信息和连接池参数。
+	Redis       Redis  // Redis 模块加载的认证信息和连接池参数。
 }
 
 // Load 从环境变量读取并校验配置。
 // 输入：lookup，环境变量查询函数，不能为 nil。
-// 输出：环境、日志、HTTP 和 MySQL 配置；必填项缺失或取值非法时返回错误。
+// 输出：环境、日志、HTTP、MySQL 和 Redis 配置；必填项缺失或取值非法时返回错误。
 // 功能：加载启动配置，可选参数使用默认值，数据库认证信息按原值读取。
 // 例如数据库必填项已提供、HTTP_ADDR 未设置时，得到的 HTTP 监听地址为 :8080。
 func Load(lookup LookupEnv) (Config, error) {
@@ -58,8 +59,13 @@ func Load(lookup LookupEnv) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	// 最后读取并检查数据库账号、密码和连接池参数，为后面的数据库连接创建准备配置。
+	// 接着读取并检查数据库账号、密码和连接池参数，为数据库连接创建准备配置。
 	mysqlConfig, err := loadMySQL(lookup)
+	if err != nil {
+		return Config{}, err
+	}
+	// 最后读取 Redis 配置；此时所有外部存储的连接参数都已完成格式校验。
+	redisConfig, err := loadRedis(lookup)
 	if err != nil {
 		return Config{}, err
 	}
@@ -68,6 +74,7 @@ func Load(lookup LookupEnv) (Config, error) {
 		LogLevel:    logLevel,
 		HTTP:        httpConfig,
 		MySQL:       mysqlConfig,
+		Redis:       redisConfig,
 	}, nil
 }
 

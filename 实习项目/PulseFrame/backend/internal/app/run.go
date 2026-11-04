@@ -18,9 +18,9 @@ import (
 
 // Run 构建并运行核心 API。
 // 输入：parent，服务生命周期父上下文；lookup，环境变量查询函数。
-// 输出：创建 MySQL 连接池、设置 Gin 模式并运行 HTTP 服务；退出时关闭连接池，失败时返回错误。
+// 输出：创建 MySQL 和 Redis 客户端、设置 Gin 模式并运行 HTTP 服务；退出时关闭外部连接，失败时返回错误。
 // 功能：组织配置、依赖、基础路由及 HTTP 生命周期，保证初始化后的资源得到释放。
-// 例如收到 SIGTERM 后，先等待 HTTP 请求处理结束，再关闭共享的 MySQL 连接池。
+// 例如收到 SIGTERM 后，先等待 HTTP 请求处理结束，再关闭共享的 MySQL 和 Redis 客户端。
 func Run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 	// 第一阶段只读取和校验配置，配置错误时不创建服务资源。
 	cfg, err := config.Load(lookup)

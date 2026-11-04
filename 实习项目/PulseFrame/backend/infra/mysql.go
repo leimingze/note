@@ -46,6 +46,7 @@ func NewMySQL(ctx context.Context, cfg config.MySQL) (*sql.DB, error) {
 	db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
 	// 启动检查同时受自身期限和父上下文取消控制；返回时释放计时资源。
 	checkContext, cancel := context.WithTimeout(ctx, cfg.StartupTimeout)
+	// 函数返回时取消计时器，即使 Ping 已经结束，也释放上下文相关资源。
 	defer cancel()
 	// 检查失败时不会将连接池交给调用方，因此这里关闭并保留检查及关闭错误。
 	if err := db.PingContext(checkContext); err != nil {

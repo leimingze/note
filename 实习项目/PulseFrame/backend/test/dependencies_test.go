@@ -1,4 +1,4 @@
-//go:build mysqlintegration
+//go:build mysqlintegration && redisintegration
 
 package test
 

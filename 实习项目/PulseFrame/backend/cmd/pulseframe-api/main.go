@@ -1,4 +1,4 @@
-// 程序功能：读取配置，创建 MySQL 连接池，并启动 PulseFrame 核心 API。
+// 程序功能：读取配置，创建 MySQL 和 Redis 客户端，并启动 PulseFrame 核心 API。
 // 启动命令：在 backend 目录执行 go run ./cmd/pulseframe-api；环境变量见 backend/README.md。
 package main
 

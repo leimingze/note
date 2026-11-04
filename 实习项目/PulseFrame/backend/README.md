@@ -1,6 +1,6 @@
 # PulseFrame Backend
 
-当前目录是 PulseFrame 核心 API 的工程基座。它提供配置校验、MySQL 连接池、结构化日志、请求标识、访问日志、异常恢复、统一错误响应、健康检查、HTTP 超时和优雅退出。启动需要 MySQL 连通，Redis 尚未接入。
+当前目录是 PulseFrame 核心 API 的工程基座。它提供配置校验、MySQL 和 Redis 客户端、结构化日志、请求标识、访问日志、异常恢复、统一错误响应、健康检查、HTTP 超时和优雅退出。启动需要 MySQL 与 Redis 连通。
 
 ## 目录
 
@@ -14,12 +14,13 @@ config 包按职责组织：
 | `config/env.go` | LookupEnv、可选环境变量读取、整数与时长解析，以及共用端口范围 |
 | `config/http.go` | HTTP 配置类型、默认值、加载和监听参数校验 |
 | `config/mysql.go` | MySQL 配置类型、默认值、加载和连接池参数校验 |
+| `config/redis.go` | Redis 配置类型、默认值、加载和连接池参数校验 |
 
 Load 组织各模块加载；HTTP 和 MySQL 模块使用 env.go 中的公共解析函数。所有文件属于同一个 config 包，包外通过 config.Load 获取总配置。
 
 ## 启动
 
-先创建数据库并配置 MYSQL_USER、MYSQL_PASSWORD、MYSQL_DATABASE，应用不会自动建库或建表。在 backend/ 目录执行：
+先创建数据库和 Redis 服务，并配置 MYSQL_USER、MYSQL_PASSWORD、MYSQL_DATABASE。在 backend/ 目录执行：
 
 ~~~bash
 go run ./cmd/pulseframe-api
@@ -59,15 +60,30 @@ go run ./cmd/pulseframe-api
 | MYSQL_STARTUP_TIMEOUT | 5s | 启动 PingContext 的整体期限，父上下文可以提前取消 |
 | MYSQL_CONN_MAX_LIFETIME | 30m | 连接最长存活时间，到期连接由连接池回收 |
 | MYSQL_CONN_MAX_IDLE_TIME | 5m | 连接最长空闲时间，由连接池清理空闲连接 |
+| REDIS_ADDR | 127.0.0.1:6379 | Redis 的 host:port，IPv6 使用 [地址]:端口 |
+| REDIS_USERNAME | 空 | Redis ACL 用户名 |
+| REDIS_PASSWORD | 空 | Redis 密码，按原值读取 |
+| REDIS_DATABASE | 0 | Redis 逻辑数据库编号，不能小于零 |
+| REDIS_MAX_RETRIES | 3 | 单条命令最多自动重试次数 |
+| REDIS_POOL_SIZE | 10 | 连接池基础连接数 |
+| REDIS_MIN_IDLE_CONNS | 2 | 希望维持的最小空闲连接数 |
+| REDIS_MAX_ACTIVE_CONNS | 20 | 同时分配的最大连接数 |
+| REDIS_DIAL_TIMEOUT | 3s | 建立网络连接的超时 |
+| REDIS_READ_TIMEOUT | 5s | 单次网络读取超时 |
+| REDIS_WRITE_TIMEOUT | 5s | 单次网络写入超时 |
+| REDIS_POOL_TIMEOUT | 5s | 连接池满载时等待连接的超时 |
+| REDIS_STARTUP_TIMEOUT | 5s | 启动 PING 检查的整体期限 |
+| REDIS_CONN_MAX_LIFETIME | 30m | 连接最长存活时间 |
+| REDIS_CONN_MAX_IDLE_TIME | 5m | 连接最长空闲时间 |
 
-所有 MySQL 时长必须为正数，支持 Go 时长格式，如 250ms、3s、5m。可选参数未设置或为空时使用默认值。多个后端实例各自创建连接池，部署时按实例数乘以单实例上限计算连接预算，并为管理和其他程序预留连接。
+所有 MySQL 和 Redis 时长必须为正数，支持 Go 时长格式，如 250ms、3s、5m。可选参数未设置或为空时使用默认值。多个后端实例各自创建连接池，部署时按实例数乘以单实例上限计算连接预算，并为管理和其他程序预留连接。
 
-sql.DB 本身管理连接池，DAO 借用共享对象，不自行创建或关闭。查询、执行和事务应使用带截止时间的 Context；连接池满载时，等待连接的期限也由该 Context 控制，网络读写超时不限制排队时间。查询结果、事务和显式获取的连接由使用方及时释放。
+sql.DB 和 go-redis Client 本身管理连接池，DAO 与 service 借用共享对象，不自行创建或关闭。数据库和 Redis 命令应使用带截止时间的 Context；连接池满载时，等待连接的期限由操作 Context 和 Redis PoolTimeout 共同约束。查询结果、事务和显式获取的连接由使用方及时释放。Redis 自动重试次数由 REDIS_MAX_RETRIES 控制，写操作是否允许重试仍由业务语义决定。
 
 ## 接口
 
 - GET /livez：进程可以响应时返回 200。
-- GET /readyz：MySQL 启动检查成功且 HTTP 服务开始运行后返回 200；该探针不持续查询数据库。
+- GET /readyz：MySQL 和 Redis 启动检查成功且 HTTP 服务开始运行后返回 200；该探针不持续查询外部存储。
 - 未知路径和不支持的方法使用统一 JSON 错误结构。
 
 本地检查：
@@ -84,11 +100,11 @@ go test -timeout=60s ./...
 go vet ./...
 ~~~
 
-真实 MySQL 集成测试需要配置一个独立测试数据库，沿用上表的 MYSQL_* 环境变量；缺失配置或无法连接时直接失败。测试会建立连接、执行只读查询与 SLEEP，不创建业务表。
+真实 MySQL 集成测试需要配置一个独立测试数据库，Redis 集成测试需要配置一个独立 Redis 服务；缺失配置或无法连接时直接失败。测试会建立连接、执行只读查询、SLEEP 及 Redis 读写，不创建业务表。
 
 ~~~bash
-go test -race -tags=mysqlintegration -timeout=60s ./...
-go vet -tags=mysqlintegration ./...
+go test -race -tags='mysqlintegration redisintegration' -timeout=60s ./...
+go vet -tags='mysqlintegration redisintegration' ./...
 ~~~
 
-启动调用顺序为 cmd/pulseframe-api/main.go → internal/app.Run → NewDependencies → infra.NewMySQL；数据库检查成功后启动 HTTP 服务，服务退出时统一关闭依赖。
+启动调用顺序为 cmd/pulseframe-api/main.go → internal/app.Run → NewDependencies → infra.NewMySQL/infra.NewRedis；两个外部存储检查成功后启动 HTTP 服务，服务退出时统一关闭依赖。
