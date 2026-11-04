@@ -18,6 +18,7 @@ import (
 const (
 	poolTestTimeout       = 2 * time.Second        // 查询及读超时测试的外层上下文期限。
 	poolWaitTimeout       = 50 * time.Millisecond  // 等待连接、查询取消和驱动读超时测试使用的短期限。
+	readTimeoutTestLimit  = 500 * time.Millisecond // 远程集成测试使用的读超时，需覆盖启动 PING 的网络往返。
 	serverSleepSeconds    = 1                      // SQL SLEEP 的等待秒数，须长于被验证的短期限。
 	connectionRecycleTime = 50 * time.Millisecond  // 回收测试中为连接设置的存活期限。
 	connectionRecycleWait = 100 * time.Millisecond // 再次查询前的等待时间，确保超过连接存活期限。
@@ -153,10 +154,10 @@ func TestMySQLQueryCancellation(t *testing.T) {
 // 输入：t，测试上下文。
 // 输出：连接测试数据库并执行慢查询，结束后关闭；读取超时配置未中止查询时测试失败。
 // 功能：通过真实 SQL 等待验证驱动的读超时配置。
-// 例如读取期限为50毫秒、SQL 等待1秒时，应在外层2秒期限到来前因读取超时报错。
+// 例如读取期限为500毫秒、SQL 等待1秒时，应在外层2秒期限到来前因读取超时报错。
 func TestMySQLReadTimeout(t *testing.T) {
 	cfg := integrationMySQLConfig(t)
-	cfg.ReadTimeout = poolWaitTimeout
+	cfg.ReadTimeout = readTimeoutTestLimit
 	db := openMySQL(t, cfg)
 	ctx, cancel := context.WithTimeout(t.Context(), poolTestTimeout)
 	defer cancel()
