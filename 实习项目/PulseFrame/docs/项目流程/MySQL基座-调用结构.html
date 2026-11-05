@@ -96,7 +96,7 @@ const cards = [
   { id:"cfg", name:"mysql.NewConfig", file:"go-sql-driver/mysql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:260,
     steps:[ {label:"填入主机/账号/密码/数据库/超时", to:null} ] },
   { id:"conn", name:"mysql.NewConnector", file:"go-sql-driver/mysql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:420,
-    steps:[ {label:"生成连接器，避免拼接 DSN", to:null} ] },
+    steps:[ {label:"基于驱动配置生成连接器（mysql.NewConnector），避免手工拼接 DSN", to:null} ] },
   { id:"open", name:"sql.OpenDB 创建连接池对象", file:"database/sql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:580,
     steps:[ {label:"1 设置连接总上限", to:"sOpen"}, {label:"2 设置空闲上限", to:"sIdle"},
             {label:"3 设置最长复用", to:"sLife"}, {label:"4 设置空闲清理", to:"sIdleT"} ] },
