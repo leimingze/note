@@ -92,7 +92,7 @@ const cards = [
   { id:"vconn", name:"validateConnection", file:"backend/config/mysql.go", grp:"加载与校验", c:"#ffe6c7", x:2440, y:100,
     steps:[ {label:"账号/库名非空·地址·TLS", to:null} ] },
   { id:"vpool", name:"validatePool", file:"backend/config/mysql.go", grp:"加载与校验", c:"#ffe6c7", x:2440, y:220,
-    steps:[ {label:"上限与时长合法", to:null} ] },
+    steps:[ {label:"连接数与时长取值合法（总上限/空闲/复用/清理）", to:null} ] },
   { id:"cfg", name:"mysql.NewConfig", file:"go-sql-driver/mysql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:260,
     steps:[ {label:"填入主机/账号/密码/数据库/超时", to:null} ] },
   { id:"conn", name:"mysql.NewConnector", file:"go-sql-driver/mysql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:420,
