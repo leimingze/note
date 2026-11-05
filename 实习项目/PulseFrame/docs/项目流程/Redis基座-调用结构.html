@@ -100,7 +100,7 @@ const cards = [
   { id:"client", name:"redis.NewClient 创建客户端", file:"github.com/redis/go-redis/v9 (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:480,
     steps:[ {label:"返回进程共享的客户端连接池", to:null} ] },
   { id:"ping", name:"PingContext 启动检查", file:"github.com/redis/go-redis/v9 (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:680,
-    steps:[ {label:"受 StartupTimeout 与父上下文约束执行 PING；失败关闭客户端并返回错误", to:null} ] },
+    steps:[ {label:"使用 WithTimeout 建立受 StartupTimeout 与父上下文约束的检查上下文执行 PING，确认 Redis 真实可达；失败则关闭客户端并返回错误，避免带病启动", to:null} ] },
   { id:"close", name:"dependencies.Close", file:"backend/internal/app/dependencies.go", grp:"服务与运行", c:"#e8e8ec", x:1020, y:880,
     steps:[ {label:"sync.Once 保证只释放一次，合并 Redis 与 MySQL 关闭错误", to:null} ] },
   { id:"interview", name:"面试讲解 · Redis 模块", file:"docs/设计/基座/Redis连接池-文件索引.md", grp:"面试讲解", c:"#e7defa", x:60, y:640, type:"essay", steps:[],

@@ -101,7 +101,7 @@ const cards = [
     steps:[ {label:"1 设置连接总上限", to:"sOpen"}, {label:"2 设置空闲上限", to:"sIdle"},
             {label:"3 设置最长复用", to:"sLife"}, {label:"4 设置空闲清理", to:"sIdleT"} ] },
   { id:"ping", name:"PingContext", file:"database/sql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:720,
-    steps:[ {label:"受 StartupTimeout 与父上下文约束执行 PING；失败关池并保留检查与关闭错误", to:null} ] },
+    steps:[ {label:"使用 WithTimeout 建立受 StartupTimeout 与父上下文约束的检查上下文执行 PING，确认数据库真实可达；失败则关闭连接池、合并检查与关闭错误返回，避免带病启动", to:null} ] },
   { id:"sOpen", name:"SetMaxOpenConns", file:"database/sql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2440, y:560,
     steps:[ {label:"连接总上限", to:null} ] },
   { id:"sIdle", name:"SetMaxIdleConns", file:"database/sql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2440, y:680,
