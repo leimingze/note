@@ -244,3 +244,12 @@ func assertErrorResponse(t *testing.T, recorder *httptest.ResponseRecorder, expe
 
 // 编译期确认测试生成器持续满足生产中间件依赖的接口。
 var _ middleware.IDGenerator = staticIDGenerator{}
+
+// testLogger 创建写入丢弃缓冲区的 JSON 日志器。
+// 输入：t，测试上下文。
+// 输出：可用于构造路由的日志器。
+// 功能：避免路由测试依赖真实终端输出。
+func testLogger(t *testing.T) *slog.Logger {
+	t.Helper()
+	return slog.New(slog.NewJSONHandler(&bytes.Buffer{}, nil))
+}

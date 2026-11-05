@@ -11,20 +11,23 @@ import (
 
 	"pulseframe/config"
 	"pulseframe/infra"
+	"pulseframe/metrics"
 )
 
 // Dependencies 持有当前 API 进程创建的外部依赖，使用方借用连接池。
 type Dependencies struct {
-	MySQL     *sql.DB       // 当前 API 进程共享的连接池，由 Dependencies 统一关闭。
-	Redis     *redis.Client // 当前 API 进程共享的 Redis 客户端，由 Dependencies 统一关闭。
-	closeOnce sync.Once     // 确保重复或并发调用 Close 时只释放一次资源。
-	closeErr  error         // 保存第一次关闭的结果，供后续 Close 调用返回相同结果。
+	MySQL     *sql.DB            // 当前 API 进程共享的连接池，由 Dependencies 统一关闭。
+	Redis     *redis.Client      // 当前 API 进程共享的 Redis 客户端，由 Dependencies 统一关闭。
+	Metrics   *metrics.Registry  // 指标注册表及采集器所需的统计来源。
+	collector *metrics.Collector // 连接池统计采集器，投入时持有，退出时随上下文停止。
+	closeOnce sync.Once          // 确保重复或并发调用 Close 时只释放一次资源。
+	closeErr  error              // 保存第一次关闭的结果，供后续 Close 调用返回相同结果。
 }
 
 // 输入：ctx，启动上下文；cfg，应用配置。
-// 输出：连接 MySQL 和 Redis，并返回拥有共享客户端的依赖对象；初始化失败时返回错误。
+// 输出：连接 MySQL、Redis 并组装指标与采集器，返回持有共享依赖的对象；初始化失败时返回错误。
 // 功能：集中创建进程共享资源，Redis 初始化失败时清理已创建的 MySQL 连接池。
-// 例如程序启动时调用一次，后续数据库和缓存访问都使用返回对象中的共享客户端。
+// 例如程序启动时调用一次，后续数据库、缓存和指标访问都使用返回对象中的共享客户端。
 func NewDependencies(ctx context.Context, cfg config.Config) (*Dependencies, error) {
 	// 仅在程序启动时创建共享连接池；创建函数负责清理初始化失败的资源。
 	db, err := infra.NewMySQL(ctx, cfg.MySQL)
@@ -36,8 +39,30 @@ func NewDependencies(ctx context.Context, cfg config.Config) (*Dependencies, err
 	if err != nil {
 		return nil, errors.Join(fmt.Errorf("initialize redis: %w", err), db.Close())
 	}
-	// 成功后由 Dependencies 持有关闭责任，业务模块只借用这些共享对象。
-	return &Dependencies{MySQL: db, Redis: client}, nil
+	// 组装依赖对象；指标注册表独立创建，采集器仅在启用指标时启动。
+	dependencies := &Dependencies{MySQL: db, Redis: client, Metrics: metrics.New()}
+	if cfg.Metrics.Enabled {
+		// 采集器读取共享连接池统计并周期发布指标，随 ctx 取消而停止。
+		dependencies.collector = metrics.NewCollector(dependencies.Metrics, dependencies, cfg.Metrics.CollectInterval)
+		go dependencies.collector.Run(ctx)
+	}
+	return dependencies, nil
+}
+
+// MySQLStats 返回 MySQL 连接池当前统计快照。
+// 输入：无。
+// 输出：sql.DBStats 统计。
+// 功能：向指标采集器提供 MySQL 连接池数据。
+func (dependencies *Dependencies) MySQLStats() sql.DBStats {
+	return dependencies.MySQL.Stats()
+}
+
+// RedisPoolStats 返回 Redis 客户端连接池当前统计快照。
+// 输入：无。
+// 输出：redis.PoolStats 统计。
+// 功能：向指标采集器提供 Redis 连接池数据。
+func (dependencies *Dependencies) RedisPoolStats() *redis.PoolStats {
+	return dependencies.Redis.PoolStats()
 }
 
 // 输入：dependencies，已成功创建的依赖对象。

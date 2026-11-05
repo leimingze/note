@@ -84,3 +84,19 @@ func parseAtLeastInt(lookup LookupEnv, key string, fallback, minimum int) (int, 
 	}
 	return value, nil
 }
+
+// 输入：lookup，环境查询函数；key，变量名；fallback，变量缺失或为空时的默认布尔值。
+// 输出：布尔值；格式错误时返回错误。
+// 功能：读取布尔配置，将文本转换为布尔值，并在变量缺失或为空时使用默认值。
+// 例如配置为 "true" 时返回 true，配置为 "yes" 时返回错误。
+func parseBool(lookup LookupEnv, key string, fallback bool) (bool, error) {
+	// 先把默认值写成文字，再读取环境变量；没有设置或内容为空时采用默认值。
+	raw := readValue(lookup, key, strconv.FormatBool(fallback))
+	// 将文字转换为布尔值，例如把 "true" 变成 true。
+	value, err := strconv.ParseBool(raw)
+	// 无法识别为布尔值时报告配置错误。
+	if err != nil {
+		return false, fmt.Errorf("%s must be a boolean", key)
+	}
+	return value, nil
+}

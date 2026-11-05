@@ -6,7 +6,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"pulseframe/metrics"
 	"pulseframe/middleware"
 	"pulseframe/response"
 )
@@ -25,6 +27,7 @@ type RouterDependencies struct {
 	Logger      *slog.Logger           // 访问日志和异常记录共用的日志器。
 	IDGenerator middleware.IDGenerator // 请求未携带合法标识时，用它生成新标识。
 	Health      *HealthState           // 生命周期更新、就绪接口读取的共享状态。
+	Metrics     *metrics.Registry      // 指标注册表，非空时注册指标端点与中间件。
 }
 
 // NewRouter 创建核心 API 的 Gin 路由。
@@ -66,8 +69,13 @@ func NewRouter(dependencies RouterDependencies) (*gin.Engine, error) {
 	}
 	router.HandleMethodNotAllowed = true
 	// 请求 ID 必须最先写入，后续日志和异常响应才能引用它。
-	router.Use(requestID.Handle, accessLog.Handle, recovery.Handle)
-	registerPlatformRoutes(router, dependencies.Health)
+	handlers := []gin.HandlerFunc{requestID.Handle, accessLog.Handle, recovery.Handle}
+	if dependencies.Metrics != nil {
+		// 指标中间件紧邻日志中间件，记录请求数量、耗时和错误。
+		handlers = append(handlers, middleware.NewMetrics(dependencies.Metrics).Handle)
+	}
+	router.Use(handlers...)
+	registerPlatformRoutes(router, dependencies.Health, dependencies.Metrics)
 	registerRouteErrors(router)
 	return router, nil
 }
@@ -77,10 +85,14 @@ func NewRouter(dependencies RouterDependencies) (*gin.Engine, error) {
 // 输出：修改路由注册表，无返回值。
 // 功能：提供存活和就绪探针，不注册任何业务接口。
 // 例如注册后可通过 GET /livez 查询进程存活状态，通过 GET /readyz 查询就绪状态。
-func registerPlatformRoutes(router *gin.Engine, health *HealthState) {
+func registerPlatformRoutes(router *gin.Engine, health *HealthState, metricsRegistry *metrics.Registry) {
 	ready := readyHandler{health: health}
 	router.GET("/livez", handleLive)
 	router.GET("/readyz", ready.handle)
+	if metricsRegistry != nil {
+		// 指标端点使用进程内注册表，不依赖全局默认注册表。
+		router.GET("/metrics", gin.WrapH(promhttp.HandlerFor(metricsRegistry.Prometheus(), promhttp.HandlerOpts{})))
+	}
 }
 
 // registerRouteErrors 注册未找到路由和方法不允许错误。

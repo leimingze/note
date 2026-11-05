@@ -22,16 +22,17 @@ var errNilEnvironmentLookup = errors.New("environment lookup is required")
 
 // Config 保存核心 API 基座启动所需的工程配置。
 type Config struct {
-	Environment string // 经过校验的运行环境，供启动入口选择 Gin 模式。
-	LogLevel    string // 经过校验的日志级别，供日志器初始化使用。
-	HTTP        HTTP   // HTTP 模块加载的监听地址和生命周期期限。
-	MySQL       MySQL  // MySQL 模块加载的连接信息和连接池参数。
-	Redis       Redis  // Redis 模块加载的认证信息和连接池参数。
+	Environment string  // 经过校验的运行环境，供启动入口选择 Gin 模式。
+	LogLevel    string  // 经过校验的日志级别，供日志器初始化使用。
+	HTTP        HTTP    // HTTP 模块加载的监听地址和生命周期期限。
+	MySQL       MySQL   // MySQL 模块加载的连接信息和连接池参数。
+	Redis       Redis   // Redis 模块加载的认证信息和连接池参数。
+	Metrics     Metrics // 指标模块加载的开关、暴露路径和采集周期。
 }
 
 // Load 从环境变量读取并校验配置。
 // 输入：lookup，环境变量查询函数，不能为 nil。
-// 输出：环境、日志、HTTP、MySQL 和 Redis 配置；必填项缺失或取值非法时返回错误。
+// 输出：环境、日志、HTTP、MySQL、Redis 和指标配置；必填项缺失或取值非法时返回错误。
 // 功能：加载启动配置，可选参数使用默认值，数据库认证信息按原值读取。
 // 例如数据库必填项已提供、HTTP_ADDR 未设置时，得到的 HTTP 监听地址为 :8080。
 func Load(lookup LookupEnv) (Config, error) {
@@ -64,8 +65,13 @@ func Load(lookup LookupEnv) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	// 最后读取 Redis 配置；此时所有外部存储的连接参数都已完成格式校验。
+	// 接着读取 Redis 配置；此时外部存储的连接参数都已完成格式校验。
 	redisConfig, err := loadRedis(lookup)
+	if err != nil {
+		return Config{}, err
+	}
+	// 最后读取指标配置；指标仅在启动时作为开关传给采集模块。
+	metricsConfig, err := loadMetrics(lookup)
 	if err != nil {
 		return Config{}, err
 	}
@@ -75,6 +81,7 @@ func Load(lookup LookupEnv) (Config, error) {
 		HTTP:        httpConfig,
 		MySQL:       mysqlConfig,
 		Redis:       redisConfig,
+		Metrics:     metricsConfig,
 	}, nil
 }
 

@@ -5,10 +5,17 @@ import "github.com/gin-gonic/gin"
 const (
 	RequestIDHeader     = "X-Request-ID" // 请求和响应中传递请求标识的 HTTP 头名称。
 	RequestIDContextKey = "request_id"   // Gin 上下文保存请求标识时使用的键。
+	ErrorCodeContextKey = "error_code"   // Gin 上下文保存本次统一错误码时使用的键。
 
-	CodeInternal         = "INTERNAL_ERROR"     // 服务内部错误，不向客户端暴露内部原因。
-	CodeNotFound         = "RESOURCE_NOT_FOUND" // 请求路径没有对应资源。
-	CodeMethodNotAllowed = "METHOD_NOT_ALLOWED" // 路径存在，但不支持当前请求方法。
+	CodeInternal              = "INTERNAL_ERROR"         // 服务内部错误，不向客户端暴露内部原因。
+	CodeInvalidRequest        = "INVALID_REQUEST"        // 请求参数或格式非法。
+	CodeUnauthorized          = "UNAUTHORIZED"           // 未认证或凭证无效。
+	CodeForbidden             = "FORBIDDEN"              // 已认证但无权限。
+	CodeNotFound              = "RESOURCE_NOT_FOUND"     // 请求路径没有对应资源。
+	CodeMethodNotAllowed      = "METHOD_NOT_ALLOWED"     // 路径存在，但不支持当前请求方法。
+	CodeConflict              = "CONFLICT"               // 与当前资源状态冲突。
+	CodeTooManyRequests       = "TOO_MANY_REQUESTS"      // 请求过于频繁，触发限流。
+	CodeDependencyUnavailable = "DEPENDENCY_UNAVAILABLE" // 外部依赖不可用。
 )
 
 // ErrorSpec 描述对外稳定的 HTTP 错误。
@@ -36,7 +43,8 @@ type errorBody struct {
 // 功能：避免各 Handler 自行拼装不一致或泄露内部信息的错误响应。
 // 例如传入404和 RESOURCE_NOT_FOUND 时，返回包含 request_id、error.code 和 error.message 的 JSON。
 func WriteError(c *gin.Context, spec ErrorSpec) {
-	// 请求 ID 用来把客户端错误与服务端日志对应起来，Abort 会终止后续 Handler。
+	// 请求 ID 与错误码分别写入上下文，供日志和指标中间件读取。
+	c.Set(ErrorCodeContextKey, spec.Code)
 	c.AbortWithStatusJSON(spec.Status, errorBody{
 		RequestID: c.GetString(RequestIDContextKey),
 		Error: errorDetail{
