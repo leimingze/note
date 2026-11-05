@@ -40,7 +40,7 @@
   body.dark #toolbar { background:#1d222a; border-color:#2c333d; color:#d4dae3; }
   body.dark svg.grid { background: radial-gradient(circle, #3a4250 1px, transparent 1px); }
   body.dark .node { background:#1f252e; border-color:#333c48; box-shadow:0 1px 3px rgba(0,0,0,.4); }
-  body.dark .node .head { border-bottom-color:#2c333d; background-image:linear-gradient(rgba(8,11,16,.62),rgba(8,11,16,.62)); color:#e6ebf2; }
+  body.dark .node .head { border-bottom-color:#2c333d; color:#e6ebf2; }
   body.dark .node .head .file, body.dark .node .head .grp { color:#9aa5b5; }
   body.dark .node .file, body.dark .node .grp { color:#8a93a1; }
   body.dark .node .step { color:#d4dae3; border-color:#2a313b; }
@@ -49,7 +49,7 @@
   body.dark .port:hover { background:#2a313b; }
   body.dark path.link { stroke:#98a1b0; }
   body.dark #lockBtn, body.dark #modeBtn { background:#1f252e; border-color:#3a4452; color:#d4dae3; }
-  body.dark .node.essay .head { border-bottom-color:#2c333d; background-image:linear-gradient(rgba(8,11,16,.62),rgba(8,11,16,.62)); color:#e6ebf2; }
+  body.dark .node.essay .head { border-bottom-color:#2c333d; color:#e6ebf2; }
   body.dark .essay-body { color:#d4dae3; }
   body.dark .essay-body .q { color:#e6ebf2; }
   body.dark .essay-body th, body.dark .essay-body td { border-color:#3a4452; }
@@ -140,6 +140,7 @@ canvas.style.width=W+"px"; canvas.style.height=H+"px";
 canvas.appendChild(svg);
 
 const links = [];
+const headThemes = [];
 
 function fileH(c){ return c.file ? 18 : 0; }
 
@@ -151,6 +152,7 @@ cards.forEach(c=>{
     el.style.left=c.x+"px"; el.style.top=c.y+"px";
     let html=`<div class="head" style="background:${c.c}"><div class="file">${c.file||''}</div><span class="grp">${c.grp}</span><br>${c.name}</div><div class="essay-body">${c.body}</div>`;
     el.innerHTML=html; canvas.appendChild(el);
+    headThemes.push({el: el.querySelector(".head"), light: c.c});
     let dragging=false, sx=0, sy=0, ox=0, oy=0;
     el.addEventListener("mousedown",e=>{ if(locked||e.target.classList.contains("port")) return; dragging=true; sx=e.clientX; sy=e.clientY; ox=c.x; oy=c.y; e.preventDefault(); });
     document.addEventListener("mousemove",e=>{ if(!dragging) return; c.x=ox+(e.clientX-sx); c.y=oy+(e.clientY-sy); el.style.left=c.x+"px"; el.style.top=c.y+"px"; });
@@ -167,6 +169,7 @@ cards.forEach(c=>{
   });
   el.innerHTML = html;
   canvas.appendChild(el);
+  headThemes.push({el: el.querySelector(".head"), light: c.c});
 
   c.steps.forEach((s,i)=>{
     const p = document.createElement("div"); p.className="port out";
@@ -214,9 +217,17 @@ lockBtn.addEventListener("click",()=>{
 });
 
 const modeBtn = document.getElementById("modeBtn");
+function darken(hex){
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if(!m) return hex;
+  const n = parseInt(m[1],16);
+  const r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  return "rgb("+Math.round(r*0.22+18)+","+Math.round(g*0.22+20)+","+Math.round(b*0.22+28)+")";
+}
 function applyMode(dark){
   document.body.classList.toggle("dark", dark);
   modeBtn.textContent = dark ? "☀️ 白天" : "🌙 夜间";
+  headThemes.forEach(t=>{ t.el.style.background = dark ? darken(t.light) : t.light; });
 }
 modeBtn.addEventListener("click",()=>{
   const dark = !document.body.classList.contains("dark");
