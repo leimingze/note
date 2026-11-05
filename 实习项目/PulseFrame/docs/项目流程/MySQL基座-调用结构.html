@@ -69,22 +69,14 @@
   </div>
 </div>
 <div id="viewport"><div id="canvas"></div></div>
-
 <script>
 // ---------- 卡片数据（含文件路径与内部步骤）----------
 const cards = [
   { id:"main", name:"main.go 入口", file:"backend/cmd/pulseframe-api/main.go", grp:"入口与编排", c:"#dbe6ff", x:60, y:400,
     steps:[ {label:"1 调用 app.Run", to:"run"} ] },
   { id:"run", name:"app.Run 启动编排", file:"backend/internal/app/run.go", grp:"入口与编排", c:"#dbe6ff", x:520, y:400,
-    steps:[ {label:"1 加载配置", to:"load"}, {label:"2 装配连接池", to:"dep"},
-            {label:"3 建路由", to:"router"}, {label:"4 构造 HTTP 服务", to:"srv"},
-            {label:"5 运行 HTTP", to:"http"}, {label:"6 退出关闭", to:"close"} ] },
-  { id:"router", name:"server.NewRouter", file:"backend/server/router.go", grp:"服务与运行", c:"#e8e8ec", x:1020, y:520,
-    steps:[ {label:"注册健康检查与中间件", to:null} ] },
-  { id:"srv", name:"server.New", file:"backend/server/", grp:"服务与运行", c:"#e8e8ec", x:1020, y:640,
-    steps:[ {label:"构造 HTTP 服务", to:null} ] },
-  { id:"http", name:"httpServer.Run", file:"backend/server/", grp:"服务与运行", c:"#e8e8ec", x:1020, y:760,
-    steps:[ {label:"阻塞运行", to:null} ] },
+    steps:[ {label:"1 加载配置", to:"load"}, {label:"2 装配依赖（含 MySQL）", to:"dep"},
+            {label:"3 运行 HTTP 服务", to:null}, {label:"4 退出关闭依赖", to:"close"} ] },
   { id:"close", name:"dependencies.Close", file:"backend/internal/app/dependencies.go", grp:"服务与运行", c:"#e8e8ec", x:1020, y:880,
     steps:[ {label:"关闭连接池，合并错误", to:null} ] },
   { id:"load", name:"config.Load", file:"backend/config/config.go", grp:"加载与校验", c:"#ffe6c7", x:1020, y:120,
@@ -118,7 +110,7 @@ const cards = [
     steps:[ {label:"连接最长复用时间", to:null} ] },
   { id:"sIdleT", name:"SetConnMaxIdleTime", file:"database/sql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2440, y:920,
     steps:[ {label:"连续空闲清理时间", to:null} ] },
-  { id:"interview", name:"面试讲解 · MySQL 连接池基座", file:"docs/设计/基座/MySQL基座-处理流程.md", grp:"面试讲解", c:"#e7defa", x:40, y:90, type:"essay", steps:[],
+  { id:"interview", name:"面试讲解 · MySQL 连接池基座", file:"docs/设计/基座/MySQL基座-处理流程.md", grp:"面试讲解", c:"#e7defa", x:60, y:640, type:"essay", steps:[],
     body:`<div class="essay-body">
 <p><b>总：这个模块是干嘛的</b> 服务底层有一个数据库连接池，长期维护一组物理连接。它解决的核心矛盾：连接生命周期要可控，不能无限制创建也不能频繁重建；同时保证并发能力与连接的干净、可用。</p>
 <span class="q">问题1 连接无限创建，压垮数据库</span>
@@ -137,33 +129,24 @@ const cards = [
 <p>池建好了但数据库不可达，服务带病启动。我在建池后立即执行连通性检查，失败则关闭连接池并返回错误，避免带病启动。</p>
 </div>` },
 ];
-
 const cardMap = {}; cards.forEach(c=>cardMap[c.id]=c);
-
 const inCount = {};
 cards.forEach(c=>c.steps.forEach(s=>{ if(s.to){ inCount[s.to]=(inCount[s.to]||0)+1; } }));
-
 const ND_WIDTH = 260;
 const HEAD_H = 46, STEP_H = 30, PAD = 8;
-
 const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
 const W=2900, H=1200;
 svg.setAttribute("class","grid"); svg.setAttribute("width",W); svg.setAttribute("height",H);
 svg.style.position="absolute"; svg.style.top="0"; svg.style.left="0";
-
 const canvas = document.getElementById("canvas");
 canvas.style.width=W+"px"; canvas.style.height=H+"px";
 canvas.appendChild(svg);
-
 const links = [];
 const headThemes = [];
 const stepOutPorts = {};
 const inPorts = {};
-
 function fileH(c){ return c.file ? 18 : 0; }
-
 let locked = false;
-
 cards.forEach(c=>{
   if(c.type==="essay"){
     const el=document.createElement("div"); el.className="node essay";
@@ -188,7 +171,6 @@ cards.forEach(c=>{
   el.innerHTML = html;
   canvas.appendChild(el);
   headThemes.push({el: el.querySelector(".head"), light: c.c});
-
   const outArr = [];
   c.steps.forEach((s,i)=>{
     const p = document.createElement("div"); p.className="port out";
@@ -196,13 +178,11 @@ cards.forEach(c=>{
     el.appendChild(p); outArr.push(p);
   });
   stepOutPorts[c.id] = outArr;
-
   const nIn = Math.max(inCount[c.id]||0, 1);
   const inArr=[];
   for(let i=0;i<nIn;i++){ const p=document.createElement("div"); p.className="port in";
     p.style.top = ( (i+1)/(nIn+1)*height ) + "px"; el.appendChild(p); inArr.push(p); }
   inPorts[c.id]=inArr;
-
   let dragging=false, sx=0, sy=0, ox=0, oy=0;
   el.addEventListener("mousedown",e=>{
     if(locked || e.target.classList.contains("port")) return;
@@ -215,7 +195,6 @@ cards.forEach(c=>{
   });
   document.addEventListener("mouseup",()=>{ dragging=false; });
 });
-
 // 画布平移
 const viewport = document.getElementById("viewport");
 let panning=false, psx=0, psy=0, ptx=0, pty=0, p0x=0, p0y=0;
@@ -230,7 +209,6 @@ document.addEventListener("mousemove",e=>{
   canvas.style.transform=`translate(${ptx}px,${pty}px)`;
 });
 document.addEventListener("mouseup",()=>{ panning=false; viewport.classList.remove("panning"); });
-
 // 锁
 const lockBtn = document.getElementById("lockBtn");
 lockBtn.addEventListener("click",()=>{
@@ -239,7 +217,6 @@ lockBtn.addEventListener("click",()=>{
   lockBtn.classList.toggle("on", locked);
   document.querySelectorAll(".node").forEach(n=>n.classList.toggle("locked", locked));
 });
-
 const modeBtn = document.getElementById("modeBtn");
 function darken(hex){
   const m = /^#([0-9a-f]{6})$/i.exec(hex);
@@ -280,7 +257,6 @@ function drawLinks(){
     L.svg.setAttribute("d", `M ${a.x} ${a.y} C ${a.x+90} ${a.y}, ${b.x-90} ${b.y}, ${b.x} ${b.y}`);
   });
 }
-
 const usedIn = {};
 cards.forEach(c=>{
   c.steps.forEach((s,i)=>{
