@@ -100,10 +100,10 @@ const cards = [
   { id:"client", name:"redis.NewClient 创建客户端", file:"github.com/redis/go-redis/v9 (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:480,
     steps:[ {label:"返回进程共享的客户端连接池", to:null} ] },
   { id:"ping", name:"PingContext 启动检查", file:"github.com/redis/go-redis/v9 (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:680,
-    steps:[ {label:"受 StartupTimeout 与父上下文约束；失败即关闭客户端并返回错误", to:null} ] },
+    steps:[ {label:"受 StartupTimeout 与父上下文约束执行 PING；失败关闭客户端并返回错误", to:null} ] },
   { id:"close", name:"dependencies.Close", file:"backend/internal/app/dependencies.go", grp:"服务与运行", c:"#e8e8ec", x:1020, y:880,
     steps:[ {label:"sync.Once 保证只释放一次，合并 Redis 与 MySQL 关闭错误", to:null} ] },
-  { id:"interview", name:"面试讲解 · Redis 模块", file:"docs/设计/基座/Redis连接池-文件索引.md", grp:"面试讲解", c:"#e7defa", x:40, y:40, type:"essay", steps:[],
+  { id:"interview", name:"面试讲解 · Redis 模块", file:"docs/设计/基座/Redis连接池-文件索引.md", grp:"面试讲解", c:"#e7defa", x:60, y:640, type:"essay", steps:[],
     body:`<div class="essay-body">
 <p><b>总：这个模块是干嘛的</b> 服务底层维护一个 Redis 客户端连接池，长期持有一组到 Redis 的连接并复用。它解决的核心矛盾：建连、鉴权与网络开关都有成本，不能为每条命令重建；同时要限制最大并发连接、保持连接干净可用，并在配置或连通性异常时拒绝带病启动。</p>
 <span class="q">问题1 连接无限创建，打爆 Redis</span>
