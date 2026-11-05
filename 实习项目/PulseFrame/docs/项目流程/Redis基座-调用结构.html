@@ -68,7 +68,7 @@ const cards = [
     steps:[ {label:"1 调用 infra.NewRedis 创建客户端", to:"redis"},
             {label:"2 Redis 失败时关闭其他项目依赖（包括 MySQL 等）", to:null} ] },
   { id:"redis", name:"infra.NewRedis 创建客户端", file:"backend/infra/redis.go", grp:"装配与初始化", c:"#d3f0da", x:1520, y:340,
-    steps:[ {label:"1 校验配置", to:"validate"}, {label:"2 映射重试次数（0→-1）", to:null},
+    steps:[ {label:"1 校验配置", to:"validate"}, {label:"2 将配置 0（不重试）映射为 go-redis 的 -1", to:null},
             {label:"3 构造 go-redis 选项", to:"opts"}, {label:"4 创建客户端", to:"client"},
             {label:"5 PING 启动检查", to:"ping"} ] },
   { id:"validate", name:"cfg.Validate 校验整体配置", file:"backend/config/redis.go", grp:"加载与校验", c:"#ffe6c7", x:2020, y:100,
