@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MySQL 连接池基座：调用画布</title>
+<style>
+  body { margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:#f0f1f4; }  body.dark { background:#14171c; color:#d4dae3; }
+  #toolbar { position:fixed; top:0; left:0; right:0; z-index:100; background:#fff; border-bottom:1px solid #d9dce3; padding:10px 16px; display:flex; align-items:center; gap:16px; font-size:13px; color:#3a3f47; }
+  #toolbar b { font-size:15px; }
+  #viewport { position:fixed; top:47px; left:0; right:0; bottom:0; overflow:hidden; cursor:grab; }
+  #viewport.panning { cursor:grabbing; }
+  #canvas { position:absolute; top:0; left:0; will-change:transform; }
+  svg.grid { display:block; background: radial-gradient(circle, #c9cdd5 1px, transparent 1px); background-size: 20px 20px; }
+  .node { position:absolute; background:#fff; border:1.5px solid #c6cad3; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.05); user-select:none; cursor:grab; }
+  .node:active { cursor:grabbing; }
+  .node.locked { cursor:default; }
+  .node .head { padding:6px 12px 2px; font-weight:700; font-size:13px; border-bottom:1px solid #eef0f4; margin-bottom:2px; }
+  .node .file { font-size:10px; color:#9aa0a6; font-weight:400; padding:1px 0 2px; }
+  .node .grp { font-size:10px; color:#9aa0a6; font-weight:400; }
+  .node .step { position:absolute; left:0; right:0; height:30px; box-sizing:border-box; display:flex; align-items:center; padding:0 28px 0 10px; font-size:11.5px; color:#2b2f36; border-top:1px dashed #f0f1f4; }
+  .node .step:first-of-type { border-top:none; }
+  .port { position:absolute; width:13px; height:13px; border-radius:50%; transform:translate(-50%,-50%); cursor:crosshair; }
+  .port.in { background:#fff; border:2px solid #ea4335; left:-2px; }
+  .port.out { background:#fff; border:2px solid #34a853; right:-11px; }
+  .port:hover { background:#e8f0fe; }
+  path.link { stroke:#7a808c; stroke-width:1.6; fill:none; }
+  .legend { margin-left:auto; display:flex; gap:12px; flex-wrap:wrap; }
+  .legend span { display:inline-flex; align-items:center; gap:5px; }
+  .sw { width:11px; height:11px; border-radius:3px; display:inline-block; }
+  #lockBtn,#modeBtn { padding:6px 14px; border-radius:8px; border:1.5px solid #c6cad3; background:#fff; cursor:pointer; font-size:13px; }
+  #lockBtn.on { background:#4285f4; border-color:#4285f4; color:#fff; }
+  .node.essay { width:620px; cursor:default; }
+  .node.essay .head { border-bottom:1px solid #eef0f4; margin-bottom:0; }
+  .essay-body { padding:10px 14px 14px; font-size:12.5px; line-height:1.72; color:#2b2f36; max-height:760px; overflow:auto; }
+  .essay-body .q { display:block; font-weight:700; color:#333a45; margin-top:10px; }
+  /* 夜间模式：覆盖整体与卡片配色 */
+  body.dark #toolbar { background:#1d222a; border-color:#2c333d; color:#d4dae3; }
+  body.dark svg.grid { background: radial-gradient(circle, #3a4250 1px, transparent 1px); }
+  body.dark .node { background:#1f252e; border-color:#333c48; box-shadow:0 1px 3px rgba(0,0,0,.4); }
+  body.dark .node .head { border-bottom-color:#2c333d; filter:brightness(.55); }
+  body.dark .node .file, body.dark .node .grp { color:#8a93a1; }
+  body.dark .node .step { color:#d4dae3; border-color:#2a313b; }
+  body.dark .port.in { background:#1f252e; border-color:#ff6b5e; }
+  body.dark .port.out { background:#1f252e; border-color:#53c76f; }
+  body.dark .port:hover { background:#2a313b; }
+  body.dark path.link { stroke:#98a1b0; }
+  body.dark #lockBtn, body.dark #modeBtn { background:#1f252e; border-color:#3a4452; color:#d4dae3; }
+  body.dark .node.essay .head { border-bottom-color:#2c333d; }
+  body.dark .essay-body { color:#d4dae3; }
+  body.dark .essay-body .q { color:#e6ebf2; }
+  body.dark .essay-body th, body.dark .essay-body td { border-color:#3a4452; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <b>MySQL 连接池基座：调用画布</b>
+  <span>空白处拖动平移画布</span>
+  <span>拖动卡片移动</span>
+  <button id="lockBtn">🔓 解锁</button>
+  <button id="modeBtn">🌙 夜间</button>
+  <div class="legend">
+    <span><span class="sw" style="background:#dbe6ff"></span>入口与编排</span>
+    <span><span class="sw" style="background:#ffe6c7"></span>加载与校验</span>
+    <span><span class="sw" style="background:#d3f0da"></span>装配连接池</span>
+    <span><span class="sw" style="background:#f7cdcd"></span>驱动与池对象</span>
+    <span><span class="sw" style="background:#e8e8ec"></span>服务与运行</span>
+  </div>
+</div>
+<div id="viewport"><div id="canvas"></div></div>
+
+<script>
+// ---------- 卡片数据（含文件路径与内部步骤）----------
+const cards = [
+  { id:"main", name:"main.go 入口", file:"backend/cmd/pulseframe-api/main.go", grp:"入口与编排", c:"#dbe6ff", x:60, y:400,
+    steps:[ {label:"1 调用 app.Run", to:"run"} ] },
+  { id:"run", name:"app.Run 启动编排", file:"backend/internal/app/run.go", grp:"入口与编排", c:"#dbe6ff", x:520, y:400,
+    steps:[ {label:"1 加载配置", to:"load"}, {label:"2 装配连接池", to:"dep"},
+            {label:"3 建路由", to:"router"}, {label:"4 构造 HTTP 服务", to:"srv"},
+            {label:"5 运行 HTTP", to:"http"}, {label:"6 退出关闭", to:"close"} ] },
+  { id:"router", name:"server.NewRouter", file:"backend/server/router.go", grp:"服务与运行", c:"#e8e8ec", x:1020, y:520,
+    steps:[ {label:"注册健康检查与中间件", to:null} ] },
+  { id:"srv", name:"server.New", file:"backend/server/", grp:"服务与运行", c:"#e8e8ec", x:1020, y:640,
+    steps:[ {label:"构造 HTTP 服务", to:null} ] },
+  { id:"http", name:"httpServer.Run", file:"backend/server/", grp:"服务与运行", c:"#e8e8ec", x:1020, y:760,
+    steps:[ {label:"阻塞运行", to:null} ] },
+  { id:"close", name:"dependencies.Close", file:"backend/internal/app/dependencies.go", grp:"服务与运行", c:"#e8e8ec", x:1020, y:880,
+    steps:[ {label:"关闭连接池，合并错误", to:null} ] },
+  { id:"load", name:"config.Load", file:"backend/config/config.go", grp:"加载与校验", c:"#ffe6c7", x:1020, y:120,
+    steps:[ {label:"读取并校验环境变量", to:null} ] },
+  { id:"dep", name:"NewDependencies 装配连接池", file:"backend/internal/app/dependencies.go", grp:"装配连接池", c:"#d3f0da", x:1020, y:320,
+    steps:[ {label:"创建连接池，失败清理已建", to:"mysql"} ] },
+  { id:"mysql", name:"infra.NewMySQL 创建连接池", file:"backend/infra/mysql.go", grp:"装配连接池", c:"#d3f0da", x:1520, y:340,
+    steps:[ {label:"1 校验配置", to:"validate"}, {label:"2 构造驱动配置", to:"cfg"},
+            {label:"3 生成连接器", to:"conn"}, {label:"4 创建连接池对象", to:"open"},
+            {label:"5 连通性检查", to:"ping"} ] },
+  { id:"validate", name:"cfg.Validate 校验整体配置", file:"backend/config/mysql.go", grp:"加载与校验", c:"#ffe6c7", x:2020, y:100,
+    steps:[ {label:"1 连接参数校验", to:"vconn"}, {label:"2 池参数校验", to:"vpool"} ] },
+  { id:"vconn", name:"validateConnection", file:"backend/config/mysql.go", grp:"加载与校验", c:"#ffe6c7", x:2440, y:100,
+    steps:[ {label:"账号/库名非空·地址·TLS", to:null} ] },
+  { id:"vpool", name:"validatePool", file:"backend/config/mysql.go", grp:"加载与校验", c:"#ffe6c7", x:2440, y:220,
+    steps:[ {label:"上限与时长合法", to:null} ] },
+  { id:"cfg", name:"mysql.NewConfig", file:"go-sql-driver/mysql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:260,
+    steps:[ {label:"填入主机/账号/密码/数据库/超时", to:null} ] },
+  { id:"conn", name:"mysql.NewConnector", file:"go-sql-driver/mysql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:420,
+    steps:[ {label:"生成连接器，避免拼接 DSN", to:null} ] },
+  { id:"open", name:"sql.OpenDB 创建连接池对象", file:"database/sql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:580,
+    steps:[ {label:"1 设置连接总上限", to:"sOpen"}, {label:"2 设置空闲上限", to:"sIdle"},
+            {label:"3 设置最长复用", to:"sLife"}, {label:"4 设置空闲清理", to:"sIdleT"} ] },
+  { id:"ping", name:"PingContext", file:"database/sql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:720,
+    steps:[ {label:"确认可连；失败关池", to:null} ] },
+  { id:"sOpen", name:"SetMaxOpenConns", file:"database/sql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2440, y:560,
+    steps:[ {label:"连接总上限", to:null} ] },
+  { id:"sIdle", name:"SetMaxIdleConns", file:"database/sql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2440, y:680,
+    steps:[ {label:"空闲连接上限", to:null} ] },
+  { id:"sLife", name:"SetConnMaxLifetime", file:"database/sql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2440, y:800,
+    steps:[ {label:"连接最长复用时间", to:null} ] },
+  { id:"sIdleT", name:"SetConnMaxIdleTime", file:"database/sql (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2440, y:920,
+    steps:[ {label:"连续空闲清理时间", to:null} ] },
+  { id:"interview", name:"面试讲解 · MySQL 连接池基座", file:"docs/设计/基座/MySQL基座-处理流程.md", grp:"面试讲解", c:"#e7defa", x:40, y:90, type:"essay", steps:[],
+    body:`<div class="essay-body">
+<p><b>总：这个模块是干嘛的</b> 服务底层有一个数据库连接池，长期维护一组物理连接。它解决的核心矛盾：连接生命周期要可控，不能无限制创建也不能频繁重建；同时保证并发能力与连接的干净、可用。</p>
+<span class="q">问题1 连接无限创建，压垮数据库</span>
+<p>连接池必须限制总连接数，超出后请求阻塞等待，而不是无限创建。我基于服务实例数和单实例并发请求量，结合压测峰值连接数，乘以安全冗余系数得到初始上限；值不写死，开放为配置项，后续用压测结果和线上连接监控指标校准。这是数据驱动的定参，不靠经验拍脑袋。</p>
+<span class="q">问题2 频繁建连开销大</span>
+<p>每次建连含 TCP 握手、鉴权、协议握手，开销高，所以连接复用。按场景区分：短突发请求保留更多空闲连接，长连接场景减少保留，避免池复用过深或不足。</p>
+<span class="q">问题3 连接长时间复用会失效、状态过期</span>
+<p>连接复用过久，可能已被服务端或中间网络层断开，或残留会话状态。我设置最长复用时间，到期强制重建。取值参考数据库服务端空闲限制、会话时长上限，以及代理、网关超时，取偏小者并留余量，确保在被远端断开前轮换掉。</p>
+<span class="q">问题4 空闲连接占资源</span>
+<p>长期空闲连接持续占用内存和服务端名额。我设置空闲清理时间，超时自动回收；并配合空闲连接上下限，保证高峰够用、低峰不空耗。</p>
+<span class="q">问题5 配置错误导致带病运行</span>
+<p>账号、库名、地址、TLS、池参数配置错误时运行期才暴露。我在启动早期对连接参数和池参数做集中校验，任何不合格直接拒绝启动，让错误在启动阶段暴露。</p>
+<span class="q">问题6 手工拼连接串不安全</span>
+<p>手拼含密码、地址的连接串，易转义错误、注入或凭据泄露。我由驱动库构造连接参数并生成连接器，避免手工拼串。</p>
+<span class="q">问题7 交付一个连不上的池</span>
+<p>池建好了但数据库不可达，服务带病启动。我在建池后立即执行连通性检查，失败则关闭连接池并返回错误，避免带病启动。</p>
+</div>` },
+];
+
+const cardMap = {}; cards.forEach(c=>cardMap[c.id]=c);
+
+const inCount = {};
+cards.forEach(c=>c.steps.forEach(s=>{ if(s.to){ inCount[s.to]=(inCount[s.to]||0)+1; } }));
+
+const ND_WIDTH = 260;
+const HEAD_H = 46, STEP_H = 30, PAD = 8;
+
+const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+const W=2900, H=1200;
+svg.setAttribute("class","grid"); svg.setAttribute("width",W); svg.setAttribute("height",H);
+svg.style.position="absolute"; svg.style.top="0"; svg.style.left="0";
+
+const canvas = document.getElementById("canvas");
+canvas.style.width=W+"px"; canvas.style.height=H+"px";
+canvas.appendChild(svg);
+
+const links = [];
+const stepOutPorts = {};
+const inPorts = {};
+
+function fileH(c){ return c.file ? 18 : 0; }
+
+let locked = false;
+
+cards.forEach(c=>{
+  if(c.type==="essay"){
+    const el=document.createElement("div"); el.className="node essay";
+    el.style.left=c.x+"px"; el.style.top=c.y+"px";
+    let html=`<div class="head" style="background:${c.c}"><div class="file">${c.file||''}</div><span class="grp">${c.grp}</span><br>${c.name}</div><div class="essay-body">${c.body}</div>`;
+    el.innerHTML=html; canvas.appendChild(el);
+    let dragging=false, sx=0, sy=0, ox=0, oy=0;
+    el.addEventListener("mousedown",e=>{ if(locked||e.target.classList.contains("port")) return; dragging=true; sx=e.clientX; sy=e.clientY; ox=c.x; oy=c.y; e.preventDefault(); });
+    document.addEventListener("mousemove",e=>{ if(!dragging) return; c.x=ox+(e.clientX-sx); c.y=oy+(e.clientY-sy); el.style.left=c.x+"px"; el.style.top=c.y+"px"; });
+    document.addEventListener("mouseup",()=>{ dragging=false; });
+    return;
+  }
+  const fh = fileH(c);
+  const height = PAD + HEAD_H + fh + c.steps.length*STEP_H + PAD;
+  const el = document.createElement("div"); el.className="node";
+  el.style.left=c.x+"px"; el.style.top=c.y+"px"; el.style.width=ND_WIDTH+"px"; el.style.height=height+"px";
+  let html = `<div class="head" style="background:${c.c}"><div class="file">${c.file||''}</div><span class="grp">${c.grp}</span><br>${c.name}</div>`;
+  c.steps.forEach((s,i)=>{
+    html += `<div class="step" style="top:${HEAD_H+fh+i*STEP_H}px">${s.label}</div>`;
+  });
+  el.innerHTML = html;
+  canvas.appendChild(el);
+
+  const outArr = [];
+  c.steps.forEach((s,i)=>{
+    const p = document.createElement("div"); p.className="port out";
+    p.style.top = (HEAD_H+fh + i*STEP_H + STEP_H/2) + "px";
+    el.appendChild(p); outArr.push(p);
+  });
+  stepOutPorts[c.id] = outArr;
+
+  const nIn = Math.max(inCount[c.id]||0, 1);
+  const inArr=[];
+  for(let i=0;i<nIn;i++){ const p=document.createElement("div"); p.className="port in";
+    p.style.top = ( (i+1)/(nIn+1)*height ) + "px"; el.appendChild(p); inArr.push(p); }
+  inPorts[c.id]=inArr;
+
+  let dragging=false, sx=0, sy=0, ox=0, oy=0;
+  el.addEventListener("mousedown",e=>{
+    if(locked || e.target.classList.contains("port")) return;
+    dragging=true; sx=e.clientX; sy=e.clientY; ox=c.x; oy=c.y; e.preventDefault();
+  });
+  document.addEventListener("mousemove",e=>{
+    if(!dragging) return;
+    c.x=ox+(e.clientX-sx); c.y=oy+(e.clientY-sy);
+    el.style.left=c.x+"px"; el.style.top=c.y+"px"; drawLinks();
+  });
+  document.addEventListener("mouseup",()=>{ dragging=false; });
+});
+
+// 画布平移
+const viewport = document.getElementById("viewport");
+let panning=false, psx=0, psy=0, ptx=0, pty=0, p0x=0, p0y=0;
+viewport.addEventListener("mousedown",e=>{
+  if(e.target.closest(".node")) return;
+  panning=true; psx=e.clientX; psy=e.clientY;
+  p0x=ptx; p0y=pty; viewport.classList.add("panning"); e.preventDefault();
+});
+document.addEventListener("mousemove",e=>{
+  if(!panning) return;
+  ptx=p0x+(e.clientX-psx); pty=p0y+(e.clientY-psy);
+  canvas.style.transform=`translate(${ptx}px,${pty}px)`;
+});
+document.addEventListener("mouseup",()=>{ panning=false; viewport.classList.remove("panning"); });
+
+// 锁
+const lockBtn = document.getElementById("lockBtn");
+lockBtn.addEventListener("click",()=>{
+  locked=!locked;
+  lockBtn.textContent = locked ? "🔒 已锁定" : "🔓 解锁";
+  lockBtn.classList.toggle("on", locked);
+  document.querySelectorAll(".node").forEach(n=>n.classList.toggle("locked", locked));
+});
+
+const modeBtn = document.getElementById("modeBtn");
+function applyMode(dark){
+  document.body.classList.toggle("dark", dark);
+  modeBtn.textContent = dark ? "☀️ 白天" : "🌙 夜间";
+}
+modeBtn.addEventListener("click",()=>{
+  const dark = !document.body.classList.contains("dark");
+  applyMode(dark);
+  try { localStorage.setItem("mysqlCanvasDark", dark ? "1" : "0"); } catch(e){}
+});
+try {
+  if(localStorage.getItem("mysqlCanvasDark") === "1") applyMode(true);
+} catch(e){}
+function outPos(cardId, stepIdx){
+  const c=cardMap[cardId];
+  const fh = fileH(c);
+  return { x: c.x + ND_WIDTH, y: c.y + HEAD_H + fh + stepIdx*STEP_H + STEP_H/2 };
+}
+function inPos(cardId, inIdx){
+  const c=cardMap[cardId];
+  const fh = fileH(c);
+  const height = PAD + HEAD_H + fh + c.steps.length*STEP_H + PAD;
+  const nIn = Math.max(inCount[cardId]||0,1);
+  return { x: c.x, y: c.y + (inIdx+1)/(nIn+1)*height };
+}
+function drawLinks(){
+  links.forEach(L=>{
+    const a=outPos(L.from.cardId, L.from.stepIdx);
+    const b=inPos(L.to.cardId, L.to.inIdx);
+    L.svg.setAttribute("d", `M ${a.x} ${a.y} C ${a.x+90} ${a.y}, ${b.x-90} ${b.y}, ${b.x} ${b.y}`);
+  });
+}
+
+const usedIn = {};
+cards.forEach(c=>{
+  c.steps.forEach((s,i)=>{
+    if(!s.to) return;
+    const ii = usedIn[s.to]||0; usedIn[s.to]=ii+1;
+    const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+    path.setAttribute("class","link"); svg.appendChild(path);
+    links.push({svg:path, from:{cardId:c.id, stepIdx:i}, to:{cardId:s.to, inIdx:ii}});
+  });
+});
+drawLinks();
+</script>
+</body>
+</html>
