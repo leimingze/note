@@ -112,7 +112,7 @@ const cards = [
 <tr><td>REDIS_USERNAME</td><td>空</td><td>ACL 用户名，空为服务端默认用户</td></tr>
 <tr><td>REDIS_PASSWORD</td><td>空</td><td>按原值读取，不用于日志输出</td></tr>
 <tr><td>REDIS_DATABASE</td><td>0</td><td>逻辑库编号，非负</td></tr>
-<tr><td>REDIS_MAX_RETRIES</td><td>3</td><td>单命令重试次数，0 表示不重试</td></tr>
+<tr><td>REDIS_MAX_RETRIES</td><td>3</td><td>默认 3 次；显式设 0 表示关闭自动重试</td></tr>
 <tr><td>REDIS_POOL_SIZE</td><td>10</td><td>基础连接数，1..MaxActiveConns</td></tr>
 <tr><td>REDIS_MIN_IDLE_CONNS</td><td>2</td><td>维持的空闲连接数，0..MaxActiveConns</td></tr>
 <tr><td>REDIS_MAX_ACTIVE_CONNS</td><td>20</td><td>同时分配上限，须大于 0</td></tr>
