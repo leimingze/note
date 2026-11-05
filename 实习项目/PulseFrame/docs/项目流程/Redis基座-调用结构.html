@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Redis 模块：调用画布</title>
 <style>
-  body { margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:#f0f1f4; }
+  body { margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:#f0f1f4; }  body.dark { background:#14171c; color:#d4dae3; }
   #toolbar { position:fixed; top:0; left:0; right:0; z-index:100; background:#fff; border-bottom:1px solid #d9dce3; padding:10px 16px; display:flex; align-items:center; gap:16px; font-size:13px; color:#3a3f47; }
   #toolbar b { font-size:15px; }
   #viewport { position:fixed; top:47px; left:0; right:0; bottom:0; overflow:hidden; cursor:grab; }
@@ -28,7 +28,7 @@
   .legend { margin-left:auto; display:flex; gap:12px; flex-wrap:wrap; }
   .legend span { display:inline-flex; align-items:center; gap:5px; }
   .sw { width:11px; height:11px; border-radius:3px; display:inline-block; }
-  #lockBtn { padding:6px 14px; border-radius:8px; border:1.5px solid #c6cad3; background:#fff; cursor:pointer; font-size:13px; }
+  #lockBtn,#modeBtn { padding:6px 14px; border-radius:8px; border:1.5px solid #c6cad3; background:#fff; cursor:pointer; font-size:13px; }
   #lockBtn.on { background:#4285f4; border-color:#4285f4; color:#fff; }
   .node.essay { width:640px; cursor:default; }
   .node.essay .head { border-bottom:1px solid #eef0f4; margin-bottom:0; }
@@ -36,6 +36,22 @@
   .essay-body .q { display:block; font-weight:700; color:#333a45; margin-top:10px; }
   .essay-body table { border-collapse:collapse; width:100%; font-size:12px; margin-top:6px; }
   .essay-body th,.essay-body td { padding:4px 8px; border:1px solid #d9dce3; text-align:left; vertical-align:top; }
+  /* 夜间模式：覆盖整体与卡片配色 */
+  body.dark #toolbar { background:#1d222a; border-color:#2c333d; color:#d4dae3; }
+  body.dark svg.grid { background: radial-gradient(circle, #3a4250 1px, transparent 1px); }
+  body.dark .node { background:#1f252e; border-color:#333c48; box-shadow:0 1px 3px rgba(0,0,0,.4); }
+  body.dark .node .head { border-bottom-color:#2c333d; filter:brightness(.55); }
+  body.dark .node .file, body.dark .node .grp { color:#8a93a1; }
+  body.dark .node .step { color:#d4dae3; border-color:#2a313b; }
+  body.dark .port.in { background:#1f252e; border-color:#ff6b5e; }
+  body.dark .port.out { background:#1f252e; border-color:#53c76f; }
+  body.dark .port:hover { background:#2a313b; }
+  body.dark path.link { stroke:#98a1b0; }
+  body.dark #lockBtn, body.dark #modeBtn { background:#1f252e; border-color:#3a4452; color:#d4dae3; }
+  body.dark .node.essay .head { border-bottom-color:#2c333d; }
+  body.dark .essay-body { color:#d4dae3; }
+  body.dark .essay-body .q { color:#e6ebf2; }
+  body.dark .essay-body th, body.dark .essay-body td { border-color:#3a4452; }
 </style>
 </head>
 <body>
@@ -44,6 +60,7 @@
   <span>空白处拖动平移画布</span>
   <span>拖动卡片移动</span>
   <button id="lockBtn">🔓 解锁</button>
+  <button id="modeBtn">🌙 夜间</button>
   <div class="legend">
     <span><span class="sw" style="background:#dbe6ff"></span>入口与编排</span>
     <span><span class="sw" style="background:#ffe6c7"></span>加载与校验</span>
@@ -70,7 +87,7 @@ const cards = [
   { id:"redis", name:"infra.NewRedis 创建客户端", file:"backend/infra/redis.go", grp:"装配与初始化", c:"#d3f0da", x:1520, y:340,
     steps:[ {label:"1 校验配置", to:"validate"}, {label:"2 构造客户端选项（透传重试次数）", to:"opts"},
             {label:"3 创建客户端", to:"client"},
-            {label:"5 PING 启动检查", to:"ping"} ] },
+            {label:"4 PING 启动检查", to:"ping"} ] },
   { id:"validate", name:"cfg.Validate 校验整体配置", file:"backend/config/redis.go", grp:"加载与校验", c:"#ffe6c7", x:2020, y:100,
     steps:[ {label:"1 连接参数校验", to:"vconn"}, {label:"2 池参数校验", to:"vpool"} ] },
   { id:"vconn", name:"validateConnection", file:"backend/config/redis.go", grp:"加载与校验", c:"#ffe6c7", x:2440, y:100,
@@ -195,6 +212,19 @@ lockBtn.addEventListener("click",()=>{
   document.querySelectorAll(".node").forEach(n=>n.classList.toggle("locked", locked));
 });
 
+const modeBtn = document.getElementById("modeBtn");
+function applyMode(dark){
+  document.body.classList.toggle("dark", dark);
+  modeBtn.textContent = dark ? "☀️ 白天" : "🌙 夜间";
+}
+modeBtn.addEventListener("click",()=>{
+  const dark = !document.body.classList.contains("dark");
+  applyMode(dark);
+  try { localStorage.setItem("redisCanvasDark", dark ? "1" : "0"); } catch(e){}
+});
+try {
+  if(localStorage.getItem("redisCanvasDark") === "1") applyMode(true);
+} catch(e){}
 function outPos(cardId, stepIdx){
   const c=cardMap[cardId];
   const fh = fileH(c);
