@@ -103,30 +103,7 @@ const cards = [
 <span class="q">问题7 交付一个连不上的客户端</span>
 <p>客户端建好了但 Redis 不可达，服务不应带病启动。我用带 StartupTimeout 的上下文执行 PING 检查，失败即关闭客户端并返回错误，把故障暴露在启动阶段。</p>
 </div>` },
-  { id:"cfgnotes", name:"配置附注 · Redis 环境变量", file:"backend/config/redis.go", grp:"加载与校验", c:"#ffe6c7", x:40, y:820, type:"essay", steps:[],
-    body:`<div class="essay-body">
-<p><b>参数与默认值（缺省时生效，均经 Validate 校验）</b></p>
-<table>
-<tr><th>变量</th><th>默认</th><th>含义 / 校验</th></tr>
-<tr><td>REDIS_ADDR</td><td>127.0.0.1:6379</td><td>主机:端口，端口须在合法区间</td></tr>
-<tr><td>REDIS_USERNAME</td><td>空</td><td>ACL 用户名，空为服务端默认用户</td></tr>
-<tr><td>REDIS_PASSWORD</td><td>空</td><td>按原值读取，不用于日志输出</td></tr>
-<tr><td>REDIS_DATABASE</td><td>0</td><td>逻辑库编号，非负</td></tr>
-<tr><td>REDIS_MAX_RETRIES</td><td>3</td><td>-1 关闭重试；0 使用库默认（3 次）；正数指定次数</td></tr>
-<tr><td>REDIS_POOL_SIZE</td><td>10</td><td>基础连接数，1..MaxActiveConns</td></tr>
-<tr><td>REDIS_MIN_IDLE_CONNS</td><td>2</td><td>维持的空闲连接数，0..MaxActiveConns</td></tr>
-<tr><td>REDIS_MAX_ACTIVE_CONNS</td><td>20</td><td>同时分配上限，须大于 0</td></tr>
-<tr><td>REDIS_DIAL_TIMEOUT</td><td>3s</td><td>建连期限，须大于 0</td></tr>
-<tr><td>REDIS_READ_TIMEOUT</td><td>5s</td><td>读取期限，须大于 0</td></tr>
-<tr><td>REDIS_WRITE_TIMEOUT</td><td>5s</td><td>写入期限，须大于 0</td></tr>
-<tr><td>REDIS_POOL_TIMEOUT</td><td>5s</td><td>池满载等待期限，须大于 0</td></tr>
-<tr><td>REDIS_STARTUP_TIMEOUT</td><td>5s</td><td>启动 PING 整体期限，须大于 0</td></tr>
-<tr><td>REDIS_CONN_MAX_LIFETIME</td><td>30m</td><td>连接最长复用，须大于 0</td></tr>
-<tr><td>REDIS_CONN_MAX_IDLE_TIME</td><td>5m</td><td>空闲清理时间，须大于 0</td></tr>
-</table>
-</div>` },
 ];
-
 const cardMap = {}; cards.forEach(c=>cardMap[c.id]=c);
 
 const inCount = {};
