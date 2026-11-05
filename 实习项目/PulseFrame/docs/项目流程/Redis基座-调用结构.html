@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Redis 客户端基座：调用画布</title>
+<title>Redis 模块：调用画布</title>
 <style>
   body { margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:#f0f1f4; }
   #toolbar { position:fixed; top:0; left:0; right:0; z-index:100; background:#fff; border-bottom:1px solid #d9dce3; padding:10px 16px; display:flex; align-items:center; gap:16px; font-size:13px; color:#3a3f47; }
@@ -30,15 +30,17 @@
   .sw { width:11px; height:11px; border-radius:3px; display:inline-block; }
   #lockBtn { padding:6px 14px; border-radius:8px; border:1.5px solid #c6cad3; background:#fff; cursor:pointer; font-size:13px; }
   #lockBtn.on { background:#4285f4; border-color:#4285f4; color:#fff; }
-  .node.essay { width:620px; cursor:default; }
+  .node.essay { width:640px; cursor:default; }
   .node.essay .head { border-bottom:1px solid #eef0f4; margin-bottom:0; }
-  .essay-body { padding:10px 14px 14px; font-size:12.5px; line-height:1.72; color:#2b2f36; max-height:760px; overflow:auto; }
+  .essay-body { padding:10px 14px 14px; font-size:12.5px; line-height:1.7; color:#2b2f36; max-height:520px; overflow:auto; }
   .essay-body .q { display:block; font-weight:700; color:#333a45; margin-top:10px; }
+  .essay-body table { border-collapse:collapse; width:100%; font-size:12px; margin-top:6px; }
+  .essay-body th,.essay-body td { padding:4px 8px; border:1px solid #d9dce3; text-align:left; vertical-align:top; }
 </style>
 </head>
 <body>
 <div id="toolbar">
-  <b>Redis 客户端基座：调用画布</b>
+  <b>Redis 模块：调用画布</b>
   <span>空白处拖动平移画布</span>
   <span>拖动卡片移动</span>
   <button id="lockBtn">🔓 解锁</button>
@@ -58,49 +60,70 @@ const cards = [
   { id:"main", name:"main.go 入口", file:"backend/cmd/pulseframe-api/main.go", grp:"入口与编排", c:"#dbe6ff", x:60, y:400,
     steps:[ {label:"1 调用 app.Run", to:"run"} ] },
   { id:"run", name:"app.Run 启动编排", file:"backend/internal/app/run.go", grp:"入口与编排", c:"#dbe6ff", x:520, y:400,
-    steps:[ {label:"1 加载配置", to:"load"}, {label:"2 装配依赖", to:"dep"},
-            {label:"3 建路由", to:null}, {label:"4 构造 HTTP 服务", to:null},
-            {label:"5 运行 HTTP", to:null}, {label:"6 退出关闭", to:"close"} ] },
+    steps:[ {label:"1 加载配置", to:"load"}, {label:"2 装配依赖（含 Redis）", to:"dep"},
+            {label:"3 运行 HTTP 服务", to:null}, {label:"4 退出关闭依赖", to:"close"} ] },
   { id:"load", name:"config.Load", file:"backend/config/config.go", grp:"加载与校验", c:"#ffe6c7", x:1020, y:120,
-    steps:[ {label:"读取并校验环境变量", to:null} ] },
+    steps:[ {label:"读取并校验环境变量；最后加载 Redis 配置", to:null} ] },
   { id:"dep", name:"NewDependencies 装配依赖", file:"backend/internal/app/dependencies.go", grp:"装配与初始化", c:"#d3f0da", x:1020, y:320,
-    steps:[ {label:"1 创建 MySQL 连接池", to:null}, {label:"2 创建 Redis 客户端", to:"redis"},
-            {label:"3 Redis 失败则关闭 MySQL", to:null} ] },
+    steps:[ {label:"1 调用 infra.NewRedis 创建客户端", to:"redis"},
+            {label:"2 Redis 失败时回滚已建的 MySQL 连接池", to:null} ] },
   { id:"redis", name:"infra.NewRedis 创建客户端", file:"backend/infra/redis.go", grp:"装配与初始化", c:"#d3f0da", x:1520, y:340,
-    steps:[ {label:"1 校验配置", to:"validate"}, {label:"2 重试次数换算(0→-1)", to:null},
-            {label:"3 构造客户端选项", to:"opts"}, {label:"4 创建客户端", to:"client"},
-            {label:"5 PING 连通性检查", to:"ping"} ] },
+    steps:[ {label:"1 校验配置", to:"validate"}, {label:"2 映射重试次数（0→-1）", to:null},
+            {label:"3 构造 go-redis 选项", to:"opts"}, {label:"4 创建客户端", to:"client"},
+            {label:"5 PING 启动检查", to:"ping"} ] },
   { id:"validate", name:"cfg.Validate 校验整体配置", file:"backend/config/redis.go", grp:"加载与校验", c:"#ffe6c7", x:2020, y:100,
     steps:[ {label:"1 连接参数校验", to:"vconn"}, {label:"2 池参数校验", to:"vpool"} ] },
   { id:"vconn", name:"validateConnection", file:"backend/config/redis.go", grp:"加载与校验", c:"#ffe6c7", x:2440, y:100,
-    steps:[ {label:"地址 host:port 且端口合法", to:null} ] },
+    steps:[ {label:"地址须为 host:port 且端口在合法区间", to:null} ] },
   { id:"vpool", name:"validatePool", file:"backend/config/redis.go", grp:"加载与校验", c:"#ffe6c7", x:2440, y:220,
-    steps:[ {label:"数据库编号·重试·连接数·期限", to:null} ] },
+    steps:[ {label:"数据库编号/重试/连接数/期限取值合法", to:null} ] },
   { id:"opts", name:"redis.Options 构造选项", file:"github.com/redis/go-redis/v9 (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:300,
-    steps:[ {label:"填地址/认证/DB/重试/池/超时", to:null} ] },
+    steps:[ {label:"填充地址/认证/DB/重试/连接池/超时", to:null} ] },
   { id:"client", name:"redis.NewClient 创建客户端", file:"github.com/redis/go-redis/v9 (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:480,
-    steps:[ {label:"返回进程共享客户端连接池", to:null} ] },
+    steps:[ {label:"返回进程共享的客户端连接池", to:null} ] },
   { id:"ping", name:"PingContext 启动检查", file:"github.com/redis/go-redis/v9 (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:680,
-    steps:[ {label:"带超时检查；失败关闭客户端", to:null} ] },
+    steps:[ {label:"受 StartupTimeout 与父上下文约束；失败即关闭客户端并返回错误", to:null} ] },
   { id:"close", name:"dependencies.Close", file:"backend/internal/app/dependencies.go", grp:"服务与运行", c:"#e8e8ec", x:1020, y:880,
-    steps:[ {label:"遍历关闭 MySQL 与 Redis，合并错误", to:null} ] },
-  { id:"interview", name:"面试讲解 · Redis 客户端基座", file:"docs/设计/基座/Redis连接池-文件索引.md", grp:"面试讲解", c:"#e7defa", x:40, y:70, type:"essay", steps:[],
+    steps:[ {label:"sync.Once 保证只释放一次，合并 Redis 与 MySQL 关闭错误", to:null} ] },
+  { id:"interview", name:"面试讲解 · Redis 模块", file:"docs/设计/基座/Redis连接池-文件索引.md", grp:"面试讲解", c:"#e7defa", x:40, y:40, type:"essay", steps:[],
     body:`<div class="essay-body">
-<p><b>总：这个模块是干嘛的</b> 服务底层维护 Redis 客户端连接池，长期持有一组到 Redis 的连接并复用。它解决的核心矛盾：建连、鉴权与网络开关都有成本，不能为每条命令重建；同时要限制最大并发连接、保持连接干净可用，并在配置或连通性异常时拒绝带病启动。</p>
+<p><b>总：这个模块是干嘛的</b> 服务底层维护一个 Redis 客户端连接池，长期持有一组到 Redis 的连接并复用。它解决的核心矛盾：建连、鉴权与网络开关都有成本，不能为每条命令重建；同时要限制最大并发连接、保持连接干净可用，并在配置或连通性异常时拒绝带病启动。</p>
 <span class="q">问题1 连接无限创建，打爆 Redis</span>
-<p>必须限制连接池容量。go-redis 用 PoolSize 控制基础连接数、MaxActiveConns 控制同时分配的最大连接数，超出后请求等待或按 PoolTimeout 超时。我把它俩开放为环境变量，结合单实例并发与压测峰值定参，不让连接无限增长。</p>
+<p>必须限制连接池容量。go-redis 用 PoolSize 控制基础连接数、MaxActiveConns 控制同时分配的最大连接数，超出后请求等待或按 PoolTimeout 超时。我把二者开放为环境变量，结合单实例并发与压测峰值定参。</p>
 <span class="q">问题2 频繁建连开销大</span>
-<p>每次建连含 TCP 握手与 ACL 用户鉴权，开销高，所以要复用。短突发业务保留更多空闲连接，长连接场景减少保留；用 MinIdleConns 让池内始终保有若干空闲连接，供高峰即取即用。</p>
+<p>每次建连含 TCP 握手与 ACL 用户鉴权，开销高，所以要复用。短突发业务保留更多空闲连接，长连接场景减少保留；用 MinIdleConns 让池内始终保有若干空闲连接，高峰即取即用。</p>
 <span class="q">问题3 连接长时间复用会失效</span>
 <p>复用过久的连接可能已被服务端或网络层断开，也可能残留过期状态。通过 ConnMaxLifetime 限制单条连接最长存活时间，到期强制重建，取值参考服务端超时并留余量。</p>
 <span class="q">问题4 空闲连接占资源</span>
-<p>长期空闲连接占用客户端内存与服务端名额。设 ConnMaxIdleTime 定时回收空闲连接，配合 MinIdleConns 与 PoolSize，保证高峰够用、低峰不空耗。</p>
+<p>长期空闲连接占用客户端内存与服务端名额。设 ConnMaxIdleTime 定时回收，配合 MinIdleConns 与 PoolSize，保证高峰够用、低峰不空耗。</p>
 <span class="q">问题5 配置错误导致带病运行</span>
-<p>地址、端口、数据库编号、连接数与各超时配置错误时运行期才暴露。我在启动早期做集中校验，任何非法直接拒绝启动，让错误在启动阶段浮出，不给静默兜底。</p>
+<p>地址、端口、数据库编号、连接数与各超时配置错误时，运行期才暴露。我在启动早期做集中校验，任何非法直接拒绝启动，让错误在启动阶段浮出，不给静默兜底。</p>
 <span class="q">问题6 自动重试意图不一致</span>
-<p>项目用 0 表示“不自动重试”，而 go-redis 用 -1 表示关闭自动重试。创建客户端前先做一次取值换算，避免把“不重试”误解成默认重试，也避免写操作被静默重试。</p>
+<p>项目用 0 表示“不自动重试”，而 go-redis 用 -1 表示关闭自动重试。创建客户端前先做取值换算，避免把“不重试”误解成默认重试，也避免写操作被静默重试。</p>
 <span class="q">问题7 交付一个连不上的客户端</span>
 <p>客户端建好了但 Redis 不可达，服务不应带病启动。我用带 StartupTimeout 的上下文执行 PING 检查，失败即关闭客户端并返回错误，把故障暴露在启动阶段。</p>
+</div>` },
+  { id:"cfgnotes", name:"配置附注 · Redis 环境变量", file:"backend/config/redis.go", grp:"加载与校验", c:"#ffe6c7", x:40, y:820, type:"essay", steps:[],
+    body:`<div class="essay-body">
+<p><b>参数与默认值（缺省时生效，均经 Validate 校验）</b></p>
+<table>
+<tr><th>变量</th><th>默认</th><th>含义 / 校验</th></tr>
+<tr><td>REDIS_ADDR</td><td>127.0.0.1:6379</td><td>主机:端口，端口须在合法区间</td></tr>
+<tr><td>REDIS_USERNAME</td><td>空</td><td>ACL 用户名，空为服务端默认用户</td></tr>
+<tr><td>REDIS_PASSWORD</td><td>空</td><td>按原值读取，不用于日志输出</td></tr>
+<tr><td>REDIS_DATABASE</td><td>0</td><td>逻辑库编号，非负</td></tr>
+<tr><td>REDIS_MAX_RETRIES</td><td>3</td><td>单命令重试次数，0 表示不重试</td></tr>
+<tr><td>REDIS_POOL_SIZE</td><td>10</td><td>基础连接数，1..MaxActiveConns</td></tr>
+<tr><td>REDIS_MIN_IDLE_CONNS</td><td>2</td><td>维持的空闲连接数，0..MaxActiveConns</td></tr>
+<tr><td>REDIS_MAX_ACTIVE_CONNS</td><td>20</td><td>同时分配上限，须大于 0</td></tr>
+<tr><td>REDIS_DIAL_TIMEOUT</td><td>3s</td><td>建连期限，须大于 0</td></tr>
+<tr><td>REDIS_READ_TIMEOUT</td><td>5s</td><td>读取期限，须大于 0</td></tr>
+<tr><td>REDIS_WRITE_TIMEOUT</td><td>5s</td><td>写入期限，须大于 0</td></tr>
+<tr><td>REDIS_POOL_TIMEOUT</td><td>5s</td><td>池满载等待期限，须大于 0</td></tr>
+<tr><td>REDIS_STARTUP_TIMEOUT</td><td>5s</td><td>启动 PING 整体期限，须大于 0</td></tr>
+<tr><td>REDIS_CONN_MAX_LIFETIME</td><td>30m</td><td>连接最长复用，须大于 0</td></tr>
+<tr><td>REDIS_CONN_MAX_IDLE_TIME</td><td>5m</td><td>空闲清理时间，须大于 0</td></tr>
+</table>
 </div>` },
 ];
 
