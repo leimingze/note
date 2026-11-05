@@ -10,7 +10,7 @@ backend/config/config.go 定义总配置并组织加载；env.go 保存 LookupEn
 
 docs/设计/ 保存6份项目方案与文件索引；docs/学习笔记/ 保存2份通用知识文档及 assets/ 中的4张配图，原有文档和图片内容保持不变。
 
-可用性与高并发治理的职责、进度及连接池讨论范围见 docs/设计/服务可用性与高并发治理.md，该文档引用 MySQL 和 Redis 的独立文件索引。日志与指标方案见 docs/设计/日志与指标设计.md：保留现有 slog、请求 ID、访问日志和异常恢复，后续采用 Prometheus 模型补充 HTTP、依赖、连接池和生命周期指标。MySQL 通过 go-sql-driver/mysql v1.10.1 和 database/sql 接入，Redis 通过 github.com/redis/go-redis/v9 v9.7.0 接入；config 读取配置，infra 创建并检查连接，internal/app/dependencies.go 持有和关闭客户端，internal/app/run.go 组织启动及退出，main.go 调用 app.Run。MySQL 单进程默认最多20个连接、5个空闲连接；Redis 默认基础连接10个、最大同时分配20个连接、最小空闲2个，均可配置。两者连接最长存活30分钟、空闲5分钟，启动检查失败直接返回错误。账号、密码、数据库为显式配置，密码保留原值。
+可用性与高并发治理的职责、进度及连接池讨论范围见 docs/设计/服务可用性与高并发治理.md，该文档引用 MySQL 和 Redis 的独立文件索引。日志与指标方案见 docs/设计/日志与指标设计.md：保留现有 slog、请求 ID、访问日志和异常恢复，指标采用 github.com/prometheus/client_golang；`/livez` 只检查进程，`/readyz` 聚合 HTTP、MySQL 和 Redis 的后台探活状态，`error_code` 与 `error_type` 分别维护固定集合。MySQL 通过 go-sql-driver/mysql v1.10.1 和 database/sql 接入，Redis 通过 github.com/redis/go-redis/v9 v9.7.0 接入；config 读取配置，infra 创建并检查连接，internal/app/dependencies.go 持有和关闭客户端，internal/app/run.go 组织启动及退出，main.go 调用 app.Run。MySQL 单进程默认最多20个连接、5个空闲连接；Redis 默认基础连接10个、最大同时分配20个连接、最小空闲2个，均可配置。两者连接最长存活30分钟、空闲5分钟，启动检查失败直接返回错误。账号、密码、数据库为显式配置，密码保留原值。
 
 MySQL 连接池等待使用操作 Context 的截止时间，网络读写超时单独配置；Redis 连接池等待使用 PoolTimeout 和操作 Context，客户端默认每条命令最多自动重试3次；写操作是否允许重试仍由业务语义决定。使用方负责释放查询结果、事务和显式获取的连接。外部 HTTP 客户端已建立文件索引、QQ 授权码登录流程和通用 HTTPS 客户端边界，代码尚未编写。部署连接预算及监测继续讨论。
 
