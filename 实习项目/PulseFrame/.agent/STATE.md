@@ -8,9 +8,9 @@ TASK-2026-11-04-REDIS-POOL，10份后端测试文件统一保存在 backend/test
 
 backend/config/config.go 定义总配置并组织加载；env.go 保存 LookupEnv、可选环境变量读取、整数与时长解析和共用端口范围；http.go、mysql.go 与 redis.go 各自负责模块配置。运行环境及日志级别校验保留在统一入口文件，公共解析函数不调用模块加载函数。配置接口、默认值及校验行为保持一致，说明见 backend/README.md。
 
-docs/设计/ 保存5份项目方案与文件索引；docs/学习笔记/ 保存2份通用知识文档及 assets/ 中的4张配图，原有文档和图片内容保持不变。
+docs/设计/ 保存6份项目方案与文件索引；docs/学习笔记/ 保存2份通用知识文档及 assets/ 中的4张配图，原有文档和图片内容保持不变。
 
-可用性与高并发治理的职责、进度及连接池讨论范围见 docs/设计/服务可用性与高并发治理.md，该文档引用 MySQL 和 Redis 的独立文件索引。MySQL 通过 go-sql-driver/mysql v1.10.1 和 database/sql 接入，Redis 通过 github.com/redis/go-redis/v9 v9.7.0 接入；config 读取配置，infra 创建并检查连接，internal/app/dependencies.go 持有和关闭客户端，internal/app/run.go 组织启动及退出，main.go 调用 app.Run。MySQL 单进程默认最多20个连接、5个空闲连接；Redis 默认基础连接10个、最大同时分配20个连接、最小空闲2个，均可配置。两者连接最长存活30分钟、空闲5分钟，启动检查失败直接返回错误。账号、密码、数据库为显式配置，密码保留原值。
+可用性与高并发治理的职责、进度及连接池讨论范围见 docs/设计/服务可用性与高并发治理.md，该文档引用 MySQL 和 Redis 的独立文件索引。日志与指标方案见 docs/设计/日志与指标设计.md：保留现有 slog、请求 ID、访问日志和异常恢复，后续采用 Prometheus 模型补充 HTTP、依赖、连接池和生命周期指标。MySQL 通过 go-sql-driver/mysql v1.10.1 和 database/sql 接入，Redis 通过 github.com/redis/go-redis/v9 v9.7.0 接入；config 读取配置，infra 创建并检查连接，internal/app/dependencies.go 持有和关闭客户端，internal/app/run.go 组织启动及退出，main.go 调用 app.Run。MySQL 单进程默认最多20个连接、5个空闲连接；Redis 默认基础连接10个、最大同时分配20个连接、最小空闲2个，均可配置。两者连接最长存活30分钟、空闲5分钟，启动检查失败直接返回错误。账号、密码、数据库为显式配置，密码保留原值。
 
 MySQL 连接池等待使用操作 Context 的截止时间，网络读写超时单独配置；Redis 连接池等待使用 PoolTimeout 和操作 Context，客户端默认每条命令最多自动重试3次；写操作是否允许重试仍由业务语义决定。使用方负责释放查询结果、事务和显式获取的连接。外部 HTTP 客户端已建立文件索引、QQ 授权码登录流程和通用 HTTPS 客户端边界，代码尚未编写。部署连接预算及监测继续讨论。
 
@@ -36,6 +36,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 
 - docs/README.md：项目设计与学习笔记的统一入口。
 - docs/设计/服务可用性与高并发治理.md：职责与进度表，引用 MySQL 和 Redis 文件索引。
+- docs/设计/日志与指标设计.md：结构化日志字段、敏感信息规则、Prometheus 指标和后续实现职责。
 - docs/设计/MySQL连接池-文件索引.md：仅列 MySQL 连接池配置、创建、启动管理及依赖清单相关文件与职责；Agent 执行时的测试和文档维护要求不列入表格。
 - docs/设计/Redis连接池-文件索引.md：Redis 连接池配置、创建、启动管理及依赖清单相关文件与职责。
 - docs/设计/外部HTTP客户端-文件索引.md：外部 HTTP 客户端的文件职责、通用边界和后续实现计划。
@@ -85,7 +86,7 @@ Redis 连接池实现（2026-11-04）：config/redis.go 读取并校验 Redis �
 
 ## 下一步
 
-继续确定外部 HTTP 客户端的连接参数、超时层次、响应体限制、故障处理和监测指标，再进入配置与客户端代码实现。
+先依据 docs/设计/日志与指标设计.md 确定日志公共字段和指标采集方式，再进入指标配置、HTTP 指标中间件和连接池采集代码实现；外部 HTTP 客户端按既定计划后期再做。
 
 ## 归档位置
 
