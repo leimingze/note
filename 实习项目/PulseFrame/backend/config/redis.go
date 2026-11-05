@@ -12,7 +12,7 @@ import (
 const (
 	defaultRedisAddress        = "127.0.0.1:6379" // 本地开发默认连接目标，格式为主机地址:端口。
 	defaultRedisDatabase       = 0                // 默认使用 Redis 的逻辑数据库0。
-	defaultRedisMaxRetries     = 3                // 单条命令最多自动重试3次；具体写操作仍需由业务判断是否允许重试。
+	defaultRedisMaxRetries     = 3                // 单条命令默认自动重试3次；配置 -1 表示关闭重试。
 	defaultRedisPoolSize       = 10               // 连接池基础连接数，连接不足时客户端按需创建。
 	defaultRedisMinIdleConns   = 2                // 尽量维持的空闲连接数，不代表连接池启动时立即建立。
 	defaultRedisMaxActiveConns = 20               // 连接池同时分配的最大连接数，超过后等待或超时。
@@ -30,7 +30,7 @@ type Redis struct {
 	Username        string        // Redis ACL 用户名，可为空表示使用服务端默认用户。
 	Password        string        // Redis 认证密码，保留原值，不用于日志输出。
 	Database        int           // Redis 逻辑数据库编号，不能小于零。
-	MaxRetries      int           // 单条命令的自动重试次数，零表示不自动重试。
+	MaxRetries      int           // 单条命令的自动重试次数，-1 表示关闭重试，0 表示使用库默认（3次）。
 	PoolSize        int           // 连接池基础连接数。
 	MinIdleConns    int           // 连接池希望维持的最小空闲连接数。
 	MaxActiveConns  int           // 连接池同时分配的最大连接数。
@@ -59,7 +59,7 @@ func loadRedis(lookup LookupEnv) (Redis, error) {
 	if err != nil {
 		return Redis{}, err
 	}
-	cfg.MaxRetries, err = parseNonNegativeInt(lookup, "REDIS_MAX_RETRIES", defaultRedisMaxRetries)
+	cfg.MaxRetries, err = parseAtLeastInt(lookup, "REDIS_MAX_RETRIES", defaultRedisMaxRetries, -1)
 	if err != nil {
 		return Redis{}, err
 	}
@@ -136,8 +136,8 @@ func (cfg Redis) validatePool() error {
 	if cfg.Database < 0 {
 		return fmt.Errorf("REDIS_DATABASE must be nonnegative")
 	}
-	if cfg.MaxRetries < 0 {
-		return fmt.Errorf("REDIS_MAX_RETRIES must be nonnegative")
+	if cfg.MaxRetries < -1 {
+		return fmt.Errorf("REDIS_MAX_RETRIES must be -1 or greater")
 	}
 	if cfg.MaxActiveConns <= 0 {
 		return fmt.Errorf("REDIS_MAX_ACTIVE_CONNS must be greater than zero")

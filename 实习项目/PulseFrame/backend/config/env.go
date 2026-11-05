@@ -70,3 +70,17 @@ func parseNonNegativeInt(lookup LookupEnv, key string, fallback int) (int, error
 	}
 	return value, nil
 }
+
+// 输入：lookup，环境查询函数；key，变量名；fallback，缺省整数；minimum，允许的最小值。
+// 输出：不小于 minimum 的整数；格式错误、溢出或小于最小值返回错误。
+// 功能：读取整数配置，将文本转换为整数，并确保结果不小于指定下限，供取值下界非零的配置使用。
+// 例如配置为 "-1" 且下限为 -1 时返回 -1；配置为 "-2" 且下限为 -1 时返回错误。
+func parseAtLeastInt(lookup LookupEnv, key string, fallback, minimum int) (int, error) {
+	// 先按默认整数读取环境变量，再用文字转换成整数；没有设置或内容为空时采用默认值。
+	value, err := strconv.Atoi(readValue(lookup, key, strconv.Itoa(fallback)))
+	// 无法转换、超出整数范围或低于允许的最小值时报告配置错误。
+	if err != nil || value < minimum {
+		return 0, fmt.Errorf("%s must be an integer at least %d", key, minimum)
+	}
+	return value, nil
+}

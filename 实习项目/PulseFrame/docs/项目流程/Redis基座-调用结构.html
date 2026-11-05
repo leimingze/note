@@ -68,8 +68,8 @@ const cards = [
     steps:[ {label:"1 调用 infra.NewRedis 创建客户端", to:"redis"},
             {label:"2 Redis 失败时关闭其他项目依赖（包括 MySQL 等）", to:null} ] },
   { id:"redis", name:"infra.NewRedis 创建客户端", file:"backend/infra/redis.go", grp:"装配与初始化", c:"#d3f0da", x:1520, y:340,
-    steps:[ {label:"1 校验配置", to:"validate"}, {label:"2 将配置 0（不重试）映射为 go-redis 的 -1（关闭自动重试）", to:null},
-            {label:"3 构造 go-redis 选项", to:"opts"}, {label:"4 创建客户端", to:"client"},
+    steps:[ {label:"1 校验配置", to:"validate"}, {label:"2 构造客户端选项（透传重试次数）", to:"opts"},
+            {label:"3 创建客户端", to:"client"},
             {label:"5 PING 启动检查", to:"ping"} ] },
   { id:"validate", name:"cfg.Validate 校验整体配置", file:"backend/config/redis.go", grp:"加载与校验", c:"#ffe6c7", x:2020, y:100,
     steps:[ {label:"1 连接参数校验", to:"vconn"}, {label:"2 池参数校验", to:"vpool"} ] },
@@ -98,8 +98,8 @@ const cards = [
 <p>长期空闲连接占用客户端内存与服务端名额。设 ConnMaxIdleTime 定时回收，配合 MinIdleConns 与 PoolSize，保证高峰够用、低峰不空耗。</p>
 <span class="q">问题5 配置错误导致带病运行</span>
 <p>地址、端口、数据库编号、连接数与各超时配置错误时，运行期才暴露。我在启动早期做集中校验，任何非法直接拒绝启动，让错误在启动阶段浮出，不给静默兜底。</p>
-<span class="q">问题6 自动重试意图不一致</span>
-<p>项目用 0 表示“不自动重试”，而 go-redis 用 -1 表示关闭自动重试。创建客户端前先做取值换算，避免把“不重试”误解成默认重试，也避免写操作被静默重试。</p>
+<span class="q">问题6 重试次数与库约定一致</span>
+<p>REDIS_MAX_RETRIES 直接遵循 go-redis 的约定：-1 关闭重试，0 使用库默认（3 次），正数指定重试次数；配置原样透传给客户端，无需额外换算。</p>
 <span class="q">问题7 交付一个连不上的客户端</span>
 <p>客户端建好了但 Redis 不可达，服务不应带病启动。我用带 StartupTimeout 的上下文执行 PING 检查，失败即关闭客户端并返回错误，把故障暴露在启动阶段。</p>
 </div>` },
@@ -112,7 +112,7 @@ const cards = [
 <tr><td>REDIS_USERNAME</td><td>空</td><td>ACL 用户名，空为服务端默认用户</td></tr>
 <tr><td>REDIS_PASSWORD</td><td>空</td><td>按原值读取，不用于日志输出</td></tr>
 <tr><td>REDIS_DATABASE</td><td>0</td><td>逻辑库编号，非负</td></tr>
-<tr><td>REDIS_MAX_RETRIES</td><td>3</td><td>默认 3 次；显式设 0 表示关闭自动重试</td></tr>
+<tr><td>REDIS_MAX_RETRIES</td><td>3</td><td>-1 关闭重试；0 使用库默认（3 次）；正数指定次数</td></tr>
 <tr><td>REDIS_POOL_SIZE</td><td>10</td><td>基础连接数，1..MaxActiveConns</td></tr>
 <tr><td>REDIS_MIN_IDLE_CONNS</td><td>2</td><td>维持的空闲连接数，0..MaxActiveConns</td></tr>
 <tr><td>REDIS_MAX_ACTIVE_CONNS</td><td>20</td><td>同时分配上限，须大于 0</td></tr>

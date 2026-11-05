@@ -71,6 +71,22 @@ func TestRedisOverrides(t *testing.T) {
 }
 
 // 输入：t，测试上下文。
+// 输入：t，测试上下文。
+// 输出：关闭重试的配置未被按原意读取时使测试失败。
+// 功能：验证 REDIS_MAX_RETRIES=-1 表示关闭自动重试并直接透传给客户端。
+// 例如设置 REDIS_MAX_RETRIES=-1 时，加载得到 MaxRetries 为 -1。
+func TestRedisDisableRetries(t *testing.T) {
+	values := redisEnvironment()
+	values["REDIS_MAX_RETRIES"] = "-1"
+	cfg, err := config.Load(values.Lookup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Redis.MaxRetries != -1 {
+		t.Fatalf("expected retries disabled (-1), got %d", cfg.Redis.MaxRetries)
+	}
+}
+
 // 输出：非法 Redis 配置未返回包含对应变量名称的错误时使测试失败。
 // 功能：验证地址、容量、重试次数和逻辑数据库的边界。
 // 例如 REDIS_POOL_SIZE 为0时，要求配置加载指出连接池基础数量无效。
@@ -84,7 +100,7 @@ func TestRedisRejectsInvalidValues(t *testing.T) {
 		{"REDIS_ADDR", "127.0.0.1:0"},
 		{"REDIS_ADDR", "127.0.0.1:65536"},
 		{"REDIS_DATABASE", "-1"},
-		{"REDIS_MAX_RETRIES", "-1"},
+		{"REDIS_MAX_RETRIES", "-2"},
 		{"REDIS_POOL_SIZE", "0"},
 		{"REDIS_POOL_SIZE", "21"},
 		{"REDIS_MIN_IDLE_CONNS", "21"},

@@ -19,19 +19,14 @@ func NewRedis(ctx context.Context, cfg config.Redis) (*redis.Client, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("validate redis config: %w", err)
 	}
-	// go-redis 用 -1 表示关闭自动重试，而项目配置用0表达同一意图，先完成一次取值转换。
-	maxRetries := cfg.MaxRetries
-	if maxRetries == 0 {
-		maxRetries = -1
-	}
-	// 将项目配置逐项映射到 go-redis，显式设置连接池、超时和重试行为。
+	// Redis 配置直接透传给 go-redis，重试次数遵循库约定：-1 关闭重试，0 使用默认（3次），正数为指定次数。
 	client := redis.NewClient(&redis.Options{
 		Network:         "tcp",
 		Addr:            cfg.Address,
 		Username:        cfg.Username,
 		Password:        cfg.Password,
 		DB:              cfg.Database,
-		MaxRetries:      maxRetries,
+		MaxRetries:      cfg.MaxRetries,
 		PoolSize:        cfg.PoolSize,
 		MinIdleConns:    cfg.MinIdleConns,
 		MaxActiveConns:  cfg.MaxActiveConns,
