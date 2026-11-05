@@ -40,6 +40,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 - docs/设计/MySQL连接池-文件索引.md：仅列 MySQL 连接池配置、创建、启动管理及依赖清单相关文件与职责；Agent 执行时的测试和文档维护要求不列入表格。
 - docs/设计/Redis连接池-文件索引.md：Redis 连接池配置、创建、启动管理及依赖清单相关文件与职责。
 - docs/设计/外部HTTP客户端-文件索引.md：外部 HTTP 客户端的文件职责、通用边界和后续实现计划。
+- docs/设计/基座/MySQL基座-处理流程.md：按函数职责聚合的 MySQL 连接池启动、运行和退出流程图。
 - docs/设计/登录与注册.md：当前认证设计，保留“思考、暂定方案”及客户端、服务端步骤格式。
 - docs/设计/登录与注册-数据结构.md：三张 MySQL 表的字段与约束、Redis 会话及令牌映射、QQ state 和频率计数。
 - docs/学习笔记/注册与发现.md、docs/学习笔记/通用高并发架构设计/高并发架构设计要点.md：通用知识笔记；配图保存在 docs/学习笔记/assets/。
