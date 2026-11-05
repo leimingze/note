@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redis 客户端基座：调用画布</title>
+<style>
+  body { margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:#f0f1f4; }
+  #toolbar { position:fixed; top:0; left:0; right:0; z-index:100; background:#fff; border-bottom:1px solid #d9dce3; padding:10px 16px; display:flex; align-items:center; gap:16px; font-size:13px; color:#3a3f47; }
+  #toolbar b { font-size:15px; }
+  #viewport { position:fixed; top:47px; left:0; right:0; bottom:0; overflow:hidden; cursor:grab; }
+  #viewport.panning { cursor:grabbing; }
+  #canvas { position:absolute; top:0; left:0; will-change:transform; }
+  svg.grid { display:block; background: radial-gradient(circle, #c9cdd5 1px, transparent 1px); background-size: 20px 20px; }
+  .node { position:absolute; background:#fff; border:1.5px solid #c6cad3; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.05); user-select:none; cursor:grab; }
+  .node:active { cursor:grabbing; }
+  .node.locked { cursor:default; }
+  .node .head { padding:6px 12px 2px; font-weight:700; font-size:13px; border-bottom:1px solid #eef0f4; margin-bottom:2px; }
+  .node .file { font-size:10px; color:#9aa0a6; font-weight:400; padding:1px 0 2px; }
+  .node .grp { font-size:10px; color:#9aa0a6; font-weight:400; }
+  .node .step { position:absolute; left:0; right:0; height:30px; box-sizing:border-box; display:flex; align-items:center; padding:0 28px 0 10px; font-size:11.5px; color:#2b2f36; border-top:1px dashed #f0f1f4; }
+  .node .step:first-of-type { border-top:none; }
+  .port { position:absolute; width:13px; height:13px; border-radius:50%; transform:translate(-50%,-50%); cursor:crosshair; }
+  .port.in { background:#fff; border:2px solid #ea4335; left:-2px; }
+  .port.out { background:#fff; border:2px solid #34a853; right:-11px; }
+  .port:hover { background:#e8f0fe; }
+  path.link { stroke:#7a808c; stroke-width:1.6; fill:none; }
+  .legend { margin-left:auto; display:flex; gap:12px; flex-wrap:wrap; }
+  .legend span { display:inline-flex; align-items:center; gap:5px; }
+  .sw { width:11px; height:11px; border-radius:3px; display:inline-block; }
+  #lockBtn { padding:6px 14px; border-radius:8px; border:1.5px solid #c6cad3; background:#fff; cursor:pointer; font-size:13px; }
+  #lockBtn.on { background:#4285f4; border-color:#4285f4; color:#fff; }
+  .node.essay { width:620px; cursor:default; }
+  .node.essay .head { border-bottom:1px solid #eef0f4; margin-bottom:0; }
+  .essay-body { padding:10px 14px 14px; font-size:12.5px; line-height:1.72; color:#2b2f36; max-height:760px; overflow:auto; }
+  .essay-body .q { display:block; font-weight:700; color:#333a45; margin-top:10px; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <b>Redis 客户端基座：调用画布</b>
+  <span>空白处拖动平移画布</span>
+  <span>拖动卡片移动</span>
+  <button id="lockBtn">🔓 解锁</button>
+  <div class="legend">
+    <span><span class="sw" style="background:#dbe6ff"></span>入口与编排</span>
+    <span><span class="sw" style="background:#ffe6c7"></span>加载与校验</span>
+    <span><span class="sw" style="background:#d3f0da"></span>装配与初始化</span>
+    <span><span class="sw" style="background:#f7cdcd"></span>驱动与池对象</span>
+    <span><span class="sw" style="background:#e8e8ec"></span>服务与运行</span>
+  </div>
+</div>
+<div id="viewport"><div id="canvas"></div></div>
+
+<script>
+// ---------- 卡片数据（含文件路径与内部步骤）----------
+const cards = [
+  { id:"main", name:"main.go 入口", file:"backend/cmd/pulseframe-api/main.go", grp:"入口与编排", c:"#dbe6ff", x:60, y:400,
+    steps:[ {label:"1 调用 app.Run", to:"run"} ] },
+  { id:"run", name:"app.Run 启动编排", file:"backend/internal/app/run.go", grp:"入口与编排", c:"#dbe6ff", x:520, y:400,
+    steps:[ {label:"1 加载配置", to:"load"}, {label:"2 装配依赖", to:"dep"},
+            {label:"3 建路由", to:null}, {label:"4 构造 HTTP 服务", to:null},
+            {label:"5 运行 HTTP", to:null}, {label:"6 退出关闭", to:"close"} ] },
+  { id:"load", name:"config.Load", file:"backend/config/config.go", grp:"加载与校验", c:"#ffe6c7", x:1020, y:120,
+    steps:[ {label:"读取并校验环境变量", to:null} ] },
+  { id:"dep", name:"NewDependencies 装配依赖", file:"backend/internal/app/dependencies.go", grp:"装配与初始化", c:"#d3f0da", x:1020, y:320,
+    steps:[ {label:"1 创建 MySQL 连接池", to:null}, {label:"2 创建 Redis 客户端", to:"redis"},
+            {label:"3 Redis 失败则关闭 MySQL", to:null} ] },
+  { id:"redis", name:"infra.NewRedis 创建客户端", file:"backend/infra/redis.go", grp:"装配与初始化", c:"#d3f0da", x:1520, y:340,
+    steps:[ {label:"1 校验配置", to:"validate"}, {label:"2 重试次数换算(0→-1)", to:null},
+            {label:"3 构造客户端选项", to:"opts"}, {label:"4 创建客户端", to:"client"},
+            {label:"5 PING 连通性检查", to:"ping"} ] },
+  { id:"validate", name:"cfg.Validate 校验整体配置", file:"backend/config/redis.go", grp:"加载与校验", c:"#ffe6c7", x:2020, y:100,
+    steps:[ {label:"1 连接参数校验", to:"vconn"}, {label:"2 池参数校验", to:"vpool"} ] },
+  { id:"vconn", name:"validateConnection", file:"backend/config/redis.go", grp:"加载与校验", c:"#ffe6c7", x:2440, y:100,
+    steps:[ {label:"地址 host:port 且端口合法", to:null} ] },
+  { id:"vpool", name:"validatePool", file:"backend/config/redis.go", grp:"加载与校验", c:"#ffe6c7", x:2440, y:220,
+    steps:[ {label:"数据库编号·重试·连接数·期限", to:null} ] },
+  { id:"opts", name:"redis.Options 构造选项", file:"github.com/redis/go-redis/v9 (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:300,
+    steps:[ {label:"填地址/认证/DB/重试/池/超时", to:null} ] },
+  { id:"client", name:"redis.NewClient 创建客户端", file:"github.com/redis/go-redis/v9 (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:480,
+    steps:[ {label:"返回进程共享客户端连接池", to:null} ] },
+  { id:"ping", name:"PingContext 启动检查", file:"github.com/redis/go-redis/v9 (infra 调用)", grp:"驱动与池对象", c:"#f7cdcd", x:2020, y:680,
+    steps:[ {label:"带超时检查；失败关闭客户端", to:null} ] },
+  { id:"close", name:"dependencies.Close", file:"backend/internal/app/dependencies.go", grp:"服务与运行", c:"#e8e8ec", x:1020, y:880,
+    steps:[ {label:"遍历关闭 MySQL 与 Redis，合并错误", to:null} ] },
+  { id:"interview", name:"面试讲解 · Redis 客户端基座", file:"docs/设计/基座/Redis连接池-文件索引.md", grp:"面试讲解", c:"#e7defa", x:40, y:70, type:"essay", steps:[],
+    body:`<div class="essay-body">
+<p><b>总：这个模块是干嘛的</b> 服务底层维护 Redis 客户端连接池，长期持有一组到 Redis 的连接并复用。它解决的核心矛盾：建连、鉴权与网络开关都有成本，不能为每条命令重建；同时要限制最大并发连接、保持连接干净可用，并在配置或连通性异常时拒绝带病启动。</p>
+<span class="q">问题1 连接无限创建，打爆 Redis</span>
+<p>必须限制连接池容量。go-redis 用 PoolSize 控制基础连接数、MaxActiveConns 控制同时分配的最大连接数，超出后请求等待或按 PoolTimeout 超时。我把它俩开放为环境变量，结合单实例并发与压测峰值定参，不让连接无限增长。</p>
+<span class="q">问题2 频繁建连开销大</span>
+<p>每次建连含 TCP 握手与 ACL 用户鉴权，开销高，所以要复用。短突发业务保留更多空闲连接，长连接场景减少保留；用 MinIdleConns 让池内始终保有若干空闲连接，供高峰即取即用。</p>
+<span class="q">问题3 连接长时间复用会失效</span>
+<p>复用过久的连接可能已被服务端或网络层断开，也可能残留过期状态。通过 ConnMaxLifetime 限制单条连接最长存活时间，到期强制重建，取值参考服务端超时并留余量。</p>
+<span class="q">问题4 空闲连接占资源</span>
+<p>长期空闲连接占用客户端内存与服务端名额。设 ConnMaxIdleTime 定时回收空闲连接，配合 MinIdleConns 与 PoolSize，保证高峰够用、低峰不空耗。</p>
+<span class="q">问题5 配置错误导致带病运行</span>
+<p>地址、端口、数据库编号、连接数与各超时配置错误时运行期才暴露。我在启动早期做集中校验，任何非法直接拒绝启动，让错误在启动阶段浮出，不给静默兜底。</p>
+<span class="q">问题6 自动重试意图不一致</span>
+<p>项目用 0 表示“不自动重试”，而 go-redis 用 -1 表示关闭自动重试。创建客户端前先做一次取值换算，避免把“不重试”误解成默认重试，也避免写操作被静默重试。</p>
+<span class="q">问题7 交付一个连不上的客户端</span>
+<p>客户端建好了但 Redis 不可达，服务不应带病启动。我用带 StartupTimeout 的上下文执行 PING 检查，失败即关闭客户端并返回错误，把故障暴露在启动阶段。</p>
+</div>` },
+];
+
+const cardMap = {}; cards.forEach(c=>cardMap[c.id]=c);
+
+const inCount = {};
+cards.forEach(c=>c.steps.forEach(s=>{ if(s.to){ inCount[s.to]=(inCount[s.to]||0)+1; } }));
+
+const ND_WIDTH = 260;
+const HEAD_H = 46, STEP_H = 30, PAD = 8;
+
+const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+const W=2900, H=1200;
+svg.setAttribute("class","grid"); svg.setAttribute("width",W); svg.setAttribute("height",H);
+svg.style.position="absolute"; svg.style.top="0"; svg.style.left="0";
+
+const canvas = document.getElementById("canvas");
+canvas.style.width=W+"px"; canvas.style.height=H+"px";
+canvas.appendChild(svg);
+
+const links = [];
+
+function fileH(c){ return c.file ? 18 : 0; }
+
+let locked = false;
+
+cards.forEach(c=>{
+  if(c.type==="essay"){
+    const el=document.createElement("div"); el.className="node essay";
+    el.style.left=c.x+"px"; el.style.top=c.y+"px";
+    let html=`<div class="head" style="background:${c.c}"><div class="file">${c.file||''}</div><span class="grp">${c.grp}</span><br>${c.name}</div><div class="essay-body">${c.body}</div>`;
+    el.innerHTML=html; canvas.appendChild(el);
+    let dragging=false, sx=0, sy=0, ox=0, oy=0;
+    el.addEventListener("mousedown",e=>{ if(locked||e.target.classList.contains("port")) return; dragging=true; sx=e.clientX; sy=e.clientY; ox=c.x; oy=c.y; e.preventDefault(); });
+    document.addEventListener("mousemove",e=>{ if(!dragging) return; c.x=ox+(e.clientX-sx); c.y=oy+(e.clientY-sy); el.style.left=c.x+"px"; el.style.top=c.y+"px"; });
+    document.addEventListener("mouseup",()=>{ dragging=false; });
+    return;
+  }
+  const fh = fileH(c);
+  const height = PAD + HEAD_H + fh + c.steps.length*STEP_H + PAD;
+  const el = document.createElement("div"); el.className="node";
+  el.style.left=c.x+"px"; el.style.top=c.y+"px"; el.style.width=ND_WIDTH+"px"; el.style.height=height+"px";
+  let html = `<div class="head" style="background:${c.c}"><div class="file">${c.file||''}</div><span class="grp">${c.grp}</span><br>${c.name}</div>`;
+  c.steps.forEach((s,i)=>{
+    html += `<div class="step" style="top:${HEAD_H+fh+i*STEP_H}px">${s.label}</div>`;
+  });
+  el.innerHTML = html;
+  canvas.appendChild(el);
+
+  c.steps.forEach((s,i)=>{
+    const p = document.createElement("div"); p.className="port out";
+    p.style.top = (HEAD_H+fh + i*STEP_H + STEP_H/2) + "px";
+    el.appendChild(p);
+  });
+
+  const nIn = Math.max(inCount[c.id]||0, 1);
+  for(let i=0;i<nIn;i++){ const p=document.createElement("div"); p.className="port in";
+    p.style.top = ( (i+1)/(nIn+1)*height ) + "px"; el.appendChild(p); }
+
+  let dragging=false, sx=0, sy=0, ox=0, oy=0;
+  el.addEventListener("mousedown",e=>{
+    if(locked || e.target.classList.contains("port")) return;
+    dragging=true; sx=e.clientX; sy=e.clientY; ox=c.x; oy=c.y; e.preventDefault();
+  });
+  document.addEventListener("mousemove",e=>{
+    if(!dragging) return;
+    c.x=ox+(e.clientX-sx); c.y=oy+(e.clientY-sy);
+    el.style.left=c.x+"px"; el.style.top=c.y+"px"; drawLinks();
+  });
+  document.addEventListener("mouseup",()=>{ dragging=false; });
+});
+
+const viewport = document.getElementById("viewport");
+let panning=false, psx=0, psy=0, ptx=0, pty=0, p0x=0, p0y=0;
+viewport.addEventListener("mousedown",e=>{
+  if(e.target.closest(".node")) return;
+  panning=true; psx=e.clientX; psy=e.clientY;
+  p0x=ptx; p0y=pty; viewport.classList.add("panning"); e.preventDefault();
+});
+document.addEventListener("mousemove",e=>{
+  if(!panning) return;
+  ptx=p0x+(e.clientX-psx); pty=p0y+(e.clientY-psy);
+  canvas.style.transform=`translate(${ptx}px,${pty}px)`;
+});
+document.addEventListener("mouseup",()=>{ panning=false; viewport.classList.remove("panning"); });
+
+const lockBtn = document.getElementById("lockBtn");
+lockBtn.addEventListener("click",()=>{
+  locked=!locked;
+  lockBtn.textContent = locked ? "🔒 已锁定" : "🔓 解锁";
+  lockBtn.classList.toggle("on", locked);
+  document.querySelectorAll(".node").forEach(n=>n.classList.toggle("locked", locked));
+});
+
+function outPos(cardId, stepIdx){
+  const c=cardMap[cardId];
+  const fh = fileH(c);
+  return { x: c.x + ND_WIDTH, y: c.y + HEAD_H + fh + stepIdx*STEP_H + STEP_H/2 };
+}
+function inPos(cardId, inIdx){
+  const c=cardMap[cardId];
+  const fh = fileH(c);
+  const height = PAD + HEAD_H + fh + c.steps.length*STEP_H + PAD;
+  const nIn = Math.max(inCount[cardId]||0,1);
+  return { x: c.x, y: c.y + (inIdx+1)/(nIn+1)*height };
+}
+function drawLinks(){
+  links.forEach(L=>{
+    const a=outPos(L.from.cardId, L.from.stepIdx);
+    const b=inPos(L.to.cardId, L.to.inIdx);
+    L.svg.setAttribute("d", `M ${a.x} ${a.y} C ${a.x+90} ${a.y}, ${b.x-90} ${b.y}, ${b.x} ${b.y}`);
+  });
+}
+
+const usedIn = {};
+cards.forEach(c=>{
+  c.steps.forEach((s,i)=>{
+    if(!s.to) return;
+    const ii = usedIn[s.to]||0; usedIn[s.to]=ii+1;
+    const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+    path.setAttribute("class","link"); svg.appendChild(path);
+    links.push({svg:path, from:{cardId:c.id, stepIdx:i}, to:{cardId:s.to, inIdx:ii}});
+  });
+});
+drawLinks();
+</script>
+</body>
+</html>
