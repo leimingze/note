@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日志与指标基座：调用画布</title>
+<style>
+  body { margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:#f0f1f4; }  body.dark { background:#14171c; color:#d4dae3; }
+  #toolbar { position:fixed; top:0; left:0; right:0; z-index:100; background:#fff; border-bottom:1px solid #d9dce3; padding:10px 16px; display:flex; align-items:center; gap:16px; font-size:13px; color:#3a3f47; }
+  #toolbar b { font-size:15px; }
+  #viewport { position:fixed; top:47px; left:0; right:0; bottom:0; overflow:hidden; cursor:grab; }
+  #viewport.panning { cursor:grabbing; }
+  #canvas { position:absolute; top:0; left:0; will-change:transform; }
+  svg.grid { display:block; background: radial-gradient(circle, #c9cdd5 1px, transparent 1px); background-size: 20px 20px; }
+  .node { position:absolute; background:#fff; border:1.5px solid #c6cad3; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.05); user-select:none; cursor:grab; }
+  .node:active { cursor:grabbing; }
+  .node.locked { cursor:default; }
+  .node .head { padding:6px 12px 2px; font-weight:700; font-size:13px; border-bottom:1px solid #eef0f4; margin-bottom:2px; }
+  .node .file { font-size:10px; color:#9aa0a6; font-weight:400; padding:1px 0 2px; }
+  .node .grp { font-size:10px; color:#9aa0a6; font-weight:400; }
+  .node .step { position:relative; box-sizing:border-box; display:flex; align-items:center; padding:4px 26px 4px 10px; font-size:11.5px; color:#2b2f36; border-top:1px dashed #f0f1f4; line-height:1.45; min-height:30px; overflow-wrap:break-word; }
+  .port { position:absolute; width:13px; height:13px; border-radius:50%; transform:translate(-50%,-50%); cursor:crosshair; }
+  .port.in { background:#fff; border:2px solid #ea4335; left:-2px; }
+  .port.out { background:#fff; border:2px solid #34a853; right:-11px; }
+  .port:hover { background:#e8f0fe; }
+  path.link { stroke:#7a808c; stroke-width:1.6; fill:none; }
+  .legend { margin-left:auto; display:flex; gap:12px; flex-wrap:wrap; }
+  .legend span { display:inline-flex; align-items:center; gap:5px; }
+  .sw { width:11px; height:11px; border-radius:3px; display:inline-block; }
+  #lockBtn,#modeBtn { padding:6px 14px; border-radius:8px; border:1.5px solid #c6cad3; background:#fff; cursor:pointer; font-size:13px; }
+  #lockBtn.on { background:#4285f4; border-color:#4285f4; color:#fff; }
+  .node.essay { width:640px; cursor:default; }
+  .node.essay .head { border-bottom:1px solid #eef0f4; margin-bottom:0; }
+  .essay-body { padding:10px 14px 14px; font-size:12.5px; line-height:1.7; color:#2b2f36; max-height:520px; overflow:auto; }
+  .essay-body .q { display:block; font-weight:700; color:#333a45; margin-top:10px; }
+  .essay-body table { border-collapse:collapse; width:100%; font-size:12px; margin-top:6px; }
+  .essay-body th,.essay-body td { padding:4px 8px; border:1px solid #d9dce3; text-align:left; vertical-align:top; }
+  /* 夜间模式 */
+  body.dark #toolbar { background:#1d222a; border-color:#2c333d; color:#d4dae3; }
+  body.dark svg.grid { background: radial-gradient(circle, #3a4250 1px, transparent 1px); }
+  body.dark .node { background:#1f252e; border-color:#333c48; box-shadow:0 1px 3px rgba(0,0,0,.4); }
+  body.dark .node .head { border-bottom-color:#2c333d; color:#e6ebf2; }
+  body.dark .node .file, body.dark .node .grp { color:#8a93a1; }
+  body.dark .node .step { color:#d4dae3; border-color:#2a313b; }
+  body.dark .port.in { background:#1f252e; border-color:#ff6b5e; }
+  body.dark .port.out { background:#1f252e; border-color:#53c76f; }
+  body.dark .port:hover { background:#2a313b; }
+  body.dark path.link { stroke:#98a1b0; }
+  body.dark #lockBtn, body.dark #modeBtn { background:#1f252e; border-color:#3a4452; color:#d4dae3; }
+  body.dark .node.essay .head { border-bottom-color:#2c333d; color:#e6ebf2; }
+  body.dark .essay-body { color:#d4dae3; }
+  body.dark .essay-body .q { color:#e6ebf2; }
+  body.dark .essay-body th, body.dark .essay-body td { border-color:#3a4452; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <b>日志与指标基座：调用画布</b>
+  <span>空白处拖动平移画布</span>
+  <span>拖动卡片移动</span>
+  <button id="lockBtn">🔓 解锁</button>
+  <button id="modeBtn">🌙 夜间</button>
+  <div class="legend">
+    <span><span class="sw" style="background:#dbe6ff"></span>入口与编排</span>
+    <span><span class="sw" style="background:#ffe6c7"></span>配置与初始化</span>
+    <span><span class="sw" style="background:#d3f0da"></span>日志模块</span>
+    <span><span class="sw" style="background:#f7cdcd"></span>指标注册与采集</span>
+    <span><span class="sw" style="background:#e8e8ec"></span>HTTP 中间件与路由</span>
+  </div>
+</div>
+<div id="viewport"><div id="canvas"></div></div>
+
+<script>
+const cards = [
+  { id:"main", name:"main.go 入口", file:"backend/cmd/pulseframe-api/main.go", grp:"入口与编排", c:"#dbe6ff", x:40, y:400,
+    steps:[ {label:"调用 app.Run", to:"run"} ] },
+  { id:"run", name:"app.Run 启动编排", file:"backend/internal/app/run.go", grp:"入口与编排", c:"#dbe6ff", x:480, y:400,
+    steps:[ {label:"1 加载配置", to:"load"}, {label:"2 创建日志器", to:"logger"},
+            {label:"3 生成公共字段日志器", to:null}, {label:"4 创建依赖（MySQL/Redis/指标）", to:"dep"},
+            {label:"5 构造路由并运行 HTTP", to:"router"}, {label:"6 退出关闭依赖", to:"close"} ] },
+  { id:"load", name:"config.Load", file:"backend/config/config.go", grp:"配置与初始化", c:"#ffe6c7", x:980, y:120,
+    steps:[ {label:"读取环境/日志/HTTP/MySQL/Redis/指标配置", to:null} ] },
+  { id:"logger", name:"logging.New 创建日志器", file:"backend/logging/logger.go", grp:"日志模块", c:"#d3f0da", x:980, y:280,
+    steps:[ {label:"校验级别与输出，构建 JSON slog.Logger", to:null} ] },
+  { id:"dep", name:"NewDependencies 装配依赖", file:"backend/internal/app/dependencies.go", grp:"配置与初始化", c:"#ffe6c7", x:980, y:460,
+    steps:[ {label:"1 创建 MySQL/Redis", to:null}, {label:"2 创建指标注册表 Registry", to:"registry"},
+            {label:"3 指标启用时启动采集器", to:"collector"} ] },
+  { id:"registry", name:"metrics.New 创建指标注册表", file:"backend/metrics/registry.go", grp:"指标注册与采集", c:"#f7cdcd", x:1500, y:460,
+    steps:[ {label:"定义并注册 HTTP/依赖/连接池/生命周期指标", to:null} ] },
+  { id:"collector", name:"metrics.NewCollector + Run", file:"backend/metrics/collector.go", grp:"指标注册与采集", c:"#f7cdcd", x:1500, y:640,
+    steps:[ {label:"周期读取 MySQL/Redis 池统计并写入指标", to:null} ] },
+  { id:"router", name:"server.NewRouter", file:"backend/server/router.go", grp:"HTTP 中间件与路由", c:"#e8e8ec", x:1500, y:220,
+    steps:[ {label:"1 挂载 requestID 中间件", to:"reqid"}, {label:"2 挂载 accessLog 中间件", to:"accesslog"},
+            {label:"3 挂载 recovery 中间件", to:"recovery"}, {label:"4 指标启用时挂载 metrics 中间件", to:"metricsmw"},
+            {label:"5 注册 /metrics 端点", to:"metricsendpoint"} ] },
+  { id:"reqid", name:"requestID.Handle", file:"backend/middleware/request_id.go", grp:"HTTP 中间件与路由", c:"#e8e8ec", x:2020, y:60,
+    steps:[ {label:"透传合法 X-Request-ID，否则生成随机 ID", to:null} ] },
+  { id:"accesslog", name:"accessLog.Handle", file:"backend/middleware/access_log.go", grp:"日志模块", c:"#d3f0da", x:2020, y:200,
+    steps:[ {label:"记录方法/路径/状态码/耗时/请求 ID", to:null} ] },
+  { id:"recovery", name:"recovery.Handle", file:"backend/middleware/recovery.go", grp:"日志模块", c:"#d3f0da", x:2020, y:360,
+    steps:[ {label:"捕获 panic，记录调用栈，返回 500", to:null} ] },
+  { id:"metricsmw", name:"metrics.Handle", file:"backend/middleware/metrics.go", grp:"指标注册与采集", c:"#f7cdcd", x:2020, y:540,
+    steps:[ {label:"记录进行中请求/总数/耗时/错误数", to:null} ] },
+  { id:"metricsendpoint", name:"/metrics 端点", file:"backend/server/router.go", grp:"指标注册与采集", c:"#f7cdcd", x:2020, y:720,
+    steps:[ {label:"promhttp.HandlerFor 读取进程内注册表", to:null} ] },
+  { id:"close", name:"dependencies.Close", file:"backend/internal/app/dependencies.go", grp:"入口与编排", c:"#dbe6ff", x:980, y:760,
+    steps:[ {label:"停止采集器，关闭 MySQL/Redis", to:null} ] },
+  { id:"interview", name:"面试讲解 · 日志与指标基座", file:"docs/设计/基座/日志与指标设计.md", grp:"面试讲解", c:"#e7defa", x:2600, y:80, type:"essay", steps:[],
+    body:`<div class="essay-body">
+<p><b>总：这个模块是干嘛的</b> 日志与指标是服务可观测性的基座：日志回答“某个请求发生了什么”，指标回答“服务整体是否正常”。业务模块只补充业务名称、操作名和错误分类，不直接创建输出器或修改采集规则，保证观测出口统一。</p>
+<span class="q">问题1 为什么日志和指标分开？</span>
+<p>两者口径不同：日志精确到单次请求，记录 request_id；指标只聚合有限维度（method/route/status），不能把请求 ID 当标签，否则高基数爆炸、无法聚合。所以日志记明细，指标记聚合。</p>
+<span class="q">问题2 为什么指标用进程内 Registry？</span>
+<p>集中定义所有指标、唯一数据源，避免全局默认注册表互相污染；各模块共用同一实例，写数据一致。</p>
+<span class="q">问题3 为什么请求在中间件记，连接池在采集器记？</span>
+<p>HTTP 指标是事件型，随每次请求即时累计；连接池指标是状态快照，定时采样即可反映健康，无需每次请求去读。</p>
+<span class="q">问题4 为什么要带公共字段的日志器？</span>
+<p>用 logger.With("service","environment") 生成公共字段，便于采集检索，业务无需重复写。</p>
+<span class="q">问题5 如何避免敏感信息泄露？</span>
+<p>日志和指标禁止写入密码、Token、Cookie、完整 URL、个人身份等；错误只记录稳定类别与摘要。</p>
+</div>` },
+];
+
+const cardMap = {}; cards.forEach(c=>cardMap[c.id]=c);
+
+const inCount = {};
+cards.forEach(c=>c.steps.forEach(s=>{ if(s.to){ inCount[s.to]=(inCount[s.to]||0)+1; } }));
+
+const ND_WIDTH = 260;
+const HEAD_H = 46, STEP_H = 30, PAD = 8;
+
+const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+const W=3000, H=1300;
+svg.setAttribute("class","grid"); svg.setAttribute("width",W); svg.setAttribute("height",H);
+svg.style.position="absolute"; svg.style.top="0"; svg.style.left="0";
+
+const canvas = document.getElementById("canvas");
+canvas.style.width=W+"px"; canvas.style.height=H+"px";
+canvas.appendChild(svg);
+
+const links = [];
+function fileH(c){ return c.file ? 18 : 0; }
+let locked = false;
+
+cards.forEach(c=>{
+  if(c.type==="essay"){
+    const el=document.createElement("div"); el.className="node essay";
+    el.style.left=c.x+"px"; el.style.top=c.y+"px";
+    let html=`<div class="head" style="background:${c.c}"><div class="file">${c.file||''}</div><span class="grp">${c.grp}</span><br>${c.name}</div><div class="essay-body">${c.body}</div>`;
+    el.innerHTML=html; canvas.appendChild(el);
+    let dragging=false, sx=0, sy=0, ox=0, oy=0;
+    el.addEventListener("mousedown",e=>{ if(locked||e.target.classList.contains("port")) return; dragging=true; sx=e.clientX; sy=e.clientY; ox=c.x; oy=c.y; e.preventDefault(); });
+    document.addEventListener("mousemove",e=>{ if(!dragging) return; c.x=ox+(e.clientX-sx); c.y=oy+(e.clientY-sy); el.style.left=c.x+"px"; el.style.top=c.y+"px"; });
+    document.addEventListener("mouseup",()=>{ dragging=false; });
+    return;
+  }
+  const fh = fileH(c);
+  const el = document.createElement("div"); el.className="node";
+  el.style.left=c.x+"px"; el.style.top=c.y+"px"; el.style.width=ND_WIDTH+"px";
+  let html = `<div class="head" style="background:${c.c}"><div class="file">${c.file||''}</div><span class="grp">${c.grp}</span><br>${c.name}</div>`;
+  c.steps.forEach((s,i)=>{ html += `<div class="step">${s.label}</div>`; });
+  el.innerHTML = html;
+  canvas.appendChild(el);
+  c._el=el; c._el._outs=[]; c._el._ins=[];
+  [...el.querySelectorAll(".step")].forEach(se=>{
+    const p=document.createElement("div"); p.className="port out";
+    const oy=se.offsetTop+se.offsetHeight/2;
+    p.style.top=oy+"px"; el.appendChild(p); c._el._outs.push(oy);
+  });
+  const nIn=Math.max(inCount[c.id]||0,1);
+  for(let i=0;i<nIn;i++){
+    const p=document.createElement("div"); p.className="port in";
+    const oy=el.offsetHeight*(i+1)/(nIn+1);
+    p.style.top=oy+"px"; el.appendChild(p); c._el._ins.push(oy);
+  }
+  let dragging=false, sx=0, sy=0, ox=0, oy=0;
+  el.addEventListener("mousedown",e=>{
+    if(locked || e.target.classList.contains("port")) return;
+    dragging=true; sx=e.clientX; sy=e.clientY; ox=c.x; oy=c.y; e.preventDefault();
+  });
+  document.addEventListener("mousemove",e=>{
+    if(!dragging) return;
+    c.x=ox+(e.clientX-sx); c.y=oy+(e.clientY-sy);
+    el.style.left=c.x+"px"; el.style.top=c.y+"px"; drawLinks();
+  });
+  document.addEventListener("mouseup",()=>{ dragging=false; });
+});
+
+const viewport = document.getElementById("viewport");
+let panning=false, psx=0, psy=0, ptx=0, pty=0, p0x=0, p0y=0;
+viewport.addEventListener("mousedown",e=>{
+  if(e.target.closest(".node")) return;
+  panning=true; psx=e.clientX; psy=e.clientY;
+  p0x=ptx; p0y=pty; viewport.classList.add("panning"); e.preventDefault();
+});
+document.addEventListener("mousemove",e=>{
+  if(!panning) return;
+  ptx=p0x+(e.clientX-psx); pty=p0y+(e.clientY-psy);
+  canvas.style.transform=`translate(${ptx}px,${pty}px)`;
+});
+document.addEventListener("mouseup",()=>{ panning=false; viewport.classList.remove("panning"); });
+
+const lockBtn = document.getElementById("lockBtn");
+lockBtn.addEventListener("click",()=>{
+  locked=!locked;
+  lockBtn.textContent = locked ? "🔒 已锁定" : "🔓 解锁";
+  lockBtn.classList.toggle("on", locked);
+  document.querySelectorAll(".node").forEach(n=>n.classList.toggle("locked", locked));
+});
+
+const modeBtn = document.getElementById("modeBtn");
+function applyMode(dark){
+  document.body.classList.toggle("dark", dark);
+  modeBtn.textContent = dark ? "☀️ 白天" : "🌙 夜间";
+}
+modeBtn.addEventListener("click",()=>{
+  const dark = !document.body.classList.contains("dark");
+  applyMode(dark);
+  try { localStorage.setItem("logmetricsCanvasDark", dark ? "1" : "0"); } catch(e){}
+});
+try {
+  if(localStorage.getItem("logmetricsCanvasDark") === "1") applyMode(true);
+} catch(e){}
+
+function outPos(cardId, stepIdx){
+  const c=cardMap[cardId];
+  return { x: c.x + ND_WIDTH, y: c.y + c._el._outs[stepIdx] };
+}
+function inPos(cardId, inIdx){
+  const c=cardMap[cardId];
+  return { x: c.x, y: c.y + c._el._ins[inIdx] };
+}
+function drawLinks(){
+  links.forEach(L=>{
+    const a=outPos(L.from.cardId, L.from.stepIdx);
+    const b=inPos(L.to.cardId, L.to.inIdx);
+    L.svg.setAttribute("d", `M ${a.x} ${a.y} C ${a.x+90} ${a.y}, ${b.x-90} ${b.y}, ${b.x} ${b.y}`);
+  });
+}
+
+const usedIn = {};
+cards.forEach(c=>{
+  c.steps.forEach((s,i)=>{
+    if(!s.to) return;
+    const ii = usedIn[s.to]||0; usedIn[s.to]=ii+1;
+    const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+    path.setAttribute("class","link"); svg.appendChild(path);
+    links.push({svg:path, from:{cardId:c.id, stepIdx:i}, to:{cardId:s.to, inIdx:ii}});
+  });
+});
+drawLinks();
+</script>
+</body>
+</html>
