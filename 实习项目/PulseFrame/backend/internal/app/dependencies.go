@@ -30,21 +30,21 @@ type Dependencies struct {
 // 例如程序启动时调用一次，后续数据库、缓存和指标访问都使用返回对象中的共享客户端。
 func NewDependencies(ctx context.Context, cfg config.Config) (*Dependencies, error) {
 	// 仅在程序启动时创建共享连接池；创建函数负责清理初始化失败的资源。
-	db, err := infra.NewMySQL(ctx, cfg.MySQL)
+	db, err := infra.NewMySQL(ctx, cfg.MySQL) // 传入上下文与 MySQL 配置；返回连接池、错误
 	if err != nil {
 		return nil, fmt.Errorf("initialize mysql: %w", err)
 	}
 	// MySQL 成功后继续创建 Redis；Redis 失败时先关闭已创建的 MySQL 连接池。
-	client, err := infra.NewRedis(ctx, cfg.Redis)
+	client, err := infra.NewRedis(ctx, cfg.Redis) // 传入上下文与 Redis 配置；返回客户端、错误
 	if err != nil {
-		return nil, errors.Join(fmt.Errorf("initialize redis: %w", err), db.Close())
+		return nil, errors.Join(fmt.Errorf("initialize redis: %w", err), db.Close()) // 合并 Redis 错误与 MySQL 关闭错误
 	}
 	// 组装依赖对象；指标注册表独立创建，采集器仅在启用指标时启动。
-	dependencies := &Dependencies{MySQL: db, Redis: client, Metrics: metrics.New()}
+	dependencies := &Dependencies{MySQL: db, Redis: client, Metrics: metrics.New()} // 传入连接池与客户端，创建指标注册表
 	if cfg.Metrics.Enabled {
 		// 采集器读取共享连接池统计并周期发布指标，随 ctx 取消而停止。
-		dependencies.collector = metrics.NewCollector(dependencies.Metrics, dependencies, cfg.Metrics.CollectInterval)
-		go dependencies.collector.Run(ctx)
+		dependencies.collector = metrics.NewCollector(dependencies.Metrics, dependencies, cfg.Metrics.CollectInterval) // 传入注册表、统计来源、采集周期；返回采集器
+		go dependencies.collector.Run(ctx)                                                                             // 传入上下文，在后台协程中周期采集
 	}
 	return dependencies, nil
 }
@@ -54,7 +54,7 @@ func NewDependencies(ctx context.Context, cfg config.Config) (*Dependencies, err
 // 输出：sql.DBStats 统计。
 // 功能：向指标采集器提供 MySQL 连接池数据。
 func (dependencies *Dependencies) MySQLStats() sql.DBStats {
-	return dependencies.MySQL.Stats()
+	return dependencies.MySQL.Stats() // 无参数；返回 MySQL 连接池统计快照
 }
 
 // RedisPoolStats 返回 Redis 客户端连接池当前统计快照。
@@ -62,7 +62,7 @@ func (dependencies *Dependencies) MySQLStats() sql.DBStats {
 // 输出：redis.PoolStats 统计。
 // 功能：向指标采集器提供 Redis 连接池数据。
 func (dependencies *Dependencies) RedisPoolStats() *redis.PoolStats {
-	return dependencies.Redis.PoolStats()
+	return dependencies.Redis.PoolStats() // 无参数；返回 Redis 客户端连接池统计快照
 }
 
 // 输入：dependencies，已成功创建的依赖对象。
@@ -70,11 +70,11 @@ func (dependencies *Dependencies) RedisPoolStats() *redis.PoolStats {
 // 功能：在 HTTP 请求处理完成后统一释放进程拥有的外部连接资源，并让退出流程可以安全重复清理。
 // 例如服务退出时调用 Close，之后通过这些客户端执行新的访问会返回错误；再次调用不会重复关闭客户端。
 func (dependencies *Dependencies) Close() error {
-	dependencies.closeOnce.Do(func() {
+	dependencies.closeOnce.Do(func() { // 保证只执行一次关闭逻辑，并发调用安全
 		// 关闭整个共享连接池会影响所有使用方，调用入口统一安排在服务退出阶段。
 		dependencies.closeErr = errors.Join(
-			closeDependency("mysql", dependencies.MySQL.Close()),
-			closeDependency("redis", dependencies.Redis.Close()),
+			closeDependency("mysql", dependencies.MySQL.Close()), // 关闭 MySQL 并标依赖名
+			closeDependency("redis", dependencies.Redis.Close()), // 关闭 Redis 并标记依赖名
 		)
 	})
 	return dependencies.closeErr

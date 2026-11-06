@@ -23,10 +23,10 @@ func New(level string, output io.Writer) (*slog.Logger, error) {
 	// 交给 slog 解析级别，避免项目维护第二套字符串映射。
 	var parsed slog.Level
 	// 先去掉首尾空白并统一大小写，再交给标准库转换；无法识别时返回错误。
-	if err := parsed.UnmarshalText([]byte(strings.ToUpper(strings.TrimSpace(level)))); err != nil {
+	if err := parsed.UnmarshalText([]byte(strings.ToUpper(strings.TrimSpace(level)))); err != nil { // 传入级别文本；解析失败时返回错误
 		return nil, err
 	}
 	// 统一使用 JSON，方便日志采集系统按字段检索。
-	handler := slog.NewJSONHandler(output, &slog.HandlerOptions{Level: parsed})
-	return slog.New(handler), nil
+	handler := slog.NewJSONHandler(output, &slog.HandlerOptions{Level: parsed}) // 传入输出目标与级别选项；返回 JSON 处理器
+	return slog.New(handler), nil                                               // 传入 JSON 处理器；返回结构化日志器
 }

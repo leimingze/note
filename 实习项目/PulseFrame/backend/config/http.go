@@ -39,31 +39,31 @@ type HTTP struct {
 // 例如 HTTP_ADDR 为 :9090、HTTP_READ_TIMEOUT 为 "3s" 时，得到9090端口和3秒读取期限。
 func loadHTTP(lookup LookupEnv) (HTTP, error) {
 	// 先读取服务要监听的地址；没有设置 HTTP_ADDR 或内容为空时，使用 :8080。
-	address := readValue(lookup, envHTTPAddress, defaultHTTPAddress)
+	address := readValue(lookup, envHTTPAddress, defaultHTTPAddress) // 传入查询函数、变量名与默认值；返回监听地址
 	// 地址必须包含有效端口，检查通过后才继续读取超时配置。
-	if err := validateAddress(address); err != nil {
+	if err := validateAddress(address); err != nil { // 传入监听地址；非法时返回错误
 		return HTTP{}, err
 	}
 
 	// 接下来逐项读取请求头、完整请求、响应写入、连接空闲和退出等待的期限。
 	// 每一项都先取环境变量或默认值，再把文字换算成时间长度；任意一项有问题就停止加载。
-	readHeader, err := parsePositiveDuration(lookup, envReadHeaderTimeout, defaultReadHeaderTime)
+	readHeader, err := parsePositiveDuration(lookup, envReadHeaderTimeout, defaultReadHeaderTime) // 返回请求头期限
 	if err != nil {
 		return HTTP{}, err
 	}
-	read, err := parsePositiveDuration(lookup, envReadTimeout, defaultReadTime)
+	read, err := parsePositiveDuration(lookup, envReadTimeout, defaultReadTime) // 返回完整请求期限
 	if err != nil {
 		return HTTP{}, err
 	}
-	write, err := parsePositiveDuration(lookup, envWriteTimeout, defaultWriteTime)
+	write, err := parsePositiveDuration(lookup, envWriteTimeout, defaultWriteTime) // 返回写入期限
 	if err != nil {
 		return HTTP{}, err
 	}
-	idle, err := parsePositiveDuration(lookup, envIdleTimeout, defaultIdleTime)
+	idle, err := parsePositiveDuration(lookup, envIdleTimeout, defaultIdleTime) // 返回空闲期限
 	if err != nil {
 		return HTTP{}, err
 	}
-	shutdown, err := parsePositiveDuration(lookup, envShutdownTimeout, defaultShutdownTime)
+	shutdown, err := parsePositiveDuration(lookup, envShutdownTimeout, defaultShutdownTime) // 返回退出期限
 	if err != nil {
 		return HTTP{}, err
 	}
@@ -85,15 +85,15 @@ func loadHTTP(lookup LookupEnv) (HTTP, error) {
 func validateAddress(address string) error {
 	// 从地址中分别取出主机和端口，例如 "localhost:8080" 中的端口是 "8080"。
 	// 这里主要检查端口，主机部分允许为空，表示监听所有网卡。
-	_, portText, err := net.SplitHostPort(address)
+	_, portText, err := net.SplitHostPort(address) // 传入监听地址；返回主机、端口文本、错误
 	// 无法从地址中分出主机和端口时，说明格式有误，立即报告配置名称和原因。
 	if err != nil {
 		return fmt.Errorf("%s must use host:port format: %w", envHTTPAddress, err)
 	}
-	// 取得的端口还是文字，先转换成整数，才能检查它有没有超出允许的范围。
-	port, err := strconv.Atoi(portText)
+	// 取得的端口还是文字，要先转换成整数，才能检查它有没有超出允许的范围。
+	port, err := strconv.Atoi(portText) // 传入端口文本；返回端口、错误
 	// 配置端口须为有效的非零数字，不在启动时自动选择端口。
-	if err != nil || port < minimumPort || port > maximumPort {
+	if err != nil || port < minimumPort || port > maximumPort { // 判断端口是否越界
 		return fmt.Errorf("%s port must be between %d and %d", envHTTPAddress, minimumPort, maximumPort)
 	}
 	return nil

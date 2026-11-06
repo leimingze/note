@@ -43,27 +43,27 @@ type MySQL struct {
 // 例如必填项有效，连接总上限配置为 "3"、空闲上限为 "1" 时，得到最多3个连接且保留至多1个空闲连接的配置。
 func loadMySQL(lookup LookupEnv) (MySQL, error) {
 	// 先读取密码，并确认密码变量有没有设置；没有设置时停止加载，显式空密码则允许继续。
-	password, exists := lookup("MYSQL_PASSWORD")
-	if !exists {
+	password, exists := lookup("MYSQL_PASSWORD") // 读取密码及是否存在标记
+	if !exists {                                 // 密码变量未设置
 		return MySQL{}, fmt.Errorf("MYSQL_PASSWORD must be explicitly set")
 	}
 	// 再读取账号和数据库名称，保留原来的内容；是否为空会在最后统一检查。
-	user, _ := lookup("MYSQL_USER")
-	database, _ := lookup("MYSQL_DATABASE")
+	user, _ := lookup("MYSQL_USER")         // 读取用户原值
+	database, _ := lookup("MYSQL_DATABASE") // 读取数据库名原值
 	// 继续读取连接地址和加密模式，这两项没有设置或内容为空时使用各自的默认值。
 	cfg := MySQL{
-		Address: readValue(lookup, "MYSQL_ADDR", defaultMySQLAddress),
+		Address: readValue(lookup, "MYSQL_ADDR", defaultMySQLAddress), // 读取连接地址
 		User:    user, Password: password, Database: database,
-		TLSMode: readValue(lookup, "MYSQL_TLS_MODE", "false"),
+		TLSMode: readValue(lookup, "MYSQL_TLS_MODE", "false"), // 读取 TLS 模式
 	}
 	var err error
 	// 接下来读取连接总上限和空闲连接上限，将配置中的文字转换为非负整数。
 	// 先确认每项能表示一个数量，最后再检查空闲连接上限有没有超过总上限。
-	cfg.MaxOpenConns, err = parseNonNegativeInt(lookup, "MYSQL_MAX_OPEN_CONNS", defaultMySQLMaxOpenConns)
+	cfg.MaxOpenConns, err = parseNonNegativeInt(lookup, "MYSQL_MAX_OPEN_CONNS", defaultMySQLMaxOpenConns) // 读取连接总上限
 	if err != nil {
 		return MySQL{}, err
 	}
-	cfg.MaxIdleConns, err = parseNonNegativeInt(lookup, "MYSQL_MAX_IDLE_CONNS", defaultMySQLMaxIdleConns)
+	cfg.MaxIdleConns, err = parseNonNegativeInt(lookup, "MYSQL_MAX_IDLE_CONNS", defaultMySQLMaxIdleConns) // 读取空闲连接上限
 	if err != nil {
 		return MySQL{}, err
 	}
@@ -82,7 +82,7 @@ func loadMySQL(lookup LookupEnv) (MySQL, error) {
 	}
 	for _, item := range durations {
 		// 每轮读取一项配置；没有设置或内容为空时使用它的默认值，再换算成时间长度。
-		value, err := parsePositiveDuration(lookup, item.key, item.fallback)
+		value, err := parsePositiveDuration(lookup, item.key, item.fallback) // 读取单个时长配置
 		// 任一时长非法就终止加载，防止只配置了一部分期限仍继续启动。
 		if err != nil {
 			return MySQL{}, err
@@ -91,7 +91,7 @@ func loadMySQL(lookup LookupEnv) (MySQL, error) {
 		*item.target = value
 	}
 	// 所有内容读取完后，统一检查连接信息和参数之间的关系，再交给上层决定能否继续启动。
-	return cfg, cfg.Validate()
+	return cfg, cfg.Validate() // 校验配置后返回
 }
 
 // 输入：cfg，环境读取或调用方直接构造的 MySQL 配置。
@@ -100,11 +100,11 @@ func loadMySQL(lookup LookupEnv) (MySQL, error) {
 // 例如其他参数有效但连接总上限为0时返回错误，避免连接数量不受限制。
 func (cfg MySQL) Validate() error {
 	// 先确认账号、数据库名称、地址和加密模式可用，发现问题就停止本次检查。
-	if err := cfg.validateConnection(); err != nil {
+	if err := cfg.validateConnection(); err != nil { // 校验连接信息
 		return err
 	}
 	// 连接信息通过后，再检查连接数量和各项期限，完成整份配置的检查。
-	return cfg.validatePool()
+	return cfg.validatePool() // 校验池参数
 }
 
 // 输入：cfg，MySQL 连接配置。
@@ -114,23 +114,23 @@ func (cfg MySQL) Validate() error {
 func (cfg MySQL) validateConnection() error {
 	// 逐项检查账号和数据库名称，完全没填或只填空白都算缺失；检查过程保留原来的内容。
 	for key, value := range map[string]string{"MYSQL_USER": cfg.User, "MYSQL_DATABASE": cfg.Database} {
-		if strings.TrimSpace(value) == "" {
+		if strings.TrimSpace(value) == "" { // 字段为空白
 			return fmt.Errorf("%s is required", key)
 		}
 	}
 	// 接着从连接地址中取出主机和端口，例如 "localhost:3306" 对应主机 localhost 和端口3306。
 	// 连接数据库必须知道具体主机，所以地址格式不正确或主机没填时，都停止检查并报错。
-	host, portText, err := net.SplitHostPort(cfg.Address)
-	if err != nil || strings.TrimSpace(host) == "" {
+	host, portText, err := net.SplitHostPort(cfg.Address) // 拆分地址为主机与端口
+	if err != nil || strings.TrimSpace(host) == "" {      // 地址格式非法或主机为空
 		return fmt.Errorf("MYSQL_ADDR must use a nonempty host:port")
 	}
 	// 端口读出来还是文字，要先转换成整数，再检查数值是否有效。
-	port, err := strconv.Atoi(portText)
-	if err != nil || port < minimumPort || port > maximumPort {
+	port, err := strconv.Atoi(portText)                         // 转换端口文本为整数
+	if err != nil || port < minimumPort || port > maximumPort { // 端口越界
 		return fmt.Errorf("MYSQL_ADDR port must be between %d and %d", minimumPort, maximumPort)
 	}
 	// 启用 TLS 时使用驱动的证书校验，不接受跳过验证等其他模式。
-	if cfg.TLSMode != "false" && cfg.TLSMode != "true" {
+	if cfg.TLSMode != "false" && cfg.TLSMode != "true" { // TLS 模式不支持
 		return fmt.Errorf("MYSQL_TLS_MODE must be false or true")
 	}
 	return nil
@@ -142,11 +142,11 @@ func (cfg MySQL) validateConnection() error {
 // 例如总上限为20、空闲上限为5且各项时长大于零时通过；空闲上限为21时返回错误。
 func (cfg MySQL) validatePool() error {
 	// sql.DB 将非正上限视为不限制连接数量，此处要求显式限制资源使用。
-	if cfg.MaxOpenConns <= 0 {
+	if cfg.MaxOpenConns <= 0 { // 连接总上限为非正
 		return fmt.Errorf("MYSQL_MAX_OPEN_CONNS must be greater than zero")
 	}
 	// 零表示不保留空闲连接；超过总上限的配置直接报错，不依赖连接池自动调整。
-	if cfg.MaxIdleConns < 0 || cfg.MaxIdleConns > cfg.MaxOpenConns {
+	if cfg.MaxIdleConns < 0 || cfg.MaxIdleConns > cfg.MaxOpenConns { // 空闲上限越界
 		return fmt.Errorf("MYSQL_MAX_IDLE_CONNS must be between zero and MYSQL_MAX_OPEN_CONNS")
 	}
 	// 对直接构造的配置也检查所有期限，防止绕过环境变量解析时的校验。
@@ -158,7 +158,7 @@ func (cfg MySQL) validatePool() error {
 		"MYSQL_CONN_MAX_LIFETIME":  cfg.ConnMaxLifetime,
 		"MYSQL_CONN_MAX_IDLE_TIME": cfg.ConnMaxIdleTime,
 	} {
-		if value <= 0 {
+		if value <= 0 { // 期限非正
 			return fmt.Errorf("%s must be greater than zero", key)
 		}
 	}

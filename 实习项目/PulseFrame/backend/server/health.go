@@ -18,7 +18,7 @@ type HealthState struct {
 // 功能：在服务启动和退出阶段向就绪探针暴露准确状态。
 // 例如刚创建状态对象时，Ready 返回 false，/readyz 返回503。
 func NewHealthState() *HealthState {
-	return &HealthState{}
+	return &HealthState{} // 无参数；返回初始未就绪的健康状态
 }
 
 // SetReady 将服务标记为就绪。
@@ -27,7 +27,7 @@ func NewHealthState() *HealthState {
 // 功能：表示服务已经完成初始化并开始接收请求。
 // 例如服务开始运行时调用后，Ready 返回 true，/readyz 返回200。
 func (state *HealthState) SetReady() {
-	state.ready.Store(true)
+	state.ready.Store(true) // 传入 true，原子地将就绪标记置为就绪
 }
 
 // SetNotReady 将服务标记为未就绪。
@@ -36,7 +36,7 @@ func (state *HealthState) SetReady() {
 // 功能：把服务标记为暂时不能接收请求，供就绪接口通知外部流量管理组件。
 // 例如退出时调用后，/readyz 返回503；停止监听由服务关闭流程负责。
 func (state *HealthState) SetNotReady() {
-	state.ready.Store(false)
+	state.ready.Store(false) // 传入 false，原子地将就绪标记置为未就绪
 }
 
 // Ready 查询服务当前就绪状态。
@@ -45,7 +45,7 @@ func (state *HealthState) SetNotReady() {
 // 功能：查询当前就绪标记，允许多个请求同时读取。
 // 例如调用 SetReady 后返回 true，调用 SetNotReady 后返回 false。
 func (state *HealthState) Ready() bool {
-	return state.ready.Load()
+	return state.ready.Load() // 无参数；返回当前就绪标记
 }
 
 // healthResponse 是存活和就绪接口的响应体。
@@ -59,7 +59,7 @@ type healthResponse struct {
 // 功能：让运行平台判断进程是否需要被重启。
 // 例如 GET /livez 返回200和 {"status":"ok"}，此接口不检查数据库。
 func handleLive(c *gin.Context) {
-	c.JSON(http.StatusOK, healthResponse{Status: "ok"})
+	c.JSON(http.StatusOK, healthResponse{Status: "ok"}) // 传入状态码与响应体，写入存活响应
 }
 
 // readyHandler 保存就绪接口依赖。
@@ -74,9 +74,9 @@ type readyHandler struct {
 // 例如就绪标记为 false 时返回503和 {"status":"not_ready"}，为 true 时返回200。
 func (handler readyHandler) handle(c *gin.Context) {
 	// 初始化未完成或服务正在退出时返回 503，让负载均衡停止分流。
-	if !handler.health.Ready() {
-		c.JSON(http.StatusServiceUnavailable, healthResponse{Status: "not_ready"})
+	if !handler.health.Ready() { // 查询当前就绪标记；未就绪时进入该分支
+		c.JSON(http.StatusServiceUnavailable, healthResponse{Status: "not_ready"}) // 写入 503 未就绪响应
 		return
 	}
-	c.JSON(http.StatusOK, healthResponse{Status: "ok"})
+	c.JSON(http.StatusOK, healthResponse{Status: "ok"}) // 写入 200 就绪响应
 }

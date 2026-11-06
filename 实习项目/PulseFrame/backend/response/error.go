@@ -44,12 +44,12 @@ type errorBody struct {
 // 例如传入404和 RESOURCE_NOT_FOUND 时，返回包含 request_id、error.code 和 error.message 的 JSON。
 func WriteError(c *gin.Context, spec ErrorSpec) {
 	// 请求 ID 与错误码分别写入上下文，供日志和指标中间件读取。
-	c.Set(ErrorCodeContextKey, spec.Code)
-	c.AbortWithStatusJSON(spec.Status, errorBody{
-		RequestID: c.GetString(RequestIDContextKey),
+	c.Set(ErrorCodeContextKey, spec.Code)         // 将错误码写入上下文
+	c.AbortWithStatusJSON(spec.Status, errorBody{ // 中断链路并按状态码写入错误 JSON
+		RequestID: c.GetString(RequestIDContextKey), // 读取请求标识
 		Error: errorDetail{
-			Code:    spec.Code,
-			Message: spec.Message,
+			Code:    spec.Code,    // 写入错误码
+			Message: spec.Message, // 写入公开说明
 		},
 	})
 }

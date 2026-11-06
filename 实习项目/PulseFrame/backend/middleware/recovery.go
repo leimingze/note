@@ -29,7 +29,7 @@ func NewRecovery(logger *slog.Logger) (*RecoveryMiddleware, error) {
 	if logger == nil {
 		return nil, errNilRecoveryLogger
 	}
-	return &RecoveryMiddleware{logger: logger}, nil
+	return &RecoveryMiddleware{logger: logger}, nil // 传入日志器；返回异常恢复中间件
 }
 
 // Handle 捕获当前 HTTP 请求链路中的 panic。
@@ -38,8 +38,8 @@ func NewRecovery(logger *slog.Logger) (*RecoveryMiddleware, error) {
 // 功能：为当前请求安排异常恢复，再执行后续中间件和路由。
 // 例如路由在发送响应前发生 panic，客户端会收到500错误，异常内容保存在日志中。
 func (middleware *RecoveryMiddleware) Handle(c *gin.Context) {
-	defer middleware.recoverRequest(c)
-	c.Next()
+	defer middleware.recoverRequest(c) // 注册延迟恢复处理，捕获 panic
+	c.Next()                           // 交给后续中间件和路由处理请求
 }
 
 // recoverRequest 处理已经发生的请求 panic。
@@ -49,22 +49,22 @@ func (middleware *RecoveryMiddleware) Handle(c *gin.Context) {
 // 例如尚未发送响应时返回 INTERNAL_ERROR；已经发送响应时保留已发送内容并中止后续处理。
 func (middleware *RecoveryMiddleware) recoverRequest(c *gin.Context) {
 	// 当前函数由 defer 直接调用，在这里读取正在传播的 panic；普通函数调用中读不到该值。
-	recovered := recover()
+	recovered := recover() // 读取当前 panic 值；无 panic 时为 nil
 	// 没有 panic 时保持正常响应，不做额外写入。
 	if recovered == nil {
 		return
 	}
-	middleware.logger.Error("http request panic",
-		"request_id", c.GetString(response.RequestIDContextKey),
-		"panic", recovered,
-		"stack", string(debug.Stack()),
+	middleware.logger.Error("http request panic", // 写入 panic 错误日志
+		"request_id", c.GetString(response.RequestIDContextKey), // 读取请求标识
+		"panic", recovered, // 写入 panic 值
+		"stack", string(debug.Stack()), // 写入调用栈
 	)
 	// 响应已经发送时不能再改写成 JSON，只能中止链路并保留日志。
-	if c.Writer.Written() {
-		c.Abort()
+	if c.Writer.Written() { // 判断响应是否已写入
+		c.Abort() // 中止后续链路
 		return
 	}
-	response.WriteError(c, response.ErrorSpec{
+	response.WriteError(c, response.ErrorSpec{ // 传入上下文与 500 错误规格
 		Status:  http.StatusInternalServerError,
 		Code:    response.CodeInternal,
 		Message: "internal server error",

@@ -25,11 +25,11 @@ type LookupEnv func(string) (string, bool)
 // 例如配置为 " 5s " 时返回 "5s"；未设置且默认值为 "3s" 时返回 "3s"。
 func readValue(lookup LookupEnv, key string, fallback string) string {
 	// 按指定的名称读取环境变量，同时确认这个变量有没有设置。
-	value, exists := lookup(key)
+	value, exists := lookup(key) // 传入变量名；返回值及是否存在
 	// 去掉内容首尾的空白，例如把 " 5s " 整理成 "5s"，方便后面识别。
-	value = strings.TrimSpace(value)
+	value = strings.TrimSpace(value) // 清理首尾空白
 	// 如果没有设置，或者去掉空白后没有内容，就使用事先给定的默认值。
-	if !exists || value == "" {
+	if !exists || value == "" { // 变量缺失或为空时使用默认值
 		return fallback
 	}
 	return value
@@ -42,15 +42,15 @@ func readValue(lookup LookupEnv, key string, fallback string) string {
 func parsePositiveDuration(lookup LookupEnv, key string, fallback time.Duration) (time.Duration, error) {
 	// 环境变量读出来都是文字，所以先把默认时长也变成文字，例如把5秒变成 "5s"。
 	// 然后读取需要的环境变量；如果没有设置或内容为空，就采用这份默认值。
-	raw := readValue(lookup, key, fallback.String())
+	raw := readValue(lookup, key, fallback.String()) // 传入查询函数、变量名与默认值文本；返回原始文本
 	// 此时拿到的仍是 "5s" 这样的文字，这里将它转换为程序能计算的时间长度。
-	value, err := time.ParseDuration(raw)
+	value, err := time.ParseDuration(raw) // 传入时长文本；返回时长、错误
 	// 如果写成了 "abc" 等无法识别的内容，就指出哪个环境变量有问题，并保留原因。
 	if err != nil {
 		return 0, fmt.Errorf("%s must be a duration: %w", key, err)
 	}
 	// 转换成功后继续检查数值，只接受大于零的时长。
-	if value <= 0 {
+	if value <= 0 { // 判断时长是否大于零
 		return 0, fmt.Errorf("%s must be greater than zero", key)
 	}
 	return value, nil
@@ -63,9 +63,9 @@ func parsePositiveDuration(lookup LookupEnv, key string, fallback time.Duration)
 func parseNonNegativeInt(lookup LookupEnv, key string, fallback int) (int, error) {
 	// 先把默认整数写成文字，再读取需要的环境变量；没有设置或内容为空时采用默认值。
 	// 最后将取得的文字转换成整数，例如把 "20" 变成数字20，供调用方使用。
-	value, err := strconv.Atoi(readValue(lookup, key, strconv.Itoa(fallback)))
+	value, err := strconv.Atoi(readValue(lookup, key, strconv.Itoa(fallback))) // 读取并转换整数文本；返回整数、错误
 	// 内容无法转换为整数、超出整数范围或小于零时，直接报告配置错误。
-	if err != nil || value < 0 {
+	if err != nil || value < 0 { // 判断是否非法或为负
 		return 0, fmt.Errorf("%s must be a nonnegative integer", key)
 	}
 	return value, nil
@@ -77,9 +77,9 @@ func parseNonNegativeInt(lookup LookupEnv, key string, fallback int) (int, error
 // 例如配置为 "-1" 且下限为 -1 时返回 -1；配置为 "-2" 且下限为 -1 时返回错误。
 func parseAtLeastInt(lookup LookupEnv, key string, fallback, minimum int) (int, error) {
 	// 先按默认整数读取环境变量，再用文字转换成整数；没有设置或内容为空时采用默认值。
-	value, err := strconv.Atoi(readValue(lookup, key, strconv.Itoa(fallback)))
+	value, err := strconv.Atoi(readValue(lookup, key, strconv.Itoa(fallback))) // 读取并转换整数文本；返回整数、错误
 	// 无法转换、超出整数范围或低于允许的最小值时报告配置错误。
-	if err != nil || value < minimum {
+	if err != nil || value < minimum { // 判断是否非法或低于下限
 		return 0, fmt.Errorf("%s must be an integer at least %d", key, minimum)
 	}
 	return value, nil
@@ -91,9 +91,9 @@ func parseAtLeastInt(lookup LookupEnv, key string, fallback, minimum int) (int, 
 // 例如配置为 "true" 时返回 true，配置为 "yes" 时返回错误。
 func parseBool(lookup LookupEnv, key string, fallback bool) (bool, error) {
 	// 先把默认值写成文字，再读取环境变量；没有设置或内容为空时采用默认值。
-	raw := readValue(lookup, key, strconv.FormatBool(fallback))
+	raw := readValue(lookup, key, strconv.FormatBool(fallback)) // 传入查询函数、变量名与默认值文本；返回原始文本
 	// 将文字转换为布尔值，例如把 "true" 变成 true。
-	value, err := strconv.ParseBool(raw)
+	value, err := strconv.ParseBool(raw) // 传入布尔文本；返回布尔值、错误
 	// 无法识别为布尔值时报告配置错误。
 	if err != nil {
 		return false, fmt.Errorf("%s must be a boolean", key)

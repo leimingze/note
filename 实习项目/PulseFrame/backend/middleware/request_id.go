@@ -45,12 +45,12 @@ type CryptoIDGenerator struct{}
 // 功能：读取16个安全随机字节，再转换为方便写入日志和响应头的32个十六进制字符。
 // 例如一次调用可能得到 "7baf01e9c2d3465089abcdef0123456789"，后续调用会重新读取随机字节。
 func (CryptoIDGenerator) NewID() (string, error) {
-	content := make([]byte, requestIDBytes)
+	content := make([]byte, requestIDBytes) // 分配16字节切片
 	// 安全随机源失败时不能生成可能重复或可预测的关联标识。
-	if _, err := rand.Read(content); err != nil {
+	if _, err := rand.Read(content); err != nil { // 读取安全随机字节；失败时返回错误
 		return "", err
 	}
-	return hex.EncodeToString(content), nil
+	return hex.EncodeToString(content), nil // 将字节编码为十六进制字符串
 }
 
 // RequestIDMiddleware 保存请求标识中间件依赖。
@@ -68,7 +68,7 @@ func NewRequestID(generator IDGenerator) (*RequestIDMiddleware, error) {
 	if generator == nil {
 		return nil, errNilIDGenerator
 	}
-	return &RequestIDMiddleware{generator: generator}, nil
+	return &RequestIDMiddleware{generator: generator}, nil // 传入生成器；返回请求标识中间件
 }
 
 // Handle 解析或生成请求标识并写入上下文与响应头。
@@ -78,25 +78,25 @@ func NewRequestID(generator IDGenerator) (*RequestIDMiddleware, error) {
 // 例如请求携带 X-Request-ID: upstream-123 时，响应头和请求上下文都会保存 upstream-123。
 func (middleware *RequestIDMiddleware) Handle(c *gin.Context) {
 	// 只透传长度和字符合法的上游 ID，避免控制字符进入日志或响应头。
-	requestID := strings.TrimSpace(c.GetHeader(response.RequestIDHeader))
+	requestID := strings.TrimSpace(c.GetHeader(response.RequestIDHeader)) // 读取并清理请求标识头部
 	// 缺失或不安全的上游值必须替换成本服务生成的新标识。
-	if !validRequestID(requestID) {
-		generated, err := middleware.generator.NewID()
+	if !validRequestID(requestID) { // 校验上游标识；非法时生成新标识
+		generated, err := middleware.generator.NewID() // 调用生成器；返回新标识、错误
 		// 生成失败时无法建立日志关联，返回统一内部错误并终止请求。
 		if err != nil {
-			response.WriteError(c, response.ErrorSpec{
+			response.WriteError(c, response.ErrorSpec{ // 传入上下文与 500 错误规格
 				Status:  http.StatusInternalServerError,
 				Code:    response.CodeInternal,
 				Message: "internal server error",
 			})
 			return
 		}
-		requestID = generated
+		requestID = generated // 采用新生成的标识
 	}
 	// 在进入后续中间件前同时写入上下文和响应头。
-	c.Set(response.RequestIDContextKey, requestID)
-	c.Header(response.RequestIDHeader, requestID)
-	c.Next()
+	c.Set(response.RequestIDContextKey, requestID) // 将请求标识写入上下文
+	c.Header(response.RequestIDHeader, requestID)  // 将请求标识写入响应头
+	c.Next()                                       // 交给后续中间件和路由处理请求
 }
 
 // validRequestID 判断上游请求标识是否可以安全透传。
@@ -105,5 +105,5 @@ func (middleware *RequestIDMiddleware) Handle(c *gin.Context) {
 // 功能：阻止超长或包含控制字符的标识进入日志和响应头。
 // 例如 "request-123" 返回 true，含空格的 "request 123" 和空字符串返回 false。
 func validRequestID(value string) bool {
-	return value != "" && len(value) <= maxRequestIDLength && requestIDPattern.MatchString(value)
+	return value != "" && len(value) <= maxRequestIDLength && requestIDPattern.MatchString(value) // 校验非空、长度与字符集合
 }

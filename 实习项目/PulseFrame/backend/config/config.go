@@ -43,35 +43,35 @@ func Load(lookup LookupEnv) (Config, error) {
 
 	// 先读取 APP_ENV；没有设置或内容为空时，按本地环境 local 处理。
 	// 再统一大小写并检查环境名称，确定程序应以哪种环境运行。
-	environment, err := parseEnvironment(readValue(lookup, envAppEnvironment, EnvironmentLocal))
+	environment, err := parseEnvironment(readValue(lookup, envAppEnvironment, EnvironmentLocal)) // 读取并校验环境名
 	// 环境非法时立即停止，避免框架进入错误模式。
 	if err != nil {
 		return Config{}, err
 	}
 	// 接着读取日志级别，默认使用 info；只有程序支持的级别才能用于创建日志器。
-	logLevel, err := parseLogLevel(readValue(lookup, envLogLevel, defaultLogLevel))
+	logLevel, err := parseLogLevel(readValue(lookup, envLogLevel, defaultLogLevel)) // 读取并校验日志级别
 	// 日志级别错误也属于启动配置错误，不在运行期静默修正。
 	if err != nil {
 		return Config{}, err
 	}
 	// 继续从同一个配置来源读取 HTTP 地址和各项超时，交给 HTTP 配置模块统一检查。
-	httpConfig, err := loadHTTP(lookup)
+	httpConfig, err := loadHTTP(lookup) // 读取 HTTP 配置
 	// HTTP 配置不完整时服务不能安全监听端口。
 	if err != nil {
 		return Config{}, err
 	}
 	// 接着读取并检查数据库账号、密码和连接池参数，为数据库连接创建准备配置。
-	mysqlConfig, err := loadMySQL(lookup)
+	mysqlConfig, err := loadMySQL(lookup) // 读取 MySQL 配置
 	if err != nil {
 		return Config{}, err
 	}
 	// 接着读取 Redis 配置；此时外部存储的连接参数都已完成格式校验。
-	redisConfig, err := loadRedis(lookup)
+	redisConfig, err := loadRedis(lookup) // 读取 Redis 配置
 	if err != nil {
 		return Config{}, err
 	}
 	// 最后读取指标配置；指标仅在启动时作为开关传给采集模块。
-	metricsConfig, err := loadMetrics(lookup)
+	metricsConfig, err := loadMetrics(lookup) // 读取指标配置
 	if err != nil {
 		return Config{}, err
 	}
@@ -92,7 +92,7 @@ func Load(lookup LookupEnv) (Config, error) {
 // 例如传入 " LOCAL " 返回 "local"，传入不支持的 "prod" 返回错误。
 func parseEnvironment(value string) (string, error) {
 	// 去掉名称首尾的空白并转为小写，例如把 " LOCAL " 整理成 "local"，再检查是否支持。
-	value = strings.ToLower(strings.TrimSpace(value))
+	value = strings.ToLower(strings.TrimSpace(value)) // 规范化环境名
 	// 只接受显式支持的环境集合，default 分支负责暴露拼写错误。
 	switch value {
 	case EnvironmentLocal, EnvironmentTest, EnvironmentStaging, EnvironmentProduction:
@@ -109,7 +109,7 @@ func parseEnvironment(value string) (string, error) {
 // 例如传入 " INFO " 返回 "info"，传入不支持的 "verbose" 返回错误。
 func parseLogLevel(value string) (string, error) {
 	// 先去除首尾空白再转为小写，使 " INFO " 可以匹配 info。
-	value = strings.ToLower(strings.TrimSpace(value))
+	value = strings.ToLower(strings.TrimSpace(value)) // 规范化日志级别
 	// 日志级别使用固定白名单，避免未知值进入 slog 配置。
 	switch value {
 	case "debug", "info", "warn", "error":

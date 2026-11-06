@@ -44,14 +44,14 @@ type Server struct {
 // 例如配置中的监听地址为 :8080，返回参数中的 Address 也为 :8080。
 func OptionsFromConfig(cfg config.Config, handler http.Handler, health *HealthState) Options {
 	return Options{
-		Address:           cfg.HTTP.Address,
-		Handler:           handler,
-		Health:            health,
-		ReadHeaderTimeout: cfg.HTTP.ReadHeaderTimeout,
-		ReadTimeout:       cfg.HTTP.ReadTimeout,
-		WriteTimeout:      cfg.HTTP.WriteTimeout,
-		IdleTimeout:       cfg.HTTP.IdleTimeout,
-		ShutdownTimeout:   cfg.HTTP.ShutdownTimeout,
+		Address:           cfg.HTTP.Address,           // 取监听地址
+		Handler:           handler,                    // 装入路由处理器
+		Health:            health,                     // 装入健康状态
+		ReadHeaderTimeout: cfg.HTTP.ReadHeaderTimeout, // 取请求头超时
+		ReadTimeout:       cfg.HTTP.ReadTimeout,       // 取读取超时
+		WriteTimeout:      cfg.HTTP.WriteTimeout,      // 取写入超时
+		IdleTimeout:       cfg.HTTP.IdleTimeout,       // 取空闲超时
+		ShutdownTimeout:   cfg.HTTP.ShutdownTimeout,   // 取退出超时
 	}
 }
 
@@ -75,7 +75,7 @@ func New(options Options) (*Server, error) {
 	}
 	// 所有网络超时都显式传入，避免慢连接无限占用服务资源。
 	return &Server{
-		server: &http.Server{
+		server: &http.Server{ // 构造标准库 HTTP 服务
 			Addr:              options.Address,
 			Handler:           options.Handler,
 			ReadHeaderTimeout: options.ReadHeaderTimeout,
@@ -94,12 +94,12 @@ func New(options Options) (*Server, error) {
 // 功能：按配置地址启动 HTTP 服务，并等待退出通知或服务错误。
 // 例如地址为 :8080 时监听8080端口；该端口已被占用时返回监听错误。
 func (server *Server) Run(ctx context.Context) error {
-	listener, err := net.Listen("tcp", server.server.Addr)
+	listener, err := net.Listen("tcp", server.server.Addr) // 传入监听地址；返回监听器、错误
 	// 端口绑定失败时服务尚未就绪，直接返回明确监听错误。
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", server.server.Addr, err)
 	}
-	return server.Serve(ctx, listener)
+	return server.Serve(ctx, listener) // 传入上下文与监听器，接管请求处理
 }
 
 // Serve 使用已有监听器运行服务直到上下文取消。
@@ -109,19 +109,19 @@ func (server *Server) Run(ctx context.Context) error {
 // 例如调用方取消上下文后，服务先标记为未就绪，再停止接收新请求并等待现有请求结束。
 func (server *Server) Serve(ctx context.Context, listener net.Listener) error {
 	// 监听器已经成功创建，此时才能对外报告服务就绪。
-	server.health.SetReady()
-	serveErrors := make(chan error, 1)
+	server.health.SetReady()           // 标记服务就绪
+	serveErrors := make(chan error, 1) // 创建容量为1的结果通道
 	// http.Server.Serve 会阻塞，放入 goroutine 后才能同时监听退出信号。
-	go server.serve(listener, serveErrors)
+	go server.serve(listener, serveErrors) // 传入监听器与结果通道，后台运行服务
 
 	// 服务自身报错和外部退出信号，谁先发生就处理谁。
 	select {
 	case err := <-serveErrors:
-		server.health.SetNotReady()
-		return normalizeServeError(err)
+		server.health.SetNotReady()     // 服务出错时标记未就绪
+		return normalizeServeError(err) // 统一映射服务错误
 	case <-ctx.Done():
-		server.health.SetNotReady()
-		return server.shutdown(serveErrors)
+		server.health.SetNotReady()         // 收到退出信号时标记未就绪
+		return server.shutdown(serveErrors) // 进入优雅关闭流程
 	}
 }
 
@@ -131,7 +131,7 @@ func (server *Server) Serve(ctx context.Context, listener net.Listener) error {
 // 功能：让 Serve 生命周期可以同时等待服务错误和退出信号。
 // 例如 HTTP 服务关闭后，把 http.ErrServerClosed 放入结果通道，通知等待方服务已经结束。
 func (server *Server) serve(listener net.Listener, results chan<- error) {
-	results <- server.server.Serve(listener)
+	results <- server.server.Serve(listener) // 阻塞运行并写入服务结果
 }
 
 // shutdown 在期限内关闭服务并等待 Serve 返回。
@@ -141,13 +141,13 @@ func (server *Server) serve(listener net.Listener, results chan<- error) {
 // 例如退出期限为10秒时，请求在2秒后完成则正常返回；超过10秒仍未结束则报告超时。
 func (server *Server) shutdown(serveErrors <-chan error) error {
 	// Shutdown 停止接收新请求，并在超时前等待正在处理的请求完成。
-	ctx, cancel := context.WithTimeout(context.Background(), server.shutdownTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), server.shutdownTimeout) // 传入退出期限；返回关闭上下文、取消函数
 	defer cancel()
 	// 超时或连接关闭失败时向入口报告，不能假装优雅退出成功。
-	if err := server.server.Shutdown(ctx); err != nil {
+	if err := server.server.Shutdown(ctx); err != nil { // 传入关闭上下文；失败时返回错误
 		return fmt.Errorf("shutdown http server: %w", err)
 	}
-	return normalizeServeError(<-serveErrors)
+	return normalizeServeError(<-serveErrors) // 读取并统一映射服务结果
 }
 
 // normalizeServeError 统一 HTTP Server 的正常关闭结果。

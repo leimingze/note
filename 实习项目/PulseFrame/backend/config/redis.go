@@ -49,29 +49,29 @@ type Redis struct {
 // 例如 REDIS_POOL_SIZE 为 "5"、REDIS_MAX_ACTIVE_CONNS 为 "10" 时，得到基础连接数5且最多同时使用10个连接的配置。
 func loadRedis(lookup LookupEnv) (Redis, error) {
 	cfg := Redis{
-		Address:  readValue(lookup, "REDIS_ADDR", defaultRedisAddress),
-		Username: readRawValue(lookup, "REDIS_USERNAME"),
-		Password: readRawValue(lookup, "REDIS_PASSWORD"),
+		Address:  readValue(lookup, "REDIS_ADDR", defaultRedisAddress), // 读取连接地址
+		Username: readRawValue(lookup, "REDIS_USERNAME"),               // 读取用户名原值
+		Password: readRawValue(lookup, "REDIS_PASSWORD"),               // 读取密码原值
 	}
 	var err error
 	// 逻辑数据库编号和重试次数先从文字转换为整数，再由 Validate 检查取值关系。
-	cfg.Database, err = parseNonNegativeInt(lookup, "REDIS_DATABASE", defaultRedisDatabase)
+	cfg.Database, err = parseNonNegativeInt(lookup, "REDIS_DATABASE", defaultRedisDatabase) // 读取逻辑库编号
 	if err != nil {
 		return Redis{}, err
 	}
-	cfg.MaxRetries, err = parseAtLeastInt(lookup, "REDIS_MAX_RETRIES", defaultRedisMaxRetries, -1)
+	cfg.MaxRetries, err = parseAtLeastInt(lookup, "REDIS_MAX_RETRIES", defaultRedisMaxRetries, -1) // 读取重试次数，允许 -1
 	if err != nil {
 		return Redis{}, err
 	}
-	cfg.PoolSize, err = parseNonNegativeInt(lookup, "REDIS_POOL_SIZE", defaultRedisPoolSize)
+	cfg.PoolSize, err = parseNonNegativeInt(lookup, "REDIS_POOL_SIZE", defaultRedisPoolSize) // 读取基础连接数
 	if err != nil {
 		return Redis{}, err
 	}
-	cfg.MinIdleConns, err = parseNonNegativeInt(lookup, "REDIS_MIN_IDLE_CONNS", defaultRedisMinIdleConns)
+	cfg.MinIdleConns, err = parseNonNegativeInt(lookup, "REDIS_MIN_IDLE_CONNS", defaultRedisMinIdleConns) // 读取最小空闲连接数
 	if err != nil {
 		return Redis{}, err
 	}
-	cfg.MaxActiveConns, err = parseNonNegativeInt(lookup, "REDIS_MAX_ACTIVE_CONNS", defaultRedisMaxActiveConns)
+	cfg.MaxActiveConns, err = parseNonNegativeInt(lookup, "REDIS_MAX_ACTIVE_CONNS", defaultRedisMaxActiveConns) // 读取最大活动连接数
 	if err != nil {
 		return Redis{}, err
 	}
@@ -91,14 +91,14 @@ func loadRedis(lookup LookupEnv) (Redis, error) {
 	// 按表中记录的变量名和配置字段逐项读取，任一时长非法都会终止整份 Redis 配置加载。
 	for _, item := range durations {
 		// 当前轮读取一项时长；缺失或为空使用该项默认值，再写入对应配置字段。
-		value, err := parsePositiveDuration(lookup, item.key, item.fallback)
+		value, err := parsePositiveDuration(lookup, item.key, item.fallback) // 读取单个时长配置
 		if err != nil {
 			return Redis{}, err
 		}
 		// target 保存的是配置字段地址，例如 &cfg.PoolTimeout；解引用后写入解析结果。
 		*item.target = value
 	}
-	return cfg, cfg.Validate()
+	return cfg, cfg.Validate() // 校验配置后返回
 }
 
 // 输入：cfg，环境读取或调用方直接构造的 Redis 配置。
@@ -106,10 +106,10 @@ func loadRedis(lookup LookupEnv) (Redis, error) {
 // 功能：在创建客户端前检查地址、数据库编号、重试次数、连接数量及各项期限。
 // 例如基础连接数为10、空闲连接数为2、最大连接数为20时通过；最大连接数为1时返回错误。
 func (cfg Redis) Validate() error {
-	if err := cfg.validateConnection(); err != nil {
+	if err := cfg.validateConnection(); err != nil { // 校验连接信息
 		return err
 	}
-	return cfg.validatePool()
+	return cfg.validatePool() // 校验池参数
 }
 
 // 输入：cfg，Redis 连接配置。
@@ -117,12 +117,12 @@ func (cfg Redis) Validate() error {
 // 功能：检查 Redis 地址中的主机和端口，确保客户端有明确的连接目标。
 // 例如 127.0.0.1:6379 可以通过检查，:6379 会因为主机为空返回错误。
 func (cfg Redis) validateConnection() error {
-	host, portText, err := net.SplitHostPort(cfg.Address)
-	if err != nil || strings.TrimSpace(host) == "" {
+	host, portText, err := net.SplitHostPort(cfg.Address) // 拆分地址为主机与端口
+	if err != nil || strings.TrimSpace(host) == "" {      // 地址格式非法或主机为空
 		return fmt.Errorf("REDIS_ADDR must use a nonempty host:port")
 	}
-	port, err := strconv.Atoi(portText)
-	if err != nil || port < minimumPort || port > maximumPort {
+	port, err := strconv.Atoi(portText)                         // 转换端口文本为整数
+	if err != nil || port < minimumPort || port > maximumPort { // 端口越界
 		return fmt.Errorf("REDIS_ADDR port must be between %d and %d", minimumPort, maximumPort)
 	}
 	return nil
@@ -133,19 +133,19 @@ func (cfg Redis) validateConnection() error {
 // 功能：确保连接数量有上限、重试次数明确、连接池等待和连接回收均具有期限。
 // 例如基础连接数为10、最大连接数为20且所有期限大于零时通过；最大连接数为0时返回错误。
 func (cfg Redis) validatePool() error {
-	if cfg.Database < 0 {
+	if cfg.Database < 0 { // 逻辑库编号为负
 		return fmt.Errorf("REDIS_DATABASE must be nonnegative")
 	}
-	if cfg.MaxRetries < -1 {
+	if cfg.MaxRetries < -1 { // 重试次数低于 -1
 		return fmt.Errorf("REDIS_MAX_RETRIES must be -1 or greater")
 	}
-	if cfg.MaxActiveConns <= 0 {
+	if cfg.MaxActiveConns <= 0 { // 最大活动连接数为非正
 		return fmt.Errorf("REDIS_MAX_ACTIVE_CONNS must be greater than zero")
 	}
-	if cfg.PoolSize <= 0 || cfg.PoolSize > cfg.MaxActiveConns {
+	if cfg.PoolSize <= 0 || cfg.PoolSize > cfg.MaxActiveConns { // 基础连接数越界
 		return fmt.Errorf("REDIS_POOL_SIZE must be between one and REDIS_MAX_ACTIVE_CONNS")
 	}
-	if cfg.MinIdleConns < 0 || cfg.MinIdleConns > cfg.MaxActiveConns {
+	if cfg.MinIdleConns < 0 || cfg.MinIdleConns > cfg.MaxActiveConns { // 最小空闲连接数越界
 		return fmt.Errorf("REDIS_MIN_IDLE_CONNS must be between zero and REDIS_MAX_ACTIVE_CONNS")
 	}
 	for key, value := range map[string]time.Duration{
@@ -157,7 +157,7 @@ func (cfg Redis) validatePool() error {
 		"REDIS_CONN_MAX_LIFETIME":  cfg.ConnMaxLifetime,
 		"REDIS_CONN_MAX_IDLE_TIME": cfg.ConnMaxIdleTime,
 	} {
-		if value <= 0 {
+		if value <= 0 { // 期限非正
 			return fmt.Errorf("%s must be greater than zero", key)
 		}
 	}
@@ -169,6 +169,6 @@ func (cfg Redis) validatePool() error {
 // 功能：读取需要保留原始内容的可选配置，例如密码不能经过 TrimSpace 改写。
 // 例如密码为 " pass " 时仍返回前后的空格，变量缺失时返回空字符串。
 func readRawValue(lookup LookupEnv, key string) string {
-	value, _ := lookup(key)
+	value, _ := lookup(key) // 读取变量原始值，忽略是否存在标记
 	return value
 }

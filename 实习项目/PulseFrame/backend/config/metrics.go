@@ -34,20 +34,20 @@ func loadMetrics(lookup LookupEnv) (Metrics, error) {
 		CollectInterval: defaultMetricsCollectInterval,
 	}
 	// 先读取是否启用指标；布尔值无法解析时配置加载失败。
-	enabled, err := parseBool(lookup, envMetricsEnabled, defaultMetricsEnabled)
+	enabled, err := parseBool(lookup, envMetricsEnabled, defaultMetricsEnabled) // 传入查询函数、变量名与默认值；返回布尔值、错误
 	if err != nil {
 		return Metrics{}, err
 	}
-	cfg.Enabled = enabled
+	cfg.Enabled = enabled // 写入启用开关
 	// 读取指标暴露路径，未设置时沿用默认的 /metrics。
-	cfg.Path = readValue(lookup, envMetricsPath, defaultMetricsPath)
+	cfg.Path = readValue(lookup, envMetricsPath, defaultMetricsPath) // 传入查询函数、变量名与默认值；返回路径文本
 	// 读取采集周期，时长非法或小于等于零时返回错误。
-	interval, err := parsePositiveDuration(lookup, envMetricsCollectInterval, defaultMetricsCollectInterval)
+	interval, err := parsePositiveDuration(lookup, envMetricsCollectInterval, defaultMetricsCollectInterval) // 传入查询函数、变量名与默认时长；返回周期、错误
 	if err != nil {
 		return Metrics{}, err
 	}
-	cfg.CollectInterval = interval
-	return cfg, cfg.validate()
+	cfg.CollectInterval = interval // 写入采集周期
+	return cfg, cfg.validate()     // 校验配置后返回
 }
 
 // 输入：cfg，指标配置。
@@ -56,11 +56,11 @@ func loadMetrics(lookup LookupEnv) (Metrics, error) {
 // 例如路径为 /metrics、周期为5秒时通过；路径为 metrics 或周期为零时返回错误。
 func (cfg Metrics) validate() error {
 	// 指标路径必须从斜杠开始，避免与业务路由冲突或无法解析。
-	if !strings.HasPrefix(cfg.Path, "/") {
+	if !strings.HasPrefix(cfg.Path, "/") { // 判断路径是否以斜杠开头
 		return fmt.Errorf("%s must start with a slash", envMetricsPath)
 	}
 	// 采集周期为零或负数时无法定期刷新连接池统计，直接拒绝。
-	if cfg.CollectInterval <= 0 {
+	if cfg.CollectInterval <= 0 { // 判断周期是否大于零
 		return fmt.Errorf("%s must be greater than zero", envMetricsCollectInterval)
 	}
 	return nil

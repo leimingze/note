@@ -28,7 +28,7 @@ func NewAccessLog(logger *slog.Logger) (*AccessLogMiddleware, error) {
 	if logger == nil {
 		return nil, errNilAccessLogger
 	}
-	return &AccessLogMiddleware{logger: logger}, nil
+	return &AccessLogMiddleware{logger: logger}, nil // 传入日志器；返回访问日志中间件
 }
 
 // Handle 记录一次 HTTP 请求的结构化访问日志。
@@ -37,20 +37,20 @@ func NewAccessLog(logger *slog.Logger) (*AccessLogMiddleware, error) {
 // 功能：让请求结果和性能能够通过请求标识追踪。
 // 例如 GET /livez 返回200后，日志包含 GET、/livez、200、耗时和本次请求标识。
 func (middleware *AccessLogMiddleware) Handle(c *gin.Context) {
-	startedAt := time.Now()
+	startedAt := time.Now() // 记录请求开始时间
 	// 先执行完整请求链，返回后才能得到最终状态码和耗时。
-	c.Next()
+	c.Next() // 交给后续中间件和路由处理请求
 
-	path := c.FullPath()
+	path := c.FullPath() // 获取注册的路由模板
 	// 未匹配路由没有模板路径，退回实际 URL 便于定位 404。
 	if path == "" {
-		path = c.Request.URL.Path
+		path = c.Request.URL.Path // 退回实际请求路径
 	}
-	middleware.logger.Info("http request completed",
-		"request_id", c.GetString(response.RequestIDContextKey),
-		"method", c.Request.Method,
-		"path", path,
-		"status", c.Writer.Status(),
-		"duration_ms", time.Since(startedAt).Milliseconds(),
+	middleware.logger.Info("http request completed", // 写入访问日志，附带请求上下文字段
+		"request_id", c.GetString(response.RequestIDContextKey), // 读取请求标识
+		"method", c.Request.Method, // 读取请求方法
+		"path", path, // 写入路由/路径
+		"status", c.Writer.Status(), // 读取响应状态码
+		"duration_ms", time.Since(startedAt).Milliseconds(), // 计算并写入整数毫秒耗时
 	)
 }

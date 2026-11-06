@@ -88,75 +88,75 @@ func New() *Registry {
 	registry := prometheus.NewRegistry()
 	metrics := &Registry{registry: registry}
 
-	metrics.RequestsTotal = prometheus.NewCounterVec(
+	metrics.RequestsTotal = prometheus.NewCounterVec( // 创建请求计数指标
 		prometheus.CounterOpts{Name: "pulseframe_http_requests_total", Help: "已完成 HTTP 请求数量"},
 		[]string{"method", "route", "status"},
 	)
-	metrics.RequestDuration = prometheus.NewHistogramVec(
+	metrics.RequestDuration = prometheus.NewHistogramVec( // 创建请求耗时分布指标
 		prometheus.HistogramOpts{Name: "pulseframe_http_request_duration_seconds", Help: "HTTP 请求处理耗时分布"},
 		[]string{"method", "route", "status"},
 	)
-	metrics.RequestsInFlight = prometheus.NewGauge(
+	metrics.RequestsInFlight = prometheus.NewGauge( // 创建进行中请求数指标
 		prometheus.GaugeOpts{Name: "pulseframe_http_requests_in_flight", Help: "当前正在处理的 HTTP 请求数量"},
 	)
-	metrics.ResponseErrorsTotal = prometheus.NewCounterVec(
+	metrics.ResponseErrorsTotal = prometheus.NewCounterVec( // 创建错误计数指标
 		prometheus.CounterOpts{Name: "pulseframe_http_response_errors_total", Help: "已返回的统一错误数量"},
 		[]string{"route", "status", "error_code"},
 	)
 
-	metrics.DependencyOperations = prometheus.NewCounterVec(
+	metrics.DependencyOperations = prometheus.NewCounterVec( // 创建依赖操作计数指标
 		prometheus.CounterOpts{Name: "pulseframe_dependency_operations_total", Help: "外部依赖操作数量"},
 		[]string{"dependency", "operation", "result"},
 	)
-	metrics.DependencyOperationDuration = prometheus.NewHistogramVec(
+	metrics.DependencyOperationDuration = prometheus.NewHistogramVec( // 创建依赖耗时分布指标
 		prometheus.HistogramOpts{Name: "pulseframe_dependency_operation_duration_seconds", Help: "外部依赖操作耗时分布"},
 		[]string{"dependency", "operation", "result"},
 	)
-	metrics.DependencyErrors = prometheus.NewCounterVec(
+	metrics.DependencyErrors = prometheus.NewCounterVec( // 创建依赖错误计数指标
 		prometheus.CounterOpts{Name: "pulseframe_dependency_errors_total", Help: "外部依赖错误数量"},
 		[]string{"dependency", "operation", "error_type"},
 	)
-	metrics.DependencyReady = prometheus.NewGaugeVec(
+	metrics.DependencyReady = prometheus.NewGaugeVec( // 创建依赖可用性指标
 		prometheus.GaugeOpts{Name: "pulseframe_dependency_ready", Help: "依赖最近一次可用性状态"},
 		[]string{"dependency"},
 	)
 
-	metrics.MySQLOpenConnections = prometheus.NewGauge(
+	metrics.MySQLOpenConnections = prometheus.NewGauge( // 创建 MySQL 打开连接数指标
 		prometheus.GaugeOpts{Name: "pulseframe_mysql_open_connections", Help: "MySQL 当前打开连接数"},
 	)
-	metrics.MySQLInUseConnections = prometheus.NewGauge(
+	metrics.MySQLInUseConnections = prometheus.NewGauge( // 创建 MySQL 使用中连接数指标
 		prometheus.GaugeOpts{Name: "pulseframe_mysql_in_use_connections", Help: "MySQL 当前使用中的连接数"},
 	)
-	metrics.MySQLIdleConnections = prometheus.NewGauge(
+	metrics.MySQLIdleConnections = prometheus.NewGauge( // 创建 MySQL 空闲连接数指标
 		prometheus.GaugeOpts{Name: "pulseframe_mysql_idle_connections", Help: "MySQL 当前空闲连接数"},
 	)
-	metrics.MySQLWaitCountTotal = prometheus.NewCounter(
+	metrics.MySQLWaitCountTotal = prometheus.NewCounter( // 创建 MySQL 等待次数指标
 		prometheus.CounterOpts{Name: "pulseframe_mysql_wait_count_total", Help: "等待 MySQL 连接累计次数"},
 	)
-	metrics.MySQLWaitDurationSecondsTotal = prometheus.NewCounter(
+	metrics.MySQLWaitDurationSecondsTotal = prometheus.NewCounter( // 创建 MySQL 等待时长指标
 		prometheus.CounterOpts{Name: "pulseframe_mysql_wait_duration_seconds_total", Help: "等待 MySQL 连接累计时长（秒）"},
 	)
-	metrics.RedisPoolTotalConnections = prometheus.NewGauge(
+	metrics.RedisPoolTotalConnections = prometheus.NewGauge( // 创建 Redis 总连接数指标
 		prometheus.GaugeOpts{Name: "pulseframe_redis_pool_total_connections", Help: "Redis 连接池连接总数"},
 	)
-	metrics.RedisPoolIdleConnections = prometheus.NewGauge(
+	metrics.RedisPoolIdleConnections = prometheus.NewGauge( // 创建 Redis 空闲连接数指标
 		prometheus.GaugeOpts{Name: "pulseframe_redis_pool_idle_connections", Help: "Redis 连接池空闲连接数"},
 	)
-	metrics.RedisPoolTimeoutsTotal = prometheus.NewCounter(
+	metrics.RedisPoolTimeoutsTotal = prometheus.NewCounter( // 创建 Redis 超时次数指标
 		prometheus.CounterOpts{Name: "pulseframe_redis_pool_timeouts_total", Help: "获取 Redis 连接超时次数"},
 	)
 
-	metrics.ProcessReady = prometheus.NewGauge(
+	metrics.ProcessReady = prometheus.NewGauge( // 创建进程就绪指标
 		prometheus.GaugeOpts{Name: "pulseframe_process_ready", Help: "HTTP 服务是否已启动"},
 	)
-	metrics.StartupFailuresTotal = prometheus.NewCounter(
+	metrics.StartupFailuresTotal = prometheus.NewCounter( // 创建启动失败次数指标
 		prometheus.CounterOpts{Name: "pulseframe_startup_failures_total", Help: "配置或依赖初始化失败次数"},
 	)
-	metrics.ShutdownTotal = prometheus.NewCounter(
+	metrics.ShutdownTotal = prometheus.NewCounter( // 创建退出次数指标
 		prometheus.CounterOpts{Name: "pulseframe_shutdown_total", Help: "服务进入退出流程次数"},
 	)
 
-	registry.MustRegister(
+	registry.MustRegister( // 批量注册全部指标
 		metrics.RequestsTotal, metrics.RequestDuration, metrics.RequestsInFlight, metrics.ResponseErrorsTotal,
 		metrics.DependencyOperations, metrics.DependencyOperationDuration, metrics.DependencyErrors, metrics.DependencyReady,
 		metrics.MySQLOpenConnections, metrics.MySQLInUseConnections, metrics.MySQLIdleConnections,
@@ -172,5 +172,5 @@ func New() *Registry {
 // 输出：Prometheus Registry 实例。
 // 功能：让指标端点读取已注册指标，而不依赖全局默认注册表。
 func (metrics *Registry) Prometheus() *prometheus.Registry {
-	return metrics.registry
+	return metrics.registry // 返回进程内注册表
 }
