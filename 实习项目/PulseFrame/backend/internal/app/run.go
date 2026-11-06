@@ -28,7 +28,7 @@ func Run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 	// ========== 第 1 步：读取并校验配置 ==========
 	// 配置是后面所有东西的基础，先把它全部读出来并校验。
 	// 如果配置有错，立刻返回，不创建任何资源。
-	cfg, err := config.Load(lookup)
+	cfg, err := config.Load(lookup) // 传入 lookup(读环境变量的函数)；返回 cfg(完整配置)、err(错误)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
@@ -37,61 +37,61 @@ func Run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 	// signal.NotifyContext 让 ctx 在收到 Ctrl+C 或 SIGTERM 时自动取消。
 	// 后面 HTTP 服务和采集器都用这个 ctx，所以退出信号一响，它们就会跟着停止。
 	// 返回的 stop 必须 defer 调用，否则信号监听会一直烙在进程里。
-	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM) // 传入 parent(父上下文)、退出信号集合；返回 ctx(可取消上下文)、stop(取消监听函数)
 	defer stop()
 
 	// ========== 第 3 步：创建日志器 ==========
 	// 先建日志器，是因为后面任何一步失败，都需要有日志器来记录错误。
 	// logging.New 只做最基础的 JSON 日志器，再通过 With 附加公共字段（service、environment），
 	// 这样所有日志都自动带上这两个字段，方便采集检索。
-	baseLogger, err := logging.New(cfg.LogLevel, os.Stdout)
+	baseLogger, err := logging.New(cfg.LogLevel, os.Stdout) // 传入 cfg.LogLevel(日志级别)、os.Stdout(输出目标)；返回 baseLogger(JSON日志器)、err(错误)
 	if err != nil {
 		return fmt.Errorf("create logger: %w", err)
 	}
-	logger := baseLogger.With("service", "pulseframe-api", "environment", cfg.Environment)
+	logger := baseLogger.With("service", "pulseframe-api", "environment", cfg.Environment) // 传入公共字段键值对；返回 logger(带公共字段的日志器)
 	// 根据启动环境设置 Gin 的运行模式（调试/测试/发布）。
-	gin.SetMode(ginMode(cfg.Environment))
+	gin.SetMode(ginMode(cfg.Environment)) // ginMode 传入 cfg.Environment(环境名)返回 Gin模式；SetMode 用该模式设置 Gin 全局状态
 
 	// ========== 第 4 步：创建外部依赖（MySQL/Redis/指标） ==========
 	// NewDependencies 负责连接 MySQL、Redis，并在指标启用时启动连接池采集器。
 	// 这一步失败就直接返回；成功后 defer 登记关闭，保证无论后续成功还是失败，资源都会被释放。
-	dependencies, err := NewDependencies(ctx, cfg)
+	dependencies, err := NewDependencies(ctx, cfg) // 传入 ctx(可取消上下文)、cfg(完整配置)；返回 dependencies(共享依赖)、err(错误)
 	if err != nil {
 		return fmt.Errorf("create dependencies: %w", err)
 	}
 	defer func() {
 		// 把之前的错误和关闭资源的错误合并，这样退出时如果关闭失败也能带到 main。
-		runErr = errors.Join(runErr, dependencies.Close())
+		runErr = errors.Join(runErr, dependencies.Close()) // 传入 runErr(旧错误)、dependencies.Close()(关闭错误)；返回合并后的错误
 	}()
 
 	// ========== 第 5 步：创建健康状态与路由 ==========
 	// 健康状态 /livez、/readyz 共用；指标启用时把注册表传给路由，
 	// 让路由挂载指标中间件并注册 /metrics 端点。
-	health := server.NewHealthState()
+	health := server.NewHealthState() // 无参数；返回 health(初始未就绪的健康状态)
 	var metricsRegistry *metrics.Registry
 	if cfg.Metrics.Enabled {
-		metricsRegistry = dependencies.Metrics
+		metricsRegistry = dependencies.Metrics // 取出共享的指标注册表，传给路由使用
 	}
 	router, err := server.NewRouter(server.RouterDependencies{
-		Logger:      logger,
-		IDGenerator: middleware.CryptoIDGenerator{},
-		Health:      health,
-		Metrics:     metricsRegistry,
-	})
+		Logger:      logger,                         // 传入带公共字段的日志器，供访问日志和异常恢复使用
+		IDGenerator: middleware.CryptoIDGenerator{}, // 传入随机请求 ID 生成器
+		Health:      health,                         // 传入共享健康状态
+		Metrics:     metricsRegistry,                // 传入指标注册表（未启用时为 nil，不注册指标端点）
+	}) // 返回 router(配置好的 Gin 路由)、err(错误)
 	if err != nil {
 		return fmt.Errorf("create router: %w", err)
 	}
 
 	// ========== 第 6 步：创建 HTTP 服务并运行 ==========
 	// 把路由、健康状态、超时配置组装成 HTTP 服务。
-	httpServer, err := server.New(server.OptionsFromConfig(cfg, router, health))
+	httpServer, err := server.New(server.OptionsFromConfig(cfg, router, health)) // OptionsFromConfig 传入 cfg/router/health 返回服务参数；New 传入服务参数返回 httpServer、err
 	if err != nil {
 		return fmt.Errorf("create http server: %w", err)
 	}
 
 	// 打印启动日志，然后阻塞运行。Run 会一直卡在这里，直到收到退出信号或服务出错。
-	logger.Info("pulseframe api starting", "address", cfg.HTTP.Address, "environment", cfg.Environment)
-	if err := httpServer.Run(ctx); err != nil {
+	logger.Info("pulseframe api starting", "address", cfg.HTTP.Address, "environment", cfg.Environment) // 传入启动信息与监听地址、环境
+	if err := httpServer.Run(ctx); err != nil {                                                         // 传入 ctx(退出信号上下文)；阻塞运行，退出或出错时返回 err
 		return fmt.Errorf("run http server: %w", err)
 	}
 	logger.Info("pulseframe api stopped")
