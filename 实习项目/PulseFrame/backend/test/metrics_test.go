@@ -110,7 +110,7 @@ func TestMetricsMiddlewareRecordsRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	registry := metrics.New()
 	router := gin.New()
-	router.Use(middleware.NewMetrics(registry).Handle)
+	router.Use(middleware.NewMetrics(metrics.NewHTTPObserver(registry)).Handle)
 	router.GET("/ok", func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})

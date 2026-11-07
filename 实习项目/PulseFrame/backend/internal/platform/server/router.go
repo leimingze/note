@@ -73,7 +73,8 @@ func NewRouter(dependencies RouterDependencies) (*gin.Engine, error) {
 	handlers := []gin.HandlerFunc{requestID.Handle, accessLog.Handle, recovery.Handle} // 组装基础中间件列表
 	if dependencies.Metrics != nil {
 		// 指标中间件紧邻日志中间件，记录请求数量、耗时和错误。
-		handlers = append(handlers, middleware.NewMetrics(dependencies.Metrics).Handle) // 传入注册表创建指标中间件并追加
+		observer := metrics.NewHTTPObserver(dependencies.Metrics)           // 创建 HTTP 请求指标观察器
+		handlers = append(handlers, middleware.NewMetrics(observer).Handle) // 传入观察器创建指标中间件并追加
 	}
 	router.Use(handlers...)                                                                          // 按顺序挂载所有全局中间件
 	registerPlatformRoutes(router, dependencies.Health, dependencies.Metrics, dependencies.Liveness) // 传入路由、健康状态、注册表、存活探测注册基础路由
