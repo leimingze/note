@@ -39,22 +39,22 @@ func (observer *PoolStatsObserver) Run(ctx context.Context) {
 	ticker := time.NewTicker(observer.interval) // 传入采集周期；返回定时器
 	defer ticker.Stop()                         // 函数返回时停止定时器
 	// 启动后立即采集一次，避免指标端点长时间为空。
-	observer.collect() // 立即执行一次采集
+	observer.sample() // 立即执行一次采集
 	for {
 		select {
 		case <-ctx.Done(): // 上下文取消时停止采集
 			return
 		case <-ticker.C: // 每次定时器触发时采集
-			observer.collect()
+			observer.sample()
 		}
 	}
 }
 
-// collect 读取一次连接池统计并更新对应指标。
+// sample 读取一次连接池统计并更新对应指标。
 // 输入：无。
 // 输出：更新 MySQL 与 Redis 连接池指标，不写日志。
 // 功能：把 sql.DB.Stats 与 Redis PoolStats 的数值同步到指标。
-func (observer *PoolStatsObserver) collect() {
+func (observer *PoolStatsObserver) sample() {
 	mysql := observer.provider.MySQLStats()                                           // 读取 MySQL 连接池统计
 	observer.registry.MySQLOpenConnections.Set(float64(mysql.OpenConnections))        // 写入打开连接数
 	observer.registry.MySQLInUseConnections.Set(float64(mysql.InUse))                 // 写入使用中连接数
