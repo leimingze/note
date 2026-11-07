@@ -16,12 +16,12 @@ import (
 
 // Dependencies 持有当前 API 进程创建的外部依赖，使用方借用连接池。
 type Dependencies struct {
-	MySQL     *sql.DB            // 当前 API 进程共享的连接池，由 Dependencies 统一关闭。
-	Redis     *redis.Client      // 当前 API 进程共享的 Redis 客户端，由 Dependencies 统一关闭。
-	Metrics   *metrics.Registry  // 指标注册表及采集器所需的统计来源。
-	collector *metrics.Collector // 连接池统计采集器，投入时持有，退出时随上下文停止。
-	closeOnce sync.Once          // 确保重复或并发调用 Close 时只释放一次资源。
-	closeErr  error              // 保存第一次关闭的结果，供后续 Close 调用返回相同结果。
+	MySQL     *sql.DB                    // 当前 API 进程共享的连接池，由 Dependencies 统一关闭。
+	Redis     *redis.Client              // 当前 API 进程共享的 Redis 客户端，由 Dependencies 统一关闭。
+	Metrics   *metrics.Registry          // 指标注册表及观察器所需的统计来源。
+	observer  *metrics.PoolStatsObserver // 连接池统计观察器，投入时持有，退出时随上下文停止。
+	closeOnce sync.Once                  // 确保重复或并发调用 Close 时只释放一次资源。
+	closeErr  error                      // 保存第一次关闭的结果，供后续 Close 调用返回相同结果。
 }
 
 // MySQLStats 返回 MySQL 连接池当前统计快照。
@@ -79,12 +79,12 @@ func NewDependencies(ctx context.Context, cfg config.Config) (*Dependencies, err
 	if err != nil {
 		return nil, errors.Join(fmt.Errorf("initialize redis: %w", err), db.Close()) // 合并 Redis 错误与 MySQL 关闭错误
 	}
-	// 组装依赖对象；指标注册表独立创建，采集器仅在启用指标时启动。
+	// 组装依赖对象；指标注册表独立创建，观察器仅在启用指标时启动。
 	dependencies := &Dependencies{MySQL: db, Redis: client, Metrics: metrics.New()} // 传入连接池与客户端，创建指标注册表
 	if cfg.Metrics.Enabled {
-		// 采集器读取共享连接池统计并周期发布指标，随 ctx 取消而停止。
-		dependencies.collector = metrics.NewCollector(dependencies.Metrics, dependencies, cfg.Metrics.CollectInterval) // 传入注册表、统计来源、采集周期；返回采集器
-		go dependencies.collector.Run(ctx)                                                                             // 传入上下文，在后台协程中周期采集
+		// 观察器读取共享连接池统计并周期发布指标，随 ctx 取消而停止。
+		dependencies.observer = metrics.NewPoolStatsObserver(dependencies.Metrics, dependencies, cfg.Metrics.CollectInterval) // 传入注册表、统计来源、采集周期；返回观察器
+		go dependencies.observer.Run(ctx)                                                                                     // 传入上下文，在后台协程中周期采集
 	}
 	return dependencies, nil
 }

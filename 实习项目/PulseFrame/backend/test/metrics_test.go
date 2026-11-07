@@ -81,16 +81,16 @@ func TestRegistryPublishesMetrics(t *testing.T) {
 	}
 }
 
-// TestCollectorPublishesPoolStats 验证采集器把连接池统计写入指标。
+// TestPoolStatsObserverPublishesPoolStats 验证观察器把连接池统计写入指标。
 // 输入：测试上下文。
 // 输出：指标值与预期不符时测试失败。
 // 功能：确认 MySQL 与 Redis 池指标随采集更新。
-func TestCollectorPublishesPoolStats(t *testing.T) {
+func TestPoolStatsObserverPublishesPoolStats(t *testing.T) {
 	registry := metrics.New()
-	collector := metrics.NewCollector(registry, fakePoolStats{}, 10*time.Millisecond)
+	observer := metrics.NewPoolStatsObserver(registry, fakePoolStats{}, 10*time.Millisecond)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go collector.Run(ctx)
+	go observer.Run(ctx)
 	time.Sleep(80 * time.Millisecond)
 	cancel()
 
