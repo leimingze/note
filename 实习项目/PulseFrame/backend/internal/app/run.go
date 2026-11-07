@@ -45,6 +45,10 @@ func Run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 	// 先建日志器，是因为后面任何一步失败，都需要有日志器来记录错误。
 	// logging.New 只做最基础的 JSON 日志器，再通过 With 附加公共字段（service、environment），
 	// 这样所有日志都自动带上这两个字段，方便采集检索。
+	// 数据样式：所有日志统一为 JSON 一行一条，公共字段固定追加在 msg 之后。例如访问日志：
+	// {"time":"2026-11-07T15:30:00.000+08:00","level":"INFO","msg":"http request completed",
+	//  "service":"pulseframe-api","environment":"local","request_id":"7baf01e9c2d3465089abcdef0123456789",
+	//  "method":"GET","path":"/livez","status":200,"duration_ms":2}
 	baseLogger, err := logging.New(cfg.LogLevel, os.Stdout) // 传入 cfg.LogLevel(日志级别)、os.Stdout(输出目标)；返回 baseLogger(JSON日志器)、err(错误)
 	if err != nil {
 		return fmt.Errorf("create logger: %w", err)
@@ -68,6 +72,10 @@ func Run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 	// ========== 第 5 步：创建健康状态与路由 ==========
 	// 就绪状态由 Health 记录，存活探针通过 Liveness 校验 MySQL/Redis 连通性；
 	// 指标启用时把注册表传给路由，挂载指标中间件并注册 /metrics 端点。
+	// 数据样式：/metrics 以 Prometheus 文本格式输出，指标名与标签见注册表定义。例如：
+	// # HELP pulseframe_http_requests_total 已完成 HTTP 请求数量
+	// # TYPE pulseframe_http_requests_total counter
+	// pulseframe_http_requests_total{method="GET",route="/livez",status="200"} 12
 	health := server.NewHealthState() // 无参数；返回 health(初始未就绪的健康状态)
 	var metricsRegistry *metrics.Registry
 	if cfg.Metrics.Enabled {
@@ -93,7 +101,10 @@ func Run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 
 	// 打印启动日志，然后阻塞运行。Run 会一直卡在这里，直到收到退出信号或服务出错。
 	logger.Info("pulseframe api starting", "address", cfg.HTTP.Address, "environment", cfg.Environment) // 传入启动信息与监听地址、环境
-	if err := httpServer.Run(ctx); err != nil {                                                         // 传入 ctx(退出信号上下文)；阻塞运行，退出或出错时返回 err
+	// 数据样式：上面的启动日志输出为
+	// {"time":"2026-11-07T15:30:00.000+08:00","level":"INFO","msg":"pulseframe api starting",
+	//  "service":"pulseframe-api","environment":"local","address":":8080"}
+	if err := httpServer.Run(ctx); err != nil { // 传入 ctx(退出信号上下文)；阻塞运行，退出或出错时返回 err
 		return fmt.Errorf("run http server: %w", err)
 	}
 	logger.Info("pulseframe api stopped")
