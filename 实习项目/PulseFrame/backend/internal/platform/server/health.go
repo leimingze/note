@@ -17,6 +17,13 @@ type DependencyProbe func(ctx context.Context) error
 // defaultProbeTimeout 限制存活接口执行依赖检查的整体期限，避免探针阻塞请求。
 const defaultProbeTimeout = 3 * time.Second
 
+// 健康状态常量描述存活和就绪探针的对外状态文本。
+const (
+	healthOK        = "ok"        // 进程与依赖均可用。
+	healthNotReady  = "not_ready" // 服务尚未就绪。
+	healthUnhealthy = "unhealthy" // 外部依赖不可用。
+)
+
 // HealthState 保存服务是否已经准备接收请求。
 type HealthState struct {
 	ready atomic.Bool // 可并发读写的就绪标记，初始值为 false。
@@ -73,11 +80,11 @@ func (handler liveHandler) handle(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), defaultProbeTimeout) // 传入请求上下文与探测期限；返回探测上下文、取消函数
 		defer cancel()
 		if err := handler.probe(ctx); err != nil { // 执行依赖探测；依赖不可用时进入该分支
-			c.JSON(http.StatusServiceUnavailable, response.HealthResponse{Status: response.HealthUnhealthy}) // 写入 503 依赖不可用响应
+			c.JSON(http.StatusServiceUnavailable, response.HealthResponse{Status: healthUnhealthy}) // 写入 503 依赖不可用响应
 			return
 		}
 	}
-	c.JSON(http.StatusOK, response.HealthResponse{Status: response.HealthOK}) // 传入状态码与响应体，写入存活响应
+	c.JSON(http.StatusOK, response.HealthResponse{Status: healthOK}) // 传入状态码与响应体，写入存活响应
 }
 
 // readyHandler 保存就绪接口依赖。
@@ -93,8 +100,8 @@ type readyHandler struct {
 func (handler readyHandler) handle(c *gin.Context) {
 	// 初始化未完成或服务正在退出时返回 503，让负载均衡停止分流。
 	if !handler.health.Ready() { // 查询当前就绪标记；未就绪时进入该分支
-		c.JSON(http.StatusServiceUnavailable, response.HealthResponse{Status: response.HealthNotReady}) // 写入 503 未就绪响应
+		c.JSON(http.StatusServiceUnavailable, response.HealthResponse{Status: healthNotReady}) // 写入 503 未就绪响应
 		return
 	}
-	c.JSON(http.StatusOK, response.HealthResponse{Status: response.HealthOK}) // 写入 200 就绪响应
+	c.JSON(http.StatusOK, response.HealthResponse{Status: healthOK}) // 写入 200 就绪响应
 }

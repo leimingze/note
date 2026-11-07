@@ -18,13 +18,6 @@ const (
 	CodeDependencyUnavailable = "DEPENDENCY_UNAVAILABLE" // 外部依赖不可用。
 )
 
-// HealthStatus 系列常量描述存活和就绪探针的对外状态文本。
-const (
-	HealthOK        = "ok"        // 进程与依赖均可用。
-	HealthNotReady  = "not_ready" // 服务尚未就绪。
-	HealthUnhealthy = "unhealthy" // 外部依赖不可用。
-)
-
 // ErrorSpec 描述对外稳定的 HTTP 错误。
 type ErrorSpec struct {
 	Status  int    // HTTP 状态码，例如404。
