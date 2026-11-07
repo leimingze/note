@@ -65,8 +65,8 @@ func Run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 	}()
 
 	// ========== 第 5 步：创建健康状态与路由 ==========
-	// 健康状态 /livez、/readyz 共用；指标启用时把注册表传给路由，
-	// 让路由挂载指标中间件并注册 /metrics 端点。
+	// 就绪状态由 Health 记录，存活探针通过 Liveness 校验 MySQL/Redis 连通性；
+	// 指标启用时把注册表传给路由，挂载指标中间件并注册 /metrics 端点。
 	health := server.NewHealthState() // 无参数；返回 health(初始未就绪的健康状态)
 	var metricsRegistry *metrics.Registry
 	if cfg.Metrics.Enabled {
@@ -77,6 +77,7 @@ func Run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 		IDGenerator: middleware.CryptoIDGenerator{}, // 传入随机请求 ID 生成器
 		Health:      health,                         // 传入共享健康状态
 		Metrics:     metricsRegistry,                // 传入指标注册表（未启用时为 nil，不注册指标端点）
+		Liveness:    dependencies.Ping,              // 传入依赖探测函数，让 /livez 校验 MySQL 与 Redis 连通性
 	}) // 返回 router(配置好的 Gin 路由)、err(错误)
 	if err != nil {
 		return fmt.Errorf("create router: %w", err)

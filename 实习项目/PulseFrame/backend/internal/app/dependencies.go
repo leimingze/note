@@ -24,6 +24,46 @@ type Dependencies struct {
 	closeErr  error              // 保存第一次关闭的结果，供后续 Close 调用返回相同结果。
 }
 
+// MySQLStats 返回 MySQL 连接池当前统计快照。
+// 输入：无。
+// 输出：sql.DBStats 统计。
+// 功能：向指标采集器提供 MySQL 连接池数据。
+func (dependencies *Dependencies) MySQLStats() sql.DBStats {
+	return dependencies.MySQL.Stats() // 无参数；返回 MySQL 连接池统计快照
+}
+
+// RedisPoolStats 返回 Redis 客户端连接池当前统计快照。
+// 输入：无。
+// 输出：redis.PoolStats 统计。
+// 功能：向指标采集器提供 Redis 连接池数据。
+func (dependencies *Dependencies) RedisPoolStats() *redis.PoolStats {
+	return dependencies.Redis.PoolStats() // 无参数；返回 Redis 客户端连接池统计快照
+}
+
+// Ping 探测 MySQL 与 Redis 连通性，任一不可用时返回错误。
+// 输入：ctx，控制探测期限的上下文。
+// 输出：全部依赖可用时返回 nil；存在不可用依赖时返回带名称的错误。
+// 功能：供存活探针校验共享连接池对应的外部组件状态。
+// 例如 MySQL 停止响应时，返回包含 mysql unreachable 的错误。
+func (dependencies *Dependencies) Ping(ctx context.Context) error {
+	return errors.Join(
+		pingDependency("mysql", dependencies.MySQL.PingContext(ctx)), // 探测 MySQL 并将失败标记依赖名
+		pingDependency("redis", dependencies.Redis.Ping(ctx).Err()), // 探测 Redis 并将失败标记依赖名
+	)
+}
+
+// pingDependency 把探测失败转换为带名称的错误。
+// 输入：name，依赖名称；err，探测返回的错误。
+// 输出：err 为 nil 时返回 nil；否则返回带依赖名称的错误。
+// 功能：统一标记不可用依赖，便于存活响应定位故障组件。
+// 例如探测 Redis 返回网络错误时，结果会带有 redis unreachable 前缀。
+func pingDependency(name string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%s unreachable: %w", name, err)
+}
+
 // 输入：ctx，启动上下文；cfg，应用配置。
 // 输出：连接 MySQL、Redis 并组装指标与采集器，返回持有共享依赖的对象；初始化失败时返回错误。
 // 功能：集中创建进程共享资源，Redis 初始化失败时清理已创建的 MySQL 连接池。
@@ -47,22 +87,6 @@ func NewDependencies(ctx context.Context, cfg config.Config) (*Dependencies, err
 		go dependencies.collector.Run(ctx)                                                                             // 传入上下文，在后台协程中周期采集
 	}
 	return dependencies, nil
-}
-
-// MySQLStats 返回 MySQL 连接池当前统计快照。
-// 输入：无。
-// 输出：sql.DBStats 统计。
-// 功能：向指标采集器提供 MySQL 连接池数据。
-func (dependencies *Dependencies) MySQLStats() sql.DBStats {
-	return dependencies.MySQL.Stats() // 无参数；返回 MySQL 连接池统计快照
-}
-
-// RedisPoolStats 返回 Redis 客户端连接池当前统计快照。
-// 输入：无。
-// 输出：redis.PoolStats 统计。
-// 功能：向指标采集器提供 Redis 连接池数据。
-func (dependencies *Dependencies) RedisPoolStats() *redis.PoolStats {
-	return dependencies.Redis.PoolStats() // 无参数；返回 Redis 客户端连接池统计快照
 }
 
 // 输入：dependencies，已成功创建的依赖对象。

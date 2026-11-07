@@ -1,11 +1,19 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"sync/atomic"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+// DependencyProbe 探测外部依赖连通性，任一依赖不可用时返回错误。
+type DependencyProbe func(ctx context.Context) error
+
+// defaultProbeTimeout 限制存活接口执行依赖检查的整体期限，避免探针阻塞请求。
+const defaultProbeTimeout = 3 * time.Second
 
 // HealthState 保存服务是否已经准备接收请求。
 type HealthState struct {
@@ -53,12 +61,25 @@ type healthResponse struct {
 	Status string `json:"status"` // 对外状态文本，使用 ok 或 not_ready。
 }
 
-// handleLive 返回进程存活状态。
+// liveHandler 保存存活接口可选执行的依赖探测函数。
+type liveHandler struct {
+	probe DependencyProbe // nil 表示不检查依赖，只报告进程存活。
+}
+
+// handle 返回进程存活状态，并在配置了依赖探测时校验依赖连通性。
 // 输入：c，当前 Gin 请求上下文。
-// 输出：写入 200 和固定存活状态。
-// 功能：让运行平台判断进程是否需要被重启。
-// 例如 GET /livez 返回200和 {"status":"ok"}，此接口不检查数据库。
-func handleLive(c *gin.Context) {
+// 输出：进程与依赖均正常时写入200；依赖不可用或探测超时时写入503。
+// 功能：让运行平台根据进程和关键依赖状态决定是否重启服务。
+// 例如未配置探测时 /livez 恒返回200；MySQL 不可达时返回503并附带 unhealthy 状态。
+func (handler liveHandler) handle(c *gin.Context) {
+	if handler.probe != nil {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), defaultProbeTimeout) // 传入请求上下文与探测期限；返回探测上下文、取消函数
+		defer cancel()
+		if err := handler.probe(ctx); err != nil { // 执行依赖探测；依赖不可用时进入该分支
+			c.JSON(http.StatusServiceUnavailable, healthResponse{Status: "unhealthy"}) // 写入 503 依赖不可用响应
+			return
+		}
+	}
 	c.JSON(http.StatusOK, healthResponse{Status: "ok"}) // 传入状态码与响应体，写入存活响应
 }
 

@@ -28,6 +28,7 @@ type RouterDependencies struct {
 	IDGenerator middleware.IDGenerator // 请求未携带合法标识时，用它生成新标识。
 	Health      *HealthState           // 生命周期更新、就绪接口读取的共享状态。
 	Metrics     *metrics.Registry      // 指标注册表，非空时注册指标端点与中间件。
+	Liveness    DependencyProbe        // 存活接口探测依赖连通性的函数，nil 时仅报告进程存活。
 }
 
 // NewRouter 创建核心 API 的 Gin 路由。
@@ -75,19 +76,20 @@ func NewRouter(dependencies RouterDependencies) (*gin.Engine, error) {
 		handlers = append(handlers, middleware.NewMetrics(dependencies.Metrics).Handle) // 传入注册表创建指标中间件并追加
 	}
 	router.Use(handlers...)                                                   // 按顺序挂载所有全局中间件
-	registerPlatformRoutes(router, dependencies.Health, dependencies.Metrics) // 传入路由、健康状态、注册表注册基础路由
+	registerPlatformRoutes(router, dependencies.Health, dependencies.Metrics, dependencies.Liveness) // 传入路由、健康状态、注册表、存活探测注册基础路由
 	registerRouteErrors(router)                                               // 传入路由注册统一错误处理
 	return router, nil
 }
 
 // registerPlatformRoutes 注册工程基础接口。
-// 输入：router，Gin 路由；health，共享健康状态；metricsRegistry，指标注册表（可为空）。
+// 输入：router，Gin 路由；health，共享健康状态；metricsRegistry，指标注册表（可为空）；probe，存活探测函数（可为 nil）。
 // 输出：修改路由注册表，无返回值。
 // 功能：提供存活、就绪探针和指标端点，不注册任何业务接口。
-// 例如注册后可通过 GET /livez 查询进程存活状态，通过 GET /readyz 查询就绪状态。
-func registerPlatformRoutes(router *gin.Engine, health *HealthState, metricsRegistry *metrics.Registry) {
+// 例如注册后可通过 GET /livez 查询进程及依赖存活状态，通过 GET /readyz 查询就绪状态。
+func registerPlatformRoutes(router *gin.Engine, health *HealthState, metricsRegistry *metrics.Registry, probe DependencyProbe) {
 	ready := readyHandler{health: health} // 组装就绪处理器
-	router.GET("/livez", handleLive)      // 注册存活探针路由
+	live := liveHandler{probe: probe}     // 组装存活处理器
+	router.GET("/livez", live.handle)     // 注册存活探针路由
 	router.GET("/readyz", ready.handle)   // 注册就绪探针路由
 	if metricsRegistry != nil {
 		// 指标端点使用进程内注册表，不依赖全局默认注册表。

@@ -2,11 +2,13 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -105,6 +107,53 @@ func TestHealthEndpoints(t *testing.T) {
 	// 发布就绪状态后，同一路由必须切换为 200。
 	if responseRecorder := performRequest(router, http.MethodGet, "/readyz"); responseRecorder.Code != http.StatusOK {
 		t.Fatalf("unexpected ready status: %d", responseRecorder.Code)
+	}
+}
+
+// TestLiveProbe 验证存活接口按依赖探测结果返回状态。
+// 输入：Go 测试框架提供的测试上下文。
+// 输出：探测失败未返回503或探测成功未返回200时使测试失败。
+// 功能：确保 /livez 在依赖不可用时能被平台识别并触发重启。
+// 例如探测返回错误时 /livez 返回503，探测成功时返回200。
+func TestLiveProbe(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	logger := slog.New(slog.NewJSONHandler(&bytes.Buffer{}, nil))
+
+	// 依赖探测失败时，存活接口必须返回 503。
+	failingRouter, err := server.NewRouter(server.RouterDependencies{
+		Logger:      logger,
+		IDGenerator: staticIDGenerator{value: testRequestID},
+		Health:      server.NewHealthState(),
+		Liveness: func(ctx context.Context) error {
+			return errors.New("mysql unreachable")
+		},
+	})
+	if err != nil {
+		t.Fatalf("create router: %v", err)
+	}
+	if recorder := performRequest(failingRouter, http.MethodGet, "/livez"); recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("unexpected live probe status: %d", recorder.Code)
+	}
+
+	// 依赖探测成功时，存活接口返回 200。
+	healthyRouter, err := server.NewRouter(server.RouterDependencies{
+		Logger:      logger,
+		IDGenerator: staticIDGenerator{value: testRequestID},
+		Health:      server.NewHealthState(),
+		Liveness: func(ctx context.Context) error {
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("create router: %v", err)
+	}
+	response := performRequest(healthyRouter, http.MethodGet, "/livez")
+	if response.Code != http.StatusOK {
+		t.Fatalf("unexpected healthy live status: %d", response.Code)
+	}
+	// 探测成功后响应正文应标记为 ok。
+	if !strings.Contains(response.Body.String(), "ok") {
+		t.Fatalf("unexpected live body: %s", response.Body.String())
 	}
 }
 
