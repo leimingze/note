@@ -68,41 +68,17 @@ func New(options Options) (*Server, error) {
 	}, nil
 }
 
-// Run 在配置地址监听并运行服务直到上下文取消。
-// 输入：ctx，控制服务生命周期的上下文。
-// 输出：监听网络端口并处理请求，正常关闭时返回 nil，监听或服务失败时返回错误。
-// 功能：按配置地址启动 HTTP 服务，并等待退出通知或服务错误。
-// 例如地址为 :8080 时监听8080端口；该端口已被占用时返回监听错误。
-func (server *Server) Run(ctx context.Context) error {
-	listener, err := net.Listen("tcp", server.server.Addr) // 传入监听地址；返回监听器、错误
-	// 端口绑定失败时服务尚未就绪，直接返回明确监听错误。
-	if err != nil {
-		return fmt.Errorf("listen on %s: %w", server.server.Addr, err)
+// normalizeServeError 统一 HTTP Server 的正常关闭结果。
+// 输入：err，标准库 Serve 返回的错误。
+// 输出：正常关闭映射为 nil，其他错误原样返回。
+// 功能：避免把 http.ErrServerClosed 误判为运行故障。
+// 例如传入 http.ErrServerClosed 返回 nil，传入其他网络错误则原样返回。
+func normalizeServeError(err error) error {
+	// Shutdown 导致的标准关闭错误属于预期结果，与 nil 一样视为成功。
+	if err == nil || errors.Is(err, http.ErrServerClosed) {
+		return nil
 	}
-	return server.Serve(ctx, listener) // 传入上下文与监听器，接管请求处理
-}
-
-// Serve 使用已有监听器运行服务直到上下文取消。
-// 输入：ctx，服务生命周期上下文；listener，已经成功绑定的网络监听器。
-// 输出：在已有监听器上处理请求并更新就绪状态；正常关闭时返回 nil，服务或关闭失败时返回错误。
-// 功能：接管已建立的监听器，启动请求处理，并在收到取消通知后安排关闭。
-// 例如调用方取消上下文后，服务先标记为未就绪，再停止接收新请求并等待现有请求结束。
-func (server *Server) Serve(ctx context.Context, listener net.Listener) error {
-	// 监听器已经成功创建，此时才能对外报告服务就绪。
-	server.health.SetReady()           // 标记服务就绪
-	serveErrors := make(chan error, 1) // 创建容量为1的结果通道
-	// http.Server.Serve 会阻塞，放入 goroutine 后才能同时监听退出信号。
-	go server.serve(listener, serveErrors) // 传入监听器与结果通道，后台运行服务
-
-	// 服务自身报错和外部退出信号，谁先发生就处理谁。
-	select {
-	case err := <-serveErrors:
-		server.health.SetNotReady()     // 服务出错时标记未就绪
-		return normalizeServeError(err) // 统一映射服务错误
-	case <-ctx.Done():
-		server.health.SetNotReady()         // 收到退出信号时标记未就绪
-		return server.shutdown(serveErrors) // 进入优雅关闭流程
-	}
+	return err
 }
 
 // serve 执行阻塞的 HTTP Serve 并传回结果。
@@ -130,15 +106,39 @@ func (server *Server) shutdown(serveErrors <-chan error) error {
 	return normalizeServeError(<-serveErrors) // 读取并统一映射服务结果
 }
 
-// normalizeServeError 统一 HTTP Server 的正常关闭结果。
-// 输入：err，标准库 Serve 返回的错误。
-// 输出：正常关闭映射为 nil，其他错误原样返回。
-// 功能：避免把 http.ErrServerClosed 误判为运行故障。
-// 例如传入 http.ErrServerClosed 返回 nil，传入其他网络错误则原样返回。
-func normalizeServeError(err error) error {
-	// Shutdown 导致的标准关闭错误属于预期结果，与 nil 一样视为成功。
-	if err == nil || errors.Is(err, http.ErrServerClosed) {
-		return nil
+// Serve 使用已有监听器运行服务直到上下文取消。
+// 输入：ctx，服务生命周期上下文；listener，已经成功绑定的网络监听器。
+// 输出：在已有监听器上处理请求并更新就绪状态；正常关闭时返回 nil，服务或关闭失败时返回错误。
+// 功能：接管已建立的监听器，启动请求处理，并在收到取消通知后安排关闭。
+// 例如调用方取消上下文后，服务先标记为未就绪，再停止接收新请求并等待现有请求结束。
+func (server *Server) Serve(ctx context.Context, listener net.Listener) error {
+	// 监听器已经成功创建，此时才能对外报告服务就绪。
+	server.health.SetReady()           // 标记服务就绪
+	serveErrors := make(chan error, 1) // 创建容量为1的结果通道
+	// http.Server.Serve 会阻塞，放入 goroutine 后才能同时监听退出信号。
+	go server.serve(listener, serveErrors) // 传入监听器与结果通道，后台运行服务
+
+	// 服务自身报错和外部退出信号，谁先发生就处理谁。
+	select {
+	case err := <-serveErrors:
+		server.health.SetNotReady()     // 服务出错时标记未就绪
+		return normalizeServeError(err) // 统一映射服务错误
+	case <-ctx.Done():
+		server.health.SetNotReady()         // 收到退出信号时标记未就绪
+		return server.shutdown(serveErrors) // 进入优雅关闭流程
 	}
-	return err
+}
+
+// Run 在配置地址监听并运行服务直到上下文取消。
+// 输入：ctx，控制服务生命周期的上下文。
+// 输出：监听网络端口并处理请求，正常关闭时返回 nil，监听或服务失败时返回错误。
+// 功能：按配置地址启动 HTTP 服务，并等待退出通知或服务错误。
+// 例如地址为 :8080 时监听8080端口；该端口已被占用时返回监听错误。
+func (server *Server) Run(ctx context.Context) error {
+	listener, err := net.Listen("tcp", server.server.Addr) // 传入监听地址；返回监听器、错误
+	// 端口绑定失败时服务尚未就绪，直接返回明确监听错误。
+	if err != nil {
+		return fmt.Errorf("listen on %s: %w", server.server.Addr, err)
+	}
+	return server.Serve(ctx, listener) // 传入上下文与监听器，接管请求处理
 }
