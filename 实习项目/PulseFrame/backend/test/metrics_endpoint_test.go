@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"pulseframe/metrics"
-	"pulseframe/server"
+	"pulseframe/internal/platform/metrics"
+	"pulseframe/internal/platform/server"
 )
 
 // TestMetricsEndpoint 验证指标启用时注册 /metrics。

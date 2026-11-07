@@ -9,9 +9,9 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"pulseframe/config"
-	"pulseframe/infra"
-	"pulseframe/metrics"
+	"pulseframe/internal/platform/config"
+	"pulseframe/internal/platform/infra"
+	"pulseframe/internal/platform/metrics"
 )
 
 // Dependencies 持有当前 API 进程创建的外部依赖，使用方借用连接池。
@@ -48,7 +48,7 @@ func (dependencies *Dependencies) RedisPoolStats() *redis.PoolStats {
 func (dependencies *Dependencies) Ping(ctx context.Context) error {
 	return errors.Join(
 		pingDependency("mysql", dependencies.MySQL.PingContext(ctx)), // 探测 MySQL 并将失败标记依赖名
-		pingDependency("redis", dependencies.Redis.Ping(ctx).Err()), // 探测 Redis 并将失败标记依赖名
+		pingDependency("redis", dependencies.Redis.Ping(ctx).Err()),  // 探测 Redis 并将失败标记依赖名
 	)
 }
 

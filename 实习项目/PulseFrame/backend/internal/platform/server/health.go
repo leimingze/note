@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"pulseframe/internal/platform/response"
 )
 
 // DependencyProbe 探测外部依赖连通性，任一依赖不可用时返回错误。
@@ -56,11 +58,6 @@ func (state *HealthState) Ready() bool {
 	return state.ready.Load() // 无参数；返回当前就绪标记
 }
 
-// healthResponse 是存活和就绪接口的响应体。
-type healthResponse struct {
-	Status string `json:"status"` // 对外状态文本，使用 ok 或 not_ready。
-}
-
 // liveHandler 保存存活接口可选执行的依赖探测函数。
 type liveHandler struct {
 	probe DependencyProbe // nil 表示不检查依赖，只报告进程存活。
@@ -76,11 +73,11 @@ func (handler liveHandler) handle(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), defaultProbeTimeout) // 传入请求上下文与探测期限；返回探测上下文、取消函数
 		defer cancel()
 		if err := handler.probe(ctx); err != nil { // 执行依赖探测；依赖不可用时进入该分支
-			c.JSON(http.StatusServiceUnavailable, healthResponse{Status: "unhealthy"}) // 写入 503 依赖不可用响应
+			c.JSON(http.StatusServiceUnavailable, response.HealthResponse{Status: response.HealthUnhealthy}) // 写入 503 依赖不可用响应
 			return
 		}
 	}
-	c.JSON(http.StatusOK, healthResponse{Status: "ok"}) // 传入状态码与响应体，写入存活响应
+	c.JSON(http.StatusOK, response.HealthResponse{Status: response.HealthOK}) // 传入状态码与响应体，写入存活响应
 }
 
 // readyHandler 保存就绪接口依赖。
@@ -96,8 +93,8 @@ type readyHandler struct {
 func (handler readyHandler) handle(c *gin.Context) {
 	// 初始化未完成或服务正在退出时返回 503，让负载均衡停止分流。
 	if !handler.health.Ready() { // 查询当前就绪标记；未就绪时进入该分支
-		c.JSON(http.StatusServiceUnavailable, healthResponse{Status: "not_ready"}) // 写入 503 未就绪响应
+		c.JSON(http.StatusServiceUnavailable, response.HealthResponse{Status: response.HealthNotReady}) // 写入 503 未就绪响应
 		return
 	}
-	c.JSON(http.StatusOK, healthResponse{Status: "ok"}) // 写入 200 就绪响应
+	c.JSON(http.StatusOK, response.HealthResponse{Status: response.HealthOK}) // 写入 200 就绪响应
 }

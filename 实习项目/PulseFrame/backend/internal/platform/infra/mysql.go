@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 
-	"pulseframe/config"
+	"pulseframe/internal/platform/config"
 )
 
 // 输入：ctx，启动上下文；cfg，MySQL 连接信息及连接池配置。

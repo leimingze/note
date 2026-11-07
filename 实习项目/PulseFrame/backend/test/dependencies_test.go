@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"pulseframe/config"
 	"pulseframe/internal/app"
+	"pulseframe/internal/platform/config"
 )
 
 const (

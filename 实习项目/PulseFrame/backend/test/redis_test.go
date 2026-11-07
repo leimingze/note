@@ -10,8 +10,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"pulseframe/config"
-	"pulseframe/infra"
+	"pulseframe/internal/platform/config"
+	"pulseframe/internal/platform/infra"
 )
 
 // 输入：t，测试上下文；进程环境需提供独立 Redis 配置。

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"pulseframe/config"
+	"pulseframe/internal/platform/config"
 )
 
 // TestMetricsDefaults 验证默认指标配置。

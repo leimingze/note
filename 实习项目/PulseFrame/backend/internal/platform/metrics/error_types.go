@@ -1,6 +1,5 @@
 package metrics
 
-
 // 服务端错误分类枚举，作为错误类型，仅在日志和指标中使用，不对客户端暴露。
 const (
 	ErrorConfigInvalid             = "config_invalid"              // 配置加载失败。

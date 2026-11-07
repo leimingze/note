@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"pulseframe/config"
+	"pulseframe/internal/platform/config"
 )
 
 const (

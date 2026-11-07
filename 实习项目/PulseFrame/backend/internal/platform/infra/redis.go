@@ -7,7 +7,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"pulseframe/config"
+	"pulseframe/internal/platform/config"
 )
 
 // 输入：ctx，启动上下文；cfg，Redis 连接信息及连接池配置。

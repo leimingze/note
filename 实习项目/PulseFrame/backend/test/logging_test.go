@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"pulseframe/logging"
+	"pulseframe/internal/platform/logging"
 )
 
 // TestNewWritesStructuredJSON 验证日志器输出可解析的 JSON。

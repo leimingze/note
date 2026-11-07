@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"pulseframe/metrics"
-	"pulseframe/response"
+	"pulseframe/internal/platform/metrics"
+	"pulseframe/internal/platform/response"
 )
 
 // MetricsMiddleware 记录 HTTP 请求指标。

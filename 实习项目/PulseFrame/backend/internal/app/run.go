@@ -10,11 +10,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"pulseframe/config"
-	"pulseframe/logging"
-	"pulseframe/metrics"
-	"pulseframe/middleware"
-	"pulseframe/server"
+	"pulseframe/internal/platform/config"
+	"pulseframe/internal/platform/logging"
+	"pulseframe/internal/platform/metrics"
+	"pulseframe/internal/platform/middleware"
+	"pulseframe/internal/platform/server"
 )
 
 // Run 是服务的总入口：负责把配置、日志、外部依赖、路由和 HTTP 服务按顺序组装起来，并一直运行到收到退出信号。

@@ -8,9 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"pulseframe/metrics"
-	"pulseframe/middleware"
-	"pulseframe/response"
+	"pulseframe/internal/platform/metrics"
+	"pulseframe/internal/platform/middleware"
+	"pulseframe/internal/platform/response"
 )
 
 var (
@@ -75,9 +75,9 @@ func NewRouter(dependencies RouterDependencies) (*gin.Engine, error) {
 		// 指标中间件紧邻日志中间件，记录请求数量、耗时和错误。
 		handlers = append(handlers, middleware.NewMetrics(dependencies.Metrics).Handle) // 传入注册表创建指标中间件并追加
 	}
-	router.Use(handlers...)                                                   // 按顺序挂载所有全局中间件
+	router.Use(handlers...)                                                                          // 按顺序挂载所有全局中间件
 	registerPlatformRoutes(router, dependencies.Health, dependencies.Metrics, dependencies.Liveness) // 传入路由、健康状态、注册表、存活探测注册基础路由
-	registerRouteErrors(router)                                               // 传入路由注册统一错误处理
+	registerRouteErrors(router)                                                                      // 传入路由注册统一错误处理
 	return router, nil
 }
 

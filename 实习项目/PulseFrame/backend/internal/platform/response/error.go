@@ -18,6 +18,13 @@ const (
 	CodeDependencyUnavailable = "DEPENDENCY_UNAVAILABLE" // 外部依赖不可用。
 )
 
+// HealthStatus 系列常量描述存活和就绪探针的对外状态文本。
+const (
+	HealthOK        = "ok"        // 进程与依赖均可用。
+	HealthNotReady  = "not_ready" // 服务尚未就绪。
+	HealthUnhealthy = "unhealthy" // 外部依赖不可用。
+)
+
 // ErrorSpec 描述对外稳定的 HTTP 错误。
 type ErrorSpec struct {
 	Status  int    // HTTP 状态码，例如404。
@@ -35,6 +42,11 @@ type errorDetail struct {
 type errorBody struct {
 	RequestID string      `json:"request_id"` // 用于关联服务端日志的请求标识。
 	Error     errorDetail `json:"error"`      // 本次失败的错误码和说明。
+}
+
+// HealthResponse 是存活和就绪接口的响应体。
+type HealthResponse struct {
+	Status string `json:"status"` // 对外状态文本，使用 ok、not_ready 或 unhealthy。
 }
 
 // WriteError 写入统一错误响应并终止当前 Gin 请求链路。

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"pulseframe/config"
+	"pulseframe/internal/platform/config"
 )
 
 // 输入：无。

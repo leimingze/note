@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"testing"
 
-	"pulseframe/middleware"
-	"pulseframe/response"
-	"pulseframe/server"
+	"pulseframe/internal/platform/middleware"
+	"pulseframe/internal/platform/response"
+	"pulseframe/internal/platform/server"
 )
 
 // 输入：Go 测试框架提供的测试上下文。

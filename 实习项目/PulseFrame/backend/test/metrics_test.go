@@ -11,8 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 
-	"pulseframe/metrics"
-	"pulseframe/middleware"
+	"pulseframe/internal/platform/metrics"
+	"pulseframe/internal/platform/middleware"
 )
 
 // fakePoolStats 提供固定的连接池统计，供采集器测试使用。

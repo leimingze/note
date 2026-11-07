@@ -13,9 +13,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"pulseframe/middleware"
-	"pulseframe/response"
-	"pulseframe/server"
+	"pulseframe/internal/platform/middleware"
+	"pulseframe/internal/platform/response"
+	"pulseframe/internal/platform/server"
 )
 
 // testRequestID 是路由测试预设并用于断言的请求关联标识。
