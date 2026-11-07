@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -85,7 +86,7 @@ func Run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 
 	// ========== 第 6 步：创建 HTTP 服务并运行 ==========
 	// 把路由、健康状态、超时配置组装成 HTTP 服务。
-	httpServer, err := server.New(server.OptionsFromConfig(cfg, router, health)) // OptionsFromConfig 传入 cfg/router/health 返回服务参数；New 传入服务参数返回 httpServer、err
+	httpServer, err := server.New(optionsFromConfig(cfg, router, health)) // optionsFromConfig 传入 cfg/router/health 返回服务参数；New 传入服务参数返回 httpServer、err
 	if err != nil {
 		return fmt.Errorf("create http server: %w", err)
 	}
@@ -111,5 +112,23 @@ func ginMode(environment string) string {
 		return gin.ReleaseMode
 	default:
 		return gin.DebugMode
+	}
+}
+
+// optionsFromConfig 将应用配置转换为 HTTP Server 参数。
+// 输入：cfg，已校验配置；handler，HTTP 路由；health，共享健康状态。
+// 输出：可传给 server.New 的服务参数。
+// 功能：取出 HTTP 配置，并与路由和健康状态组成创建服务所需的参数。
+// 例如配置中的监听地址为 :8080，返回参数中的 Address 也为 :8080。
+func optionsFromConfig(cfg config.Config, handler http.Handler, health *server.HealthState) server.Options {
+	return server.Options{
+		Address:           cfg.HTTP.Address,           // 取监听地址
+		Handler:           handler,                    // 装入路由处理器
+		Health:            health,                     // 装入健康状态
+		ReadHeaderTimeout: cfg.HTTP.ReadHeaderTimeout, // 取请求头超时
+		ReadTimeout:       cfg.HTTP.ReadTimeout,       // 取读取超时
+		WriteTimeout:      cfg.HTTP.WriteTimeout,      // 取写入超时
+		IdleTimeout:       cfg.HTTP.IdleTimeout,       // 取空闲超时
+		ShutdownTimeout:   cfg.HTTP.ShutdownTimeout,   // 取退出超时
 	}
 }

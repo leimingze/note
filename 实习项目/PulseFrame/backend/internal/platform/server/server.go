@@ -7,8 +7,6 @@ import (
 	"net"
 	"net/http"
 	"time"
-
-	"pulseframe/internal/platform/config"
 )
 
 var (
@@ -35,24 +33,6 @@ type Server struct {
 	server          *http.Server  // 接收请求并管理 HTTP 连接的标准库服务对象。
 	health          *HealthState  // 启动和退出时更新的共享就绪状态。
 	shutdownTimeout time.Duration // 发起关闭后最多等待多久。
-}
-
-// OptionsFromConfig 将应用配置转换为 HTTP Server 参数。
-// 输入：cfg，已校验配置；handler，HTTP 路由；health，共享健康状态。
-// 输出：可传给 New 的服务参数。
-// 功能：取出 HTTP 配置，并与路由和健康状态组成创建服务所需的参数。
-// 例如配置中的监听地址为 :8080，返回参数中的 Address 也为 :8080。
-func OptionsFromConfig(cfg config.Config, handler http.Handler, health *HealthState) Options {
-	return Options{
-		Address:           cfg.HTTP.Address,           // 取监听地址
-		Handler:           handler,                    // 装入路由处理器
-		Health:            health,                     // 装入健康状态
-		ReadHeaderTimeout: cfg.HTTP.ReadHeaderTimeout, // 取请求头超时
-		ReadTimeout:       cfg.HTTP.ReadTimeout,       // 取读取超时
-		WriteTimeout:      cfg.HTTP.WriteTimeout,      // 取写入超时
-		IdleTimeout:       cfg.HTTP.IdleTimeout,       // 取空闲超时
-		ShutdownTimeout:   cfg.HTTP.ShutdownTimeout,   // 取退出超时
-	}
 }
 
 // New 创建 HTTP 服务生命周期对象。
