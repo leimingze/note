@@ -11,14 +11,14 @@ import (
 
 // MetricsMiddleware 记录 HTTP 请求指标。
 type MetricsMiddleware struct {
-	observer metrics.HTTPObserver // 记录请求指标的观察器。
+	observer *metrics.HTTPObserver // 记录请求指标的观察器。
 }
 
 // NewMetrics 创建指标中间件。
 // 输入：observer，HTTP 请求指标观察器。
 // 输出：可注册到 Gin 的中间件。
 // 功能：保存观察器，供每次请求调用记录数量、耗时和进行中请求数。
-func NewMetrics(observer metrics.HTTPObserver) *MetricsMiddleware {
+func NewMetrics(observer *metrics.HTTPObserver) *MetricsMiddleware {
 	return &MetricsMiddleware{observer: observer} // 传入观察器；返回指标中间件
 }
 
