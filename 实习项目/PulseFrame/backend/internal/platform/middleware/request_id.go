@@ -5,8 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"net/http"
-	"regexp"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -16,13 +14,9 @@ import (
 const (
 	// requestIDBytes 决定新请求标识包含的安全随机字节数。
 	requestIDBytes = 16
-	// maxRequestIDLength 限制允许透传的上游请求标识长度。
-	maxRequestIDLength = 128
 )
 
 var (
-	// requestIDPattern 只允许适合日志和 HTTP 响应头的可打印字符。
-	requestIDPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
 	// errNilIDGenerator 表示请求标识中间件缺少随机 ID 生成器。
 	errNilIDGenerator = errors.New("request id generator is required")
 )
@@ -55,7 +49,7 @@ func (CryptoIDGenerator) NewID() (string, error) {
 
 // RequestIDMiddleware 保存请求标识中间件依赖。
 type RequestIDMiddleware struct {
-	generator IDGenerator // 请求未携带合法标识时使用的生成器。
+	generator IDGenerator // 为每次请求生成新标识的生成器。
 }
 
 // NewRequestID 创建请求标识中间件。
@@ -74,36 +68,21 @@ func NewRequestID(generator IDGenerator) (*RequestIDMiddleware, error) {
 // Handle 解析或生成请求标识并写入上下文与响应头。
 // 输入：c，当前 Gin 请求上下文。
 // 输出：继续请求链路；生成失败时返回统一 500 错误并终止链路。
-// 功能：保证所有进入业务路由的请求都拥有合法请求标识。
-// 例如请求携带 X-Request-ID: upstream-123 时，响应头和请求上下文都会保存 upstream-123。
+// 功能：无视上游请求标识，为每次请求统一生成新标识，避免重复值污染日志。
+// 例如生成器返回 abc123 时，响应头和请求上下文都会保存 abc123。
 func (middleware *RequestIDMiddleware) Handle(c *gin.Context) {
-	// 只透传长度和字符合法的上游 ID，避免控制字符进入日志或响应头。
-	requestID := strings.TrimSpace(c.GetHeader(response.RequestIDHeader)) // 读取并清理请求标识头部
-	// 缺失或不安全的上游值必须替换成本服务生成的新标识。
-	if !validRequestID(requestID) { // 校验上游标识；非法时生成新标识
-		generated, err := middleware.generator.NewID() // 调用生成器；返回新标识、错误
-		// 生成失败时无法建立日志关联，返回统一内部错误并终止请求。
-		if err != nil {
-			response.WriteError(c, response.ErrorSpec{ // 传入上下文与 500 错误规格
-				Status:  http.StatusInternalServerError,
-				Code:    response.CodeInternal,
-				Message: "internal server error",
-			})
-			return
-		}
-		requestID = generated // 采用新生成的标识
+	requestID, err := middleware.generator.NewID() // 每次请求调用生成器取得新标识
+	// 生成失败时无法建立日志关联，返回统一内部错误并终止请求。
+	if err != nil {
+		response.WriteError(c, response.ErrorSpec{ // 传入上下文与 500 错误规格
+			Status:  http.StatusInternalServerError,
+			Code:    response.CodeInternal,
+			Message: "internal server error",
+		})
+		return
 	}
 	// 在进入后续中间件前同时写入上下文和响应头。
 	c.Set(response.RequestIDContextKey, requestID) // 将请求标识写入上下文
 	c.Header(response.RequestIDHeader, requestID)  // 将请求标识写入响应头
 	c.Next()                                       // 交给后续中间件和路由处理请求
-}
-
-// validRequestID 判断上游请求标识是否可以安全透传。
-// 输入：value，已经清理首尾空白的请求标识。
-// 输出：长度和字符集合均合法时返回 true。
-// 功能：阻止超长或包含控制字符的标识进入日志和响应头。
-// 例如 "request-123" 返回 true，含空格的 "request 123" 和空字符串返回 false。
-func validRequestID(value string) bool {
-	return value != "" && len(value) <= maxRequestIDLength && requestIDPattern.MatchString(value) // 校验非空、长度与字符集合
 }

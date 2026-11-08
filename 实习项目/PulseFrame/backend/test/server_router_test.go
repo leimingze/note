@@ -157,22 +157,22 @@ func TestLiveProbe(t *testing.T) {
 	}
 }
 
-// TestRequestIDPropagation 验证合法上游请求标识被透传。
+// TestRequestIDGeneration 验证后端为每次请求生成新标识并忽略上游请求标识。
 // 输入：Go 测试框架提供的测试上下文。
-// 输出：响应头未返回相同请求标识时使测试失败。
-// 功能：保护跨服务请求追踪所需的标识传递行为。
-// 例如请求头携带 upstream-123 时，检查响应头也返回 upstream-123。
-func TestRequestIDPropagation(t *testing.T) {
+// 输出：响应头未返回生成器输出的请求标识时使测试失败。
+// 功能：保证每次请求使用后端生成的新标识，避免上游重复值污染日志。
+// 例如请求头携带 upstream-123 时，检查响应头返回测试预设的 request-test-001。
+func TestRequestIDGeneration(t *testing.T) {
 	health := server.NewHealthState()
 	router, _ := newTestRouter(t, health)
-	// 为存活请求设置合法的上游标识，随后检查响应头是否原样返回。
+	// 为存活请求设置上游标识，随后检查响应头返回的是生成器输出的标识而非上游值。
 	request := httptest.NewRequest(http.MethodGet, "/livez", nil)
 	request.Header.Set(response.RequestIDHeader, "upstream-123")
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, request)
 
-	// 合法上游标识必须原样返回，不能被随机生成器覆盖。
-	if value := recorder.Header().Get(response.RequestIDHeader); value != "upstream-123" {
+	// 无论上游值为何，响应头必须使用生成器输出的标识。
+	if value := recorder.Header().Get(response.RequestIDHeader); value != testRequestID {
 		t.Fatalf("unexpected request id: %q", value)
 	}
 }
