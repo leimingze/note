@@ -28,7 +28,7 @@ func CreateUserWithCredential(ctx context.Context, db *gorm.DB, user *model.User
 // 功能：登录验证密码时读取哈希及所属用户。
 // 例如存在该用户名时返回对应凭据，不存在时返回 ErrRecordNotFound。
 func GetCredentialByUsername(ctx context.Context, db *gorm.DB, username string) (*model.PasswordCredential, error) {
-	var credential model.PasswordCredential // 查询结果容器
+	var credential model.PasswordCredential                                                              // 查询结果容器
 	if err := db.WithContext(ctx).Where("username = ?", username).First(&credential).Error; err != nil { // 按用户名查询凭据
 		return nil, err
 	}
@@ -41,9 +41,33 @@ func GetCredentialByUsername(ctx context.Context, db *gorm.DB, username string) 
 // 功能：登录、刷新或资源权限检查时读取账号状态与版本。
 // 例如存在该用户时返回记录，不存在时返回 ErrRecordNotFound。
 func GetUserByID(ctx context.Context, db *gorm.DB, id string) (*model.User, error) {
-	var user model.User // 查询结果容器
+	var user model.User                                                                // 查询结果容器
 	if err := db.WithContext(ctx).Where("id = ?", id).First(&user).Error; err != nil { // 按主键查询用户
 		return nil, err
 	}
 	return &user, nil
+}
+
+// DisableUser 封禁用户：置为禁用并递增账号版本。
+// 输入：ctx，上下文；db，gorm 实例；id，用户 UUID。
+// 输出：更新成功返回 nil；未找到或更新失败时返回错误。
+// 功能：使未签发会话无法续期，登录和刷新随即被拒绝。
+// 例如对已注册用户调用后，其 status 变 disabled 且 auth_version 递增。
+func DisableUser(ctx context.Context, db *gorm.DB, id string) error {
+	if err := db.WithContext(ctx).Model(&model.User{}).Where("id = ?", id).
+		UpdateColumn("auth_version", gorm.Expr("auth_version + 1")).Error; err != nil { // 先递增账号版本
+		return err
+	}
+	return db.WithContext(ctx).Model(&model.User{}).Where("id = ?", id).
+		Update("status", "disabled").Error // 再置为禁用
+}
+
+// RestoreUser 恢复用户：仅恢复启用状态，保留已递增版本。
+// 输入：ctx，上下文；db，gorm 实例；id，用户 UUID。
+// 输出：更新成功返回 nil；未找到或更新失败时返回错误。
+// 功能：让用户可再次登录，旧会话仍不可续期。
+// 例如对禁用用户调用后，其 status 变 active 且 auth_version 不变。
+func RestoreUser(ctx context.Context, db *gorm.DB, id string) error {
+	return db.WithContext(ctx).Model(&model.User{}).Where("id = ?", id).
+		Update("status", "active").Error // 仅恢复启用状态
 }

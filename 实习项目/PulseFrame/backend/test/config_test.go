@@ -59,11 +59,13 @@ func TestLoadDefaults(t *testing.T) {
 func TestLoadOverrides(t *testing.T) {
 	values := envMap{
 		"MYSQL_USER": "config-test", "MYSQL_PASSWORD": "", "MYSQL_DATABASE": "config-test",
-		envAppEnvironment:  config.EnvironmentStaging,
-		envHTTPAddress:     "127.0.0.1:18080",
-		envLogLevel:        "debug",
-		envReadTimeout:     "3s",
-		envShutdownTimeout: "6s",
+		envAppEnvironment:           config.EnvironmentStaging,
+		envHTTPAddress:              "127.0.0.1:18080",
+		envLogLevel:                 "debug",
+		envReadTimeout:              "3s",
+		envShutdownTimeout:          "6s",
+		"AUTH_JWT_PRIVATE_KEY_PATH": "testdata/jwt-private.pem",
+		"AUTH_JWT_PUBLIC_KEY_PATH":  "testdata/jwt-public.pem",
 	}
 	cfg, err := config.Load(values.Lookup)
 	// 合法覆盖组合必须能够完整加载。

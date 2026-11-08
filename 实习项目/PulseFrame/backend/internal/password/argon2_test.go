@@ -8,7 +8,7 @@ import "testing"
 // 功能：验证 Hash 与 Verify 往返行为。
 // 例如对正确密码生成的哈希，Verify 返回 true；错误密码返回 false。
 func TestHashAndVerifyRoundTrip(t *testing.T) {
-	params := DefaultParams() // 获取默认哈希参数
+	params := DefaultParams()                                           // 获取默认哈希参数
 	hashed, err := Hash([]byte("correct horse battery staple"), params) // 生成密码哈希
 	if err != nil {
 		t.Fatal(err)

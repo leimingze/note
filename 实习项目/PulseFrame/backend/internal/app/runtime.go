@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"pulseframe/internal/handler"
 	"pulseframe/internal/platform/config"
 	"pulseframe/internal/platform/metrics"
 	"pulseframe/internal/platform/middleware"
@@ -41,5 +42,23 @@ func NewRuntime(logger *slog.Logger, cfg config.Config, dependencies *Dependenci
 	if err != nil {
 		return nil, fmt.Errorf("initialize router: %w", err)
 	}
+	authHandler, err := handler.NewAuthHandler(dependencies.MySQL, dependencies.Redis, cfg.Auth) // 创建认证处理器
+	if err != nil {
+		return nil, fmt.Errorf("initialize auth handler: %w", err)
+	}
+	registerAuthRoutes(router, authHandler) // 注册认证接口
 	return &APIRuntime{Router: router, Health: health}, nil
+}
+
+// registerAuthRoutes 注册登录、注册、刷新与退出接口。
+// 输入：router，Gin 路由；handler，认证处理器。
+// 输出：修改路由注册表，无返回值。
+// 功能：把认证接口挂到 /api 前缀下。
+// 例如注册后可通过 POST /api/login 执行登录。
+func registerAuthRoutes(router *gin.Engine, handler *handler.AuthHandler) {
+	api := router.Group("/api") // 业务接口前缀
+	api.POST("/register", handler.Register)
+	api.POST("/login", handler.Login)
+	api.POST("/refresh", handler.Refresh)
+	api.POST("/logout", handler.Logout)
 }

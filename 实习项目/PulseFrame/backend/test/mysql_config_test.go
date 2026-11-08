@@ -13,7 +13,13 @@ import (
 // 功能：为配置解析测试提供有效输入，防止必填错误遮盖其他校验。
 // 例如返回的映射包含 MYSQL_USER 和 MYSQL_DATABASE，并显式把 MYSQL_PASSWORD 设置为空字符串。
 func mysqlEnvironment() envMap {
-	return envMap{"MYSQL_USER": "config-test", "MYSQL_PASSWORD": "", "MYSQL_DATABASE": "config-test"}
+	return envMap{
+		"MYSQL_USER":                "config-test",
+		"MYSQL_PASSWORD":            "",
+		"MYSQL_DATABASE":            "config-test",
+		"AUTH_JWT_PRIVATE_KEY_PATH": "testdata/jwt-private.pem",
+		"AUTH_JWT_PUBLIC_KEY_PATH":  "testdata/jwt-public.pem",
+	}
 }
 
 // 输入：t，测试上下文。

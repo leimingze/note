@@ -58,7 +58,7 @@ func (dependencies *Dependencies) Ping(ctx context.Context) error {
 	}
 	return errors.Join(
 		pingDependency("mysql", sqlDB.PingContext(ctx)),             // 探测 MySQL 并将失败标记依赖名
-		pingDependency("redis", dependencies.Redis.Ping(ctx).Err()),  // 探测 Redis 并将失败标记依赖名
+		pingDependency("redis", dependencies.Redis.Ping(ctx).Err()), // 探测 Redis 并将失败标记依赖名
 	)
 }
 
@@ -127,7 +127,7 @@ func (dependencies *Dependencies) Close() error {
 		// 关闭整个共享连接池会影响所有使用方，调用入口统一安排在服务退出阶段。
 		dependencies.closeErr = errors.Join(
 			closeDependency("mysql", closeDB(dependencies.MySQL)), // 关闭 MySQL 并标依赖名
-			closeDependency("redis", dependencies.Redis.Close()), // 关闭 Redis 并标记依赖名
+			closeDependency("redis", dependencies.Redis.Close()),  // 关闭 Redis 并标记依赖名
 		)
 	})
 	return dependencies.closeErr

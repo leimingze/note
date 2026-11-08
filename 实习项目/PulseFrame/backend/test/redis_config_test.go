@@ -14,9 +14,11 @@ import (
 // 例如返回的映射把 REDIS_PASSWORD 设置为空字符串，表示允许未启用密码认证的本地 Redis。
 func redisEnvironment() envMap {
 	return envMap{
-		"MYSQL_USER":     "config-test",
-		"MYSQL_PASSWORD": "",
-		"MYSQL_DATABASE": "config-test",
+		"MYSQL_USER":                "config-test",
+		"MYSQL_PASSWORD":            "",
+		"MYSQL_DATABASE":            "config-test",
+		"AUTH_JWT_PRIVATE_KEY_PATH": "testdata/jwt-private.pem",
+		"AUTH_JWT_PUBLIC_KEY_PATH":  "testdata/jwt-public.pem",
 	}
 }
 

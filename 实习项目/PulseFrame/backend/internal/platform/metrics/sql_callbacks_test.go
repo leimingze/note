@@ -15,7 +15,7 @@ import (
 // 功能：确保成功操作只计数，失败操作计入对应错误分类。
 // 例如 create 成功一次，计数为1；再发生超时错误，错误计数累计 dependency_timeout。
 func TestObserveSQLOperation(t *testing.T) {
-	registry := New() // 创建独立指标注册表
+	registry := New()                                                 // 创建独立指标注册表
 	observeSQLOperation(registry, "create", 10*time.Millisecond, nil) // 统计一次成功的 create 操作
 	if got := testutil.ToFloat64(registry.DependencyOperations.WithLabelValues("mysql", "create", "ok")); got != 1 {
 		t.Fatalf("create operations = %v, want 1", got)

@@ -62,7 +62,7 @@ func lookupEnv(key string) (string, bool) {
 // 例如调用返回形如 7baf01e9c2d3465089abcdef0123456789 的标识。
 func newID(t *testing.T) string {
 	t.Helper()
-	content := make([]byte, 16) // 分配16字节随机数据
+	content := make([]byte, 16)                   // 分配16字节随机数据
 	if _, err := rand.Read(content); err != nil { // 读取安全随机字节
 		t.Fatal(err)
 	}
@@ -130,5 +130,41 @@ func TestUserStoreUniqueConflictRollsBack(t *testing.T) {
 	}
 	if count != 0 { // 冲突失败后不残留半成品用户
 		t.Fatalf("conflict transaction left user: count=%d", count)
+	}
+}
+
+// TestUserStoreDisableAndRestore 验证封禁与恢复语义。
+// 输入：Go 测试框架提供的测试上下文。
+// 输出：封禁或恢复后的状态与版本不符合预期时使测试失败。
+// 功能：验证禁用递增版本、恢复仅改状态。
+// 例如封禁后 status=disabled 且版本递增；恢复后 status=active 且版本不变。
+func TestUserStoreDisableAndRestore(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+	userID := newID(t)
+	user := &model.User{ID: userID, Status: "active", AuthVersion: 1}
+	credential := &model.PasswordCredential{UserID: userID, Username: "ban_user", PasswordHash: "hash"}
+	if err := CreateUserWithCredential(ctx, db, user, credential); err != nil { // 创建用户
+		t.Fatal(err)
+	}
+	if err := DisableUser(ctx, db, userID); err != nil { // 封禁用户
+		t.Fatal(err)
+	}
+	banned, err := GetUserByID(ctx, db, userID) // 查询封禁后状态
+	if err != nil {
+		t.Fatal(err)
+	}
+	if banned.Status != "disabled" || banned.AuthVersion != 2 { // 禁用且版本递增
+		t.Fatalf("unexpected banned state: %+v", banned)
+	}
+	if err := RestoreUser(ctx, db, userID); err != nil { // 恢复用户
+		t.Fatal(err)
+	}
+	restored, err := GetUserByID(ctx, db, userID) // 查询恢复后状态
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restored.Status != "active" || restored.AuthVersion != 2 { // 仅恢复状态、版本保留
+		t.Fatalf("unexpected restored state: %+v", restored)
 	}
 }

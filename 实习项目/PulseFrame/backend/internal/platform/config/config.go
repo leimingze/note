@@ -28,6 +28,7 @@ type Config struct {
 	MySQL       MySQL   // MySQL 模块加载的连接信息和连接池参数。
 	Redis       Redis   // Redis 模块加载的认证信息和连接池参数。
 	Metrics     Metrics // 指标模块加载的开关、暴露路径和采集周期。
+	Auth        Auth    // 认证模块加载的 JWT 密钥与令牌、会话、限流参数。
 }
 
 // Load 从环境变量读取并校验配置。
@@ -75,6 +76,11 @@ func Load(lookup LookupEnv) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	// 读取认证配置；JWT 密钥与令牌、会话、限流参数在此集中加载并校验。
+	authConfig, err := loadAuth(lookup) // 读取认证配置
+	if err != nil {
+		return Config{}, err
+	}
 	return Config{
 		Environment: environment,
 		LogLevel:    logLevel,
@@ -82,6 +88,7 @@ func Load(lookup LookupEnv) (Config, error) {
 		MySQL:       mysqlConfig,
 		Redis:       redisConfig,
 		Metrics:     metricsConfig,
+		Auth:        authConfig,
 	}, nil
 }
 

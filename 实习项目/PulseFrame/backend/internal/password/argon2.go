@@ -14,11 +14,11 @@ import (
 
 // Argon2id 哈希参数默认值，兼顾内存开销与爆破抵抗。
 const (
-	defaultMemory    = 19456 // 内存成本（KiB），约19MiB。
-	defaultTime      = 2     // 迭代次数。
-	defaultThreads   = 1     // 并行度，单核即满足默认场景。
-	defaultKeyLength = 32    // 派生密钥长度（字节）。
-	defaultSaltLength = 16   // 随机盐长度（字节）。
+	defaultMemory     = 19456 // 内存成本（KiB），约19MiB。
+	defaultTime       = 2     // 迭代次数。
+	defaultThreads    = 1     // 并行度，单核即满足默认场景。
+	defaultKeyLength  = 32    // 派生密钥长度（字节）。
+	defaultSaltLength = 16    // 随机盐长度（字节）。
 )
 
 // Params 保存 Argon2id 哈希使用的内存和时间参数。
@@ -51,12 +51,12 @@ func DefaultParams() Params {
 // 功能：结合随机盐派生密钥，输出可直接存入数据库的完整哈希。
 // 例如对任意密码调用后可得到 $argon2id$v=19$m=19456,t=2,p=1$... 格式字符串。
 func Hash(plaintext []byte, p Params) (string, error) {
-	salt := make([]byte, p.SaltLength) // 分配随机盐
+	salt := make([]byte, p.SaltLength)         // 分配随机盐
 	if _, err := rand.Read(salt); err != nil { // 读取安全随机盐；失败时返回错误
 		return "", err
 	}
 	key := argon2.IDKey(plaintext, salt, p.Time, p.Memory, p.Threads, p.KeyLength) // 派生密码密钥
-	encode := func(value []byte) string { // 无填充 base64url 编码辅助
+	encode := func(value []byte) string {                                          // 无填充 base64url 编码辅助
 		return base64.RawStdEncoding.EncodeToString(value)
 	}
 	return fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
@@ -74,7 +74,7 @@ func Verify(hash string, plaintext []byte) (bool, error) {
 		return false, err
 	}
 	recomputed := argon2.IDKey(plaintext, salt, timeCost, memory, threads, uint32(len(key))) // 按原参数重新派生密钥
-	return subtle.ConstantTimeCompare(key, recomputed) == 1, nil // 常量时间比较避免时序侧信道
+	return subtle.ConstantTimeCompare(key, recomputed) == 1, nil                             // 常量时间比较避免时序侧信道
 }
 
 // errInvalidHash 表示哈希格式无法解析。
@@ -86,7 +86,7 @@ var errInvalidHash = errors.New("invalid argon2id hash")
 // 功能：按 $argon2id$v=...$m=...,t=...,p=...$salt$key 结构拆解哈希。
 // 例如合法哈希返回对应参数与字节数据。
 func decodeHash(hash string) (uint32, uint32, uint8, []byte, []byte, error) {
-	parts := strings.Split(hash, "$") // 按 $ 拆分哈希段
+	parts := strings.Split(hash, "$")              // 按 $ 拆分哈希段
 	if len(parts) != 6 || parts[1] != "argon2id" { // 段数或算法标识不合法
 		return 0, 0, 0, nil, nil, errInvalidHash
 	}

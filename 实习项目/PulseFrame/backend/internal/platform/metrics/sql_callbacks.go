@@ -32,16 +32,16 @@ func (sqlMetricsPlugin) Name() string {
 // 例如执行一次 Create 时，统计"操作次数与耗时，出错时累加错误计数。
 func (p sqlMetricsPlugin) Initialize(db *gorm.DB) error {
 	// 每种操作在主回调之前记录开始时间，之后统一统计结果。
-	db.Callback().Create().Before("gorm:create").Register("metrics:before_create", beforeSQLCallback) // 注册创建前回调，记录开始时间
+	db.Callback().Create().Before("gorm:create").Register("metrics:before_create", beforeSQLCallback)          // 注册创建前回调，记录开始时间
 	db.Callback().Create().After("gorm:create").Register("metrics:after_create", p.afterSQLCallback("create")) // 注册创建后回调，统计结果
-	db.Callback().Update().Before("gorm:update").Register("metrics:before_update", beforeSQLCallback) // 注册更新前回调，记录开始时间
+	db.Callback().Update().Before("gorm:update").Register("metrics:before_update", beforeSQLCallback)          // 注册更新前回调，记录开始时间
 	db.Callback().Update().After("gorm:update").Register("metrics:after_update", p.afterSQLCallback("update")) // 注册更新后回调，统计结果
-	db.Callback().Delete().Before("gorm:delete").Register("metrics:before_delete", beforeSQLCallback) // 注册删除前回调，记录开始时间
+	db.Callback().Delete().Before("gorm:delete").Register("metrics:before_delete", beforeSQLCallback)          // 注册删除前回调，记录开始时间
 	db.Callback().Delete().After("gorm:delete").Register("metrics:after_delete", p.afterSQLCallback("delete")) // 注册删除后回调，统计结果
-	db.Callback().Query().Before("gorm:query").Register("metrics:before_query", beforeSQLCallback) // 注册查询前回调，记录开始时间
-	db.Callback().Query().After("gorm:query").Register("metrics:after_query", p.afterSQLCallback("query")) // 注册查询后回调，统计结果
-	db.Callback().Raw().Before("gorm:raw").Register("metrics:before_raw", beforeSQLCallback) // 注册原始 SQL 前回调，记录开始时间
-	db.Callback().Raw().After("gorm:raw").Register("metrics:after_raw", p.afterSQLCallback("raw")) // 注册原始 SQL 后回调，统计结果
+	db.Callback().Query().Before("gorm:query").Register("metrics:before_query", beforeSQLCallback)             // 注册查询前回调，记录开始时间
+	db.Callback().Query().After("gorm:query").Register("metrics:after_query", p.afterSQLCallback("query"))     // 注册查询后回调，统计结果
+	db.Callback().Raw().Before("gorm:raw").Register("metrics:before_raw", beforeSQLCallback)                   // 注册原始 SQL 前回调，记录开始时间
+	db.Callback().Raw().After("gorm:raw").Register("metrics:after_raw", p.afterSQLCallback("raw"))             // 注册原始 SQL 后回调，统计结果
 	return nil
 }
 
@@ -88,7 +88,7 @@ func observeSQLOperation(registry *Registry, operation string, duration time.Dur
 	if err != nil {
 		result = "error" // 出错时标记结果标签
 	}
-	registry.DependencyOperations.WithLabelValues("mysql", operation, result).Inc()                                 // 按依赖、操作与结果累加计数
+	registry.DependencyOperations.WithLabelValues("mysql", operation, result).Inc()                              // 按依赖、操作与结果累加计数
 	registry.DependencyOperationDuration.WithLabelValues("mysql", operation, result).Observe(duration.Seconds()) // 记录操作耗时分布
 	if err != nil {
 		registry.DependencyErrors.WithLabelValues("mysql", operation, classifySQLError(err)).Inc() // 按依赖、操作与错误类型累加错误
