@@ -12,17 +12,17 @@ import (
 	"pulseframe/internal/platform/server"
 )
 
-// RouterDependencies 持有应用路由阶段所需的 Gin 路由与共享健康状态。
-type RouterDependencies struct {
+// APIRuntime 持有应用运行所需的 Gin 路由与共享健康状态。
+type APIRuntime struct {
 	Router *gin.Engine         // 配置完成的 HTTP 路由。
 	Health *server.HealthState // 生命周期更新、就绪接口读取的共享状态。
 }
 
 // 输入：logger，带公共字段的结构化日志器；cfg，应用配置；dependencies，共享外部依赖。
-// 输出：持有路由与健康状态的路由依赖；初始化失败时返回错误。
+// 输出：持有路由与健康状态的运行组件；初始化失败时返回错误。
 // 功能：集中创建健康状态、在指标启用时选择注册表，并组装核心路由。
-// 例如指标配置开启时，返回的路由依赖会挂载指标中间件并注册 /metrics 端点。
-func NewRouterDependencies(logger *slog.Logger, cfg config.Config, dependencies *Dependencies) (*RouterDependencies, error) {
+// 例如指标配置开启时，返回的运行组件会挂载指标中间件并注册 /metrics 端点。
+func NewRuntime(logger *slog.Logger, cfg config.Config, dependencies *Dependencies) (*APIRuntime, error) {
 	// 首先创建共享健康状态；后续就绪接口读取同一实例。
 	health := server.NewHealthState() // 无参数；返回 health(初始未就绪的健康状态)
 	// 指标启用时取出共享注册表传给路由；否则传 nil，不注册指标端点。
@@ -41,5 +41,5 @@ func NewRouterDependencies(logger *slog.Logger, cfg config.Config, dependencies 
 	if err != nil {
 		return nil, fmt.Errorf("initialize router: %w", err)
 	}
-	return &RouterDependencies{Router: router, Health: health}, nil
+	return &APIRuntime{Router: router, Health: health}, nil
 }

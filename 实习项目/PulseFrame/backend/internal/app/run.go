@@ -64,8 +64,8 @@ func Run(parent context.Context, lookup config.LookupEnv) (runErr error) {
 	}()
 
 	// ========== 第 5 步：创建健康状态与路由 ==========
-	// NewRouterDependencies 集中创建健康状态、在指标启用时选择注册表并组装路由。
-	runtime, err := NewRouterDependencies(logger, cfg, dependencies) // 传入 logger、cfg、dependencies；返回 runtime、err
+	// NewRuntime 集中创建健康状态、在指标启用时选择注册表并组装路由。
+	runtime, err := NewRuntime(logger, cfg, dependencies) // 传入 logger、cfg、dependencies；返回 runtime、err
 	if err != nil {
 		return fmt.Errorf("create runtime: %w", err)
 	}
