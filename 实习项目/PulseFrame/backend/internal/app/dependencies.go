@@ -96,6 +96,8 @@ func NewDependencies(ctx context.Context, cfg config.Config) (*Dependencies, err
 	// 组装依赖对象；指标注册表独立创建，观察器仅在启用指标时启动。
 	dependencies := &Dependencies{MySQL: db, Redis: client, Metrics: metrics.New()} // 传入连接池与客户端，创建指标注册表
 	if cfg.Metrics.Enabled {
+		// 指标启用时把 SQL 观测插件挂到 gorm，激活依赖操作指标。
+		metrics.AttachDBCallbacks(db, dependencies.Metrics) // 传入 gorm 实例与注册表；注册数据库操作回调
 		// 观察器读取共享连接池统计并周期发布指标，随 ctx 取消而停止。
 		dependencies.observer = metrics.NewPoolStatsObserver(dependencies.Metrics, dependencies, cfg.Metrics.CollectInterval) // 传入注册表、统计来源、采集周期；返回观察器
 		go dependencies.observer.Run(ctx)                                                                                     // 传入上下文，在后台协程中周期采集
