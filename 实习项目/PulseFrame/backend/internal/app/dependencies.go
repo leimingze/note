@@ -10,10 +10,10 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
-	"pulseframe/internal/auth"
 	"pulseframe/internal/platform/config"
 	"pulseframe/internal/platform/infra"
 	"pulseframe/internal/platform/metrics"
+	"pulseframe/internal/store"
 )
 
 // Dependencies 持有当前 API 进程创建的外部依赖，使用方借用连接池。
@@ -85,7 +85,7 @@ func NewDependencies(ctx context.Context, cfg config.Config) (*Dependencies, err
 		return nil, fmt.Errorf("initialize mysql: %w", err)
 	}
 	// MySQL 连接创建成功后同步表结构；迁移失败时关闭连接池并返回错误。
-	if err := auth.Migrate(db); err != nil { // 传入 gorm 实例；同步登录注册表结构，失败时返回错误
+	if err := store.Migrate(db); err != nil { // 传入 gorm 实例；同步登录注册表结构，失败时返回错误
 		return nil, errors.Join(fmt.Errorf("migrate mysql: %w", err), closeDB(db)) // 合并迁移错误与连接池关闭错误
 	}
 	// MySQL 成功后继续创建 Redis；Redis 失败时先关闭已创建的 MySQL 连接池。

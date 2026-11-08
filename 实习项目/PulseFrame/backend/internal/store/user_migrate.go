@@ -1,9 +1,11 @@
-package auth
+package store
 
 import (
 	"fmt"
 
 	"gorm.io/gorm"
+
+	"pulseframe/internal/model"
 )
 
 // Migrate 创建或更新登录与注册所需的数据表。
@@ -12,7 +14,7 @@ import (
 // 功能：用 AutoMigrate 按模型同步 users 与 password_credentials 表结构。
 // 例如数据库尚无 users 表时，执行后创建该表并应用模型定义的约束与索引。
 func Migrate(db *gorm.DB) error {
-	if err := db.AutoMigrate(&User{}, &PasswordCredential{}); err != nil { // 传入两个模型；同步表结构，失败时返回错误
+	if err := db.AutoMigrate(&model.User{}, &model.PasswordCredential{}); err != nil { // 传入两个模型；同步表结构，失败时返回错误
 		return fmt.Errorf("auto migrate auth tables: %w", err)
 	}
 	return nil
