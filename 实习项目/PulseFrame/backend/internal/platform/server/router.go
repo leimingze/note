@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -49,17 +50,17 @@ func NewRouter(dependencies RouterDependencies) (*gin.Engine, error) {
 	requestID, err := middleware.NewRequestID(dependencies.IDGenerator) // 传入 ID 生成器；返回请求标识中间件、错误
 	// 请求 ID 中间件失败时，后续日志无法可靠关联请求。
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create request id middleware: %w", err)
 	}
 	accessLog, err := middleware.NewAccessLog(dependencies.Logger) // 传入日志器；返回访问日志中间件、错误
 	// 访问日志中间件失败时停止构造，避免实例缺少审计日志。
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create access log middleware: %w", err)
 	}
 	recovery, err := middleware.NewRecovery(dependencies.Logger) // 传入日志器；返回异常恢复中间件、错误
 	// 异常恢复中间件失败时不能暴露一个会被 panic 中断的路由器。
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create recovery middleware: %w", err)
 	}
 
 	// 不使用 gin.Default，确保中间件及日志格式完全由项目控制。
