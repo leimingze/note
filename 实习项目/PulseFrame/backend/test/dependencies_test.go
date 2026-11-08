@@ -38,14 +38,17 @@ func TestDependenciesLifecycle(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	shared := dependencies.MySQL
-	if err := shared.PingContext(t.Context()); err != nil {
+	sqlDB, err := dependencies.MySQL.DB() // 取出 gorm 底层连接池验证生命周期
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sqlDB.PingContext(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	if err := dependencies.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if err := shared.PingContext(t.Context()); err == nil || shared.Stats().OpenConnections != 0 {
+	if err := sqlDB.PingContext(t.Context()); err == nil || sqlDB.Stats().OpenConnections != 0 {
 		t.Fatal("dependency owner did not close the shared pool")
 	}
 }

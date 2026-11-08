@@ -43,17 +43,21 @@ func integrationMySQLConfig(t *testing.T) config.MySQL {
 // 例如传入测试数据库配置后可执行 SELECT 1，测试结束时自动关闭连接池。
 func openMySQL(t *testing.T, cfg config.MySQL) *sql.DB {
 	t.Helper()
-	db, err := infra.NewMySQL(t.Context(), cfg)
+	gdb, err := infra.NewMySQL(t.Context(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := gdb.DB() // 取出 gorm 底层连接池供测试直接使用
 	if err != nil {
 		t.Fatal(err)
 	}
 	// 即使后续断言提前结束测试，也关闭已建立的真实数据库连接。
 	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
+		if err := sqlDB.Close(); err != nil {
 			t.Error(err)
 		}
 	})
-	return db
+	return sqlDB
 }
 
 // 输入：t，测试上下文。

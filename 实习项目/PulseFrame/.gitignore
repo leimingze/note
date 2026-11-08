@@ -1,2 +1,4 @@
 .agent/work/
 /.env
+backend/.gocache/
+backend/.gomodcache/

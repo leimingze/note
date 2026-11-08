@@ -8,7 +8,9 @@ import (
 	"sync"
 
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 
+	"pulseframe/internal/auth"
 	"pulseframe/internal/platform/config"
 	"pulseframe/internal/platform/infra"
 	"pulseframe/internal/platform/metrics"
@@ -16,7 +18,7 @@ import (
 
 // Dependencies 持有当前 API 进程创建的外部依赖，使用方借用连接池。
 type Dependencies struct {
-	MySQL     *sql.DB                    // 当前 API 进程共享的连接池，由 Dependencies 统一关闭。
+	MySQL     *gorm.DB                   // 当前 API 进程共享的 gorm 数据库实例，由 Dependencies 统一关闭。
 	Redis     *redis.Client              // 当前 API 进程共享的 Redis 客户端，由 Dependencies 统一关闭。
 	Metrics   *metrics.Registry          // 指标注册表及观察器所需的统计来源。
 	observer  *metrics.PoolStatsObserver // 连接池统计观察器，投入时持有，退出时随上下文停止。
@@ -29,7 +31,11 @@ type Dependencies struct {
 // 输出：sql.DBStats 统计。
 // 功能：向指标采集器提供 MySQL 连接池数据。
 func (dependencies *Dependencies) MySQLStats() sql.DBStats {
-	return dependencies.MySQL.Stats() // 无参数；返回 MySQL 连接池统计快照
+	sqlDB, err := dependencies.MySQL.DB() // 从 gorm 实例取出底层连接池
+	if err != nil {
+		return sql.DBStats{} // 底层连接池不可用时返回空统计，不中断采集
+	}
+	return sqlDB.Stats() // 无参数；返回 MySQL 连接池统计快照
 }
 
 // RedisPoolStats 返回 Redis 客户端连接池当前统计快照。
@@ -46,8 +52,12 @@ func (dependencies *Dependencies) RedisPoolStats() *redis.PoolStats {
 // 功能：供存活探针校验共享连接池对应的外部组件状态。
 // 例如 MySQL 停止响应时，返回包含 mysql unreachable 的错误。
 func (dependencies *Dependencies) Ping(ctx context.Context) error {
+	sqlDB, err := dependencies.MySQL.DB() // 从 gorm 实例取出底层连接池
+	if err != nil {
+		return fmt.Errorf("mysql pool unavailable: %w", err)
+	}
 	return errors.Join(
-		pingDependency("mysql", dependencies.MySQL.PingContext(ctx)), // 探测 MySQL 并将失败标记依赖名
+		pingDependency("mysql", sqlDB.PingContext(ctx)),             // 探测 MySQL 并将失败标记依赖名
 		pingDependency("redis", dependencies.Redis.Ping(ctx).Err()),  // 探测 Redis 并将失败标记依赖名
 	)
 }
@@ -70,14 +80,18 @@ func pingDependency(name string, err error) error {
 // 例如程序启动时调用一次，后续数据库、缓存和指标访问都使用返回对象中的共享客户端。
 func NewDependencies(ctx context.Context, cfg config.Config) (*Dependencies, error) {
 	// 仅在程序启动时创建共享连接池；创建函数负责清理初始化失败的资源。
-	db, err := infra.NewMySQL(ctx, cfg.MySQL) // 传入上下文与 MySQL 配置；返回连接池、错误
+	db, err := infra.NewMySQL(ctx, cfg.MySQL) // 传入上下文与 MySQL 配置；返回 gorm 实例、错误
 	if err != nil {
 		return nil, fmt.Errorf("initialize mysql: %w", err)
+	}
+	// MySQL 连接创建成功后同步表结构；迁移失败时关闭连接池并返回错误。
+	if err := auth.Migrate(db); err != nil { // 传入 gorm 实例；同步登录注册表结构，失败时返回错误
+		return nil, errors.Join(fmt.Errorf("migrate mysql: %w", err), closeDB(db)) // 合并迁移错误与连接池关闭错误
 	}
 	// MySQL 成功后继续创建 Redis；Redis 失败时先关闭已创建的 MySQL 连接池。
 	client, err := infra.NewRedis(ctx, cfg.Redis) // 传入上下文与 Redis 配置；返回客户端、错误
 	if err != nil {
-		return nil, errors.Join(fmt.Errorf("initialize redis: %w", err), db.Close()) // 合并 Redis 错误与 MySQL 关闭错误
+		return nil, errors.Join(fmt.Errorf("initialize redis: %w", err), closeDB(db)) // 合并 Redis 错误与 MySQL 关闭错误
 	}
 	// 组装依赖对象；指标注册表独立创建，观察器仅在启用指标时启动。
 	dependencies := &Dependencies{MySQL: db, Redis: client, Metrics: metrics.New()} // 传入连接池与客户端，创建指标注册表
@@ -89,6 +103,19 @@ func NewDependencies(ctx context.Context, cfg config.Config) (*Dependencies, err
 	return dependencies, nil
 }
 
+// closeDB 关闭 gorm 实例持有的底连接连接池。
+// 输入：db，需要关闭的 gorm 数据库实例。
+// 输出：关闭失败时返回错误。
+// 功能：统一释放 gorm 底层的 sql.DB 连接池。
+// 例如服务退出时调用，关闭该实例持有的全部数据库连接。
+func closeDB(db *gorm.DB) error {
+	sqlDB, err := db.DB() // 取出底层连接池
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close() // 关闭连接池
+}
+
 // 输入：dependencies，已成功创建的依赖对象。
 // 输出：关闭 MySQL 连接池和 Redis 客户端；任一关闭失败时返回错误，重复调用返回第一次结果。
 // 功能：在 HTTP 请求处理完成后统一释放进程拥有的外部连接资源，并让退出流程可以安全重复清理。
@@ -97,7 +124,7 @@ func (dependencies *Dependencies) Close() error {
 	dependencies.closeOnce.Do(func() { // 保证只执行一次关闭逻辑，并发调用安全
 		// 关闭整个共享连接池会影响所有使用方，调用入口统一安排在服务退出阶段。
 		dependencies.closeErr = errors.Join(
-			closeDependency("mysql", dependencies.MySQL.Close()), // 关闭 MySQL 并标依赖名
+			closeDependency("mysql", closeDB(dependencies.MySQL)), // 关闭 MySQL 并标依赖名
 			closeDependency("redis", dependencies.Redis.Close()), // 关闭 Redis 并标记依赖名
 		)
 	})
