@@ -13,6 +13,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 
+	"pulseframe/internal/migration"
 	"pulseframe/internal/model"
 	"pulseframe/internal/platform/config"
 	"pulseframe/internal/platform/infra"
@@ -33,7 +34,7 @@ func openTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Migrate(db); err != nil { // 同步表结构
+	if err := migration.Migrate(db); err != nil { // 同步表结构
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {

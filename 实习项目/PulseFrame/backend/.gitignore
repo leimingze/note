@@ -1,0 +1,4 @@
+# Go 本地构建与模块缓存目录
+.gocache/
+.gomodcache/
+
