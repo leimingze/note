@@ -84,11 +84,11 @@ func TestVerifyWrongAudience(t *testing.T) {
 	}
 }
 
-// TestClaimsImplementsInterface 验证 Claims 满足 jwt.Claims 接口。
+// TestPayloadImplementsInterface 验证 Payload 满足 jwt.Claims 接口。
 // 输入：Go 测试框架提供的测试上下文。
-// 输出：Claims 未实现接口时编译失败。
+// 输出：Payload 未实现接口时编译失败。
 // 功能：确保嵌套 RegisteredClaims 满足库接口要求。
 // 例如声明变量可用于 NewWithClaims。
-func TestClaimsImplementsInterface(t *testing.T) {
-	var _ jwt.Claims = Claims{} // 编译期断言接口实现
+func TestPayloadImplementsInterface(t *testing.T) {
+	var _ jwt.Claims = Payload{} // 编译期断言接口实现
 }

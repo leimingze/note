@@ -18,8 +18,8 @@ var (
 	ErrTokenInvalid = errors.New("token invalid") // 令牌无效。
 )
 
-// Claims 是服务端签发的访问令牌载荷。
-type Claims struct {
+// Payload 是服务端签发的访问令牌载荷。
+type Payload struct {
 	SessionID            string `json:"sid"` // 会话标识，关联刷新会话。
 	jwt.RegisteredClaims        // 标准声明，包含用户标识、签发者、受众、签发与到期时间。
 }
@@ -51,7 +51,7 @@ func NewSigner(privateKeyPath, kid, iss, aud string) (*Signer, error) {
 // 功能：按 RS256 签名并携带密钥标识。
 // 例如传入用户、会话与有效期时返回带签名的令牌字符串。
 func (s *Signer) Sign(userID, sessionID string, now int64, ttl time.Duration) (string, error) {
-	claims := Claims{ // 组装令牌载荷
+	payload := Payload{ // 组装令牌载荷
 		SessionID: sessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID,
@@ -61,9 +61,9 @@ func (s *Signer) Sign(userID, sessionID string, now int64, ttl time.Duration) (s
 			ExpiresAt: jwt.NewNumericDate(time.Unix(now, 0).Add(ttl)),
 		},
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims) // 按 RS256 创建令牌
-	token.Header["kid"] = s.keyID                              // 写入密钥标识
-	return token.SignedString(s.key)                           // 使用私钥签名并返回令牌
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, payload) // 按 RS256 创建令牌
+	token.Header["kid"] = s.keyID                               // 写入密钥标识
+	return token.SignedString(s.key)                            // 使用私钥签名并返回令牌
 }
 
 // Verifier 使用 RSA 公钥验证访问令牌。
@@ -91,9 +91,9 @@ func NewVerifier(publicKeyPath, iss, aud string) (*Verifier, error) {
 // 输出：验证通过返回载荷；过期或无效令牌返回对应分类错误。
 // 功能：校验签名、签发者、受众与有效期。
 // 例如令牌正确未过期时返回载荷，过期时返回 ErrTokenExpired。
-func (v *Verifier) Verify(tokenString string) (Claims, error) {
-	var claims Claims // 载入结果
-	parsed, err := jwt.ParseWithClaims(tokenString, &claims, func(t *jwt.Token) (any, error) {
+func (v *Verifier) Verify(tokenString string) (Payload, error) {
+	var payload Payload // 载入结果
+	parsed, err := jwt.ParseWithClaims(tokenString, &payload, func(t *jwt.Token) (any, error) {
 		if t.Method != jwt.SigningMethodRS256 { // 算法必须是 RS256
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
@@ -101,14 +101,14 @@ func (v *Verifier) Verify(tokenString string) (Claims, error) {
 	}, jwt.WithIssuer(v.issuer), jwt.WithAudience(v.audience), jwt.WithExpirationRequired())
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) { // 区分过期与其他无效
-			return Claims{}, ErrTokenExpired
+			return Payload{}, ErrTokenExpired
 		}
-		return Claims{}, ErrTokenInvalid
+		return Payload{}, ErrTokenInvalid
 	}
 	if !parsed.Valid { // 签名或校验失败
-		return Claims{}, ErrTokenInvalid
+		return Payload{}, ErrTokenInvalid
 	}
-	return claims, nil
+	return payload, nil
 }
 
 // loadPrivateKey 从 PEM 文件加载 RSA 私钥。
