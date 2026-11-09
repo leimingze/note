@@ -79,11 +79,11 @@ func randomToken(size int) ([]byte, error) {
 	return content, nil
 }
 
-// newSessionID 生成十六进制会话标识。
+// newRandomID 生成随机十六进制标识。
 // 输入：无。
-// 输出：32位十六进制标识或错误。
-// 功能：每次登录生成独立会话标识。
-func newSessionID() (string, error) {
+// 输出：32位十六进制随机标识或错误。
+// 功能：生成随机标识，用于用户或会话等需要唯一标识的场景。
+func newRandomID() (string, error) {
 	content, err := randomToken(sessionIDBytes) // 生成随机字节
 	if err != nil {
 		return "", err

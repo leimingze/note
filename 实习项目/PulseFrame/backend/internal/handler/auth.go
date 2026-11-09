@@ -95,7 +95,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		response.WriteError(c, response.ErrorSpec{Status: http.StatusInternalServerError, Code: response.CodeInternal, Message: "internal server error"})
 		return
 	}
-	userID, err := newSessionID() // 生成用户标识
+	userID, err := newRandomID() // 生成用户标识
 	if err != nil {
 		response.WriteError(c, response.ErrorSpec{Status: http.StatusInternalServerError, Code: response.CodeInternal, Message: "internal server error"})
 		return
@@ -183,8 +183,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // 功能：生成会话与刷新令牌，写入 Redis 并签发访问令牌。
 // 例如会话创建成功返回访问令牌与刷新 Cookie。
 func (h *AuthHandler) issueSession(c *gin.Context, user *model.User) {
-	ctx := c.Request.Context()       // 请求上下文
-	sessionID, err := newSessionID() // 生成会话标识
+	ctx := c.Request.Context()      // 请求上下文
+	sessionID, err := newRandomID() // 生成会话标识
 	if err != nil {
 		response.WriteError(c, response.ErrorSpec{Status: http.StatusInternalServerError, Code: response.CodeInternal, Message: "internal server error"})
 		return
