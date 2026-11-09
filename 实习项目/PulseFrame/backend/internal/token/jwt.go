@@ -26,10 +26,10 @@ type Claims struct {
 
 // Signer 使用 RSA 私钥签发访问令牌。
 type Signer struct {
-	key *rsa.PrivateKey // 私钥。
-	kid string          // 密钥标识，写入令牌头。
-	iss string          // 签发者。
-	aud string          // 受众。
+	key      *rsa.PrivateKey // 私钥。
+	keyID    string          // 密钥标识，写入令牌头。
+	issuer   string          // 签发者。
+	audience string          // 受众。
 }
 
 // NewSigner 加载 RSA 私钥并创建签发器。
@@ -42,7 +42,7 @@ func NewSigner(privateKeyPath, kid, iss, aud string) (*Signer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Signer{key: key, kid: kid, iss: iss, aud: aud}, nil
+	return &Signer{key: key, keyID: kid, issuer: iss, audience: aud}, nil
 }
 
 // Sign 签发访问令牌。
@@ -55,22 +55,22 @@ func (s *Signer) Sign(userID, sessionID string, now int64, ttl time.Duration) (s
 		SessionID: sessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID,
-			Issuer:    s.iss,
-			Audience:  jwt.ClaimStrings{s.aud},
+			Issuer:    s.issuer,
+			Audience:  jwt.ClaimStrings{s.audience},
 			IssuedAt:  jwt.NewNumericDate(time.Unix(now, 0)),
 			ExpiresAt: jwt.NewNumericDate(time.Unix(now, 0).Add(ttl)),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims) // 按 RS256 创建令牌
-	token.Header["kid"] = s.kid                                // 写入密钥标识
+	token.Header["kid"] = s.keyID                              // 写入密钥标识
 	return token.SignedString(s.key)                           // 使用私钥签名并返回令牌
 }
 
 // Verifier 使用 RSA 公钥验证访问令牌。
 type Verifier struct {
-	key *rsa.PublicKey // 公钥。
-	iss string         // 期望签发者。
-	aud string         // 期望受众。
+	key      *rsa.PublicKey // 公钥。
+	issuer   string         // 期望签发者。
+	audience string         // 期望受众。
 }
 
 // NewVerifier 加载 RSA 公钥并创建验证器。
@@ -83,7 +83,7 @@ func NewVerifier(publicKeyPath, iss, aud string) (*Verifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Verifier{key: key, iss: iss, aud: aud}, nil
+	return &Verifier{key: key, issuer: iss, audience: aud}, nil
 }
 
 // Verify 验证令牌并返回载荷。
@@ -98,7 +98,7 @@ func (v *Verifier) Verify(tokenString string) (Claims, error) {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return v.key, nil
-	}, jwt.WithIssuer(v.iss), jwt.WithAudience(v.aud), jwt.WithExpirationRequired())
+	}, jwt.WithIssuer(v.issuer), jwt.WithAudience(v.audience), jwt.WithExpirationRequired())
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) { // 区分过期与其他无效
 			return Claims{}, ErrTokenExpired

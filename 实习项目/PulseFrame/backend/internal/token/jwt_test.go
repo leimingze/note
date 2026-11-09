@@ -29,11 +29,11 @@ func generateTestKeys(t *testing.T) (*rsa.PrivateKey, *rsa.PublicKey) {
 // 功能：验证签名、签发者、受众与载荷往返。
 // 例如签发载荷后验证返回相同用户与会话标识。
 func TestSignAndVerifyRoundTrip(t *testing.T) {
-	priv, pub := generateTestKeys(t)                                                             // 生成测试密钥
-	signer := &Signer{key: priv, kid: "test-key", iss: "pulseframe-auth", aud: "pulseframe-api"} // 构造签发器
-	verifier := &Verifier{key: pub, iss: "pulseframe-auth", aud: "pulseframe-api"}               // 构造验证器
-	now := time.Now().Unix()                                                                     // 构造签发时间
-	tokenString, err := signer.Sign("user-uuid", "session-uuid", now, 15*time.Minute)            // 签发令牌
+	priv, pub := generateTestKeys(t)                                                                       // 生成测试密钥
+	signer := &Signer{key: priv, keyID: "test-key", issuer: "pulseframe-auth", audience: "pulseframe-api"} // 构造签发器
+	verifier := &Verifier{key: pub, issuer: "pulseframe-auth", audience: "pulseframe-api"}                 // 构造验证器
+	now := time.Now().Unix()                                                                               // 构造签发时间
+	tokenString, err := signer.Sign("user-uuid", "session-uuid", now, 15*time.Minute)                      // 签发令牌
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,11 +52,11 @@ func TestSignAndVerifyRoundTrip(t *testing.T) {
 // 功能：验证 exp 校验逻辑。
 // 例如签发明文到期的令牌返回 ErrTokenExpired。
 func TestVerifyExpiredToken(t *testing.T) {
-	priv, pub := generateTestKeys(t)                                                             // 生成测试密钥
-	signer := &Signer{key: priv, kid: "test-key", iss: "pulseframe-auth", aud: "pulseframe-api"} // 构造签发器
-	verifier := &Verifier{key: pub, iss: "pulseframe-auth", aud: "pulseframe-api"}               // 构造验证器
-	now := time.Now().Unix()                                                                     // 构造签发时间
-	tokenString, err := signer.Sign("user", "session", now-2000, -time.Minute)                   // 签发已过期令牌
+	priv, pub := generateTestKeys(t)                                                                       // 生成测试密钥
+	signer := &Signer{key: priv, keyID: "test-key", issuer: "pulseframe-auth", audience: "pulseframe-api"} // 构造签发器
+	verifier := &Verifier{key: pub, issuer: "pulseframe-auth", audience: "pulseframe-api"}                 // 构造验证器
+	now := time.Now().Unix()                                                                               // 构造签发时间
+	tokenString, err := signer.Sign("user", "session", now-2000, -time.Minute)                             // 签发已过期令牌
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,11 +71,11 @@ func TestVerifyExpiredToken(t *testing.T) {
 // 功能：验证受众校验逻辑。
 // 例如授予其他受众的令牌返回 ErrTokenInvalid。
 func TestVerifyWrongAudience(t *testing.T) {
-	priv, pub := generateTestKeys(t)                                                        // 生成测试密钥
-	signer := &Signer{key: priv, kid: "test-key", iss: "pulseframe-auth", aud: "other-api"} // 不同受众签发器
-	verifier := &Verifier{key: pub, iss: "pulseframe-auth", aud: "pulseframe-api"}          // 原受众验证器
-	now := time.Now().Unix()                                                                // 构造签发时间
-	tokenString, err := signer.Sign("user", "session", now, 15*time.Minute)                 // 签发令牌
+	priv, pub := generateTestKeys(t)                                                                  // 生成测试密钥
+	signer := &Signer{key: priv, keyID: "test-key", issuer: "pulseframe-auth", audience: "other-api"} // 不同受众签发器
+	verifier := &Verifier{key: pub, issuer: "pulseframe-auth", audience: "pulseframe-api"}            // 原受众验证器
+	now := time.Now().Unix()                                                                          // 构造签发时间
+	tokenString, err := signer.Sign("user", "session", now, 15*time.Minute)                           // 签发令牌
 	if err != nil {
 		t.Fatal(err)
 	}
