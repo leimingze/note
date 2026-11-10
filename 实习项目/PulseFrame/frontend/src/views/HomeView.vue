@@ -1,9 +1,11 @@
 <template>
   <div class="home-page">
-    <header class="home-header">
-      <span class="brand">PulseFrame</span>
-      <button class="logout" @click="onLogout">退出</button>
-    </header>
+    <BaseHeader>
+      <template #right>
+        <button class="logout" @click="onLogout">退出</button>
+      </template>
+      PulseFrame
+    </BaseHeader>
     <main class="feed-placeholder">
       <p class="feed-title">短视频 Feed</p>
       <p class="hint">功能建设中，即将支持视频浏览与播放。</p>
@@ -18,6 +20,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import BaseHeader from '@/components/BaseHeader.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -38,18 +41,6 @@ function goMe() {
   display: flex;
   flex-direction: column;
   background: var(--main-bg);
-}
-.home-header {
-  height: var(--home-header-height);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--line-color);
-}
-.brand {
-  font-weight: 600;
-  font-size: 17px;
 }
 .logout {
   color: var(--second-text-color);

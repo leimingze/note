@@ -11,6 +11,10 @@
           placeholder="密码"
           autocomplete="current-password"
         />
+        <div class="protocol">
+          <Check v-model="agreed" />
+          <span>我已阅读并同意《用户协议》与《隐私政策》</span>
+        </div>
         <p v-if="auth.error" class="error">{{ auth.error }}</p>
         <BaseButton
           type="primary"
@@ -35,11 +39,13 @@ import { useAuthStore } from '@/stores/auth'
 import { validatePassword, validateUsername } from '@/utils/validate'
 import BaseButton from '@/components/BaseButton.vue'
 import LoginInput from '@/components/LoginInput.vue'
+import Check from '@/components/Check.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
 const username = ref('')
 const password = ref('')
+const agreed = ref(false)
 
 async function onSubmit() {
   const usernameError = validateUsername(username.value)
@@ -95,6 +101,13 @@ function goRegister() {
   margin: 0;
   color: var(--primary-btn-color);
   font-size: 13px;
+}
+.protocol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--second-text-color);
+  font-size: 12px;
 }
 .switch {
   margin-top: 4px;

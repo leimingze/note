@@ -1,24 +1,32 @@
 <template>
   <div class="me-page">
-    <header class="me-header">
-      <button class="back" @click="goHome">‹</button>
-      <span>我的</span>
-    </header>
+    <BaseHeader show-back :on-back="goHome">我的</BaseHeader>
     <main class="me-body">
       <div class="avatar">P</div>
       <p class="nickname">PulseFrame 用户</p>
       <p class="desc">账号功能已接入，个人资料与作品展示建设中。</p>
-      <button class="logout" @click="onLogout">退出登录</button>
+      <button class="logout" @click="showConfirm = true">退出登录</button>
     </main>
+    <ConfirmDialog
+      v-model:visible="showConfirm"
+      title="退出登录"
+      message="确定要退出当前账号吗？"
+      ok-text="退出"
+      @ok="onLogout"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import BaseHeader from '@/components/BaseHeader.vue'
+import ConfirmDialog from '@/components/dialog/ConfirmDialog.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
+const showConfirm = ref(false)
 
 async function onLogout() {
   await auth.logout()
@@ -36,19 +44,6 @@ function goHome() {
   display: flex;
   flex-direction: column;
   background: var(--main-bg);
-}
-.me-header {
-  height: var(--common-header-height, 50px);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--line-color);
-}
-.back {
-  background: transparent;
-  color: #fff;
-  font-size: 22px;
 }
 .me-body {
   flex: 1;
