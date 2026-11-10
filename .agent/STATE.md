@@ -40,6 +40,19 @@
 - 下一步：无本次更新范围内的后续工作。
 - 归档位置：`.agent/work/20261029-network-prompt-refresh/` 已归档并保留原位置，沿用已有 Git 忽略规则；包含本轮校验入口及暂存补丁。
 
+# 已完成任务：20261029-note-four-fields
+
+- 任务编号：20261029-note-four-fields
+- 当前方案：日志笔记和通用提示词统一使用场景、原理、追问、答案四字段；原理负责完整解释当前标题的问题。
+- 当前进度：笔记和提示词均已更新并选定，结构检查与内容复核通过。
+- 有效文件：`mysql/obsidian/mysql日志.md`、`笔记整理/prompt.md`；提示词 SHA-256 为 `d5c821a838e5ec25bfb782e494d9d457fc4e6d8d5383ffdb4985ecee61949e9c`。
+- 修改范围：日志笔记移除 68 个记忆句段，保留原理及新增 MVCC 内容；根节点已涵盖回滚、MVCC、恢复、复制和提交协调，追问指引同步更新。提示词的字段定义、结构规则、图片归属和示例均采用四字段，并要求新增分支时同步检查上层节点。
+- 验证情况：日志笔记 68 个节点、624 行、4 张原图，提示词 221 行、3 个示例节点；全部正文均按四字段排序，17 处下级答案指引通过检查。原图路径及覆盖、旧字段残留检查和 `git diff --check` 通过。
+- 校验方式：复用 `.agent/work/20261029-mysql-prompt-refresh/verify_mysql_refresh.py` 中的 MarkdownIt 解析、`check_references` 和图片检查函数，并按当前四字段检查直属正文；未调用历史五字段检查。
+- 未解决问题：无本次修改范围内的待核项。
+- 下一步：后续整理笔记使用当前四字段提示词。
+- 归档位置：未新增过程文件。
+
 # 已完成任务：20261029-mvcc-log-notes
 
 - 任务编号：20261029-mvcc-log-notes
@@ -219,3 +232,16 @@
 - 未解决问题：无。
 - 下一步：无。
 - 归档位置：笔记同步任务已完成，未创建过程文件；本记录随仓库同步。
+
+# 已完成任务：20261110-frontend-js
+
+- 任务编号：20261110-frontend-js
+- 当前方案：PulseFrame 前端从 Vue 3 + TypeScript 改为 Vue 3 + JavaScript，实现账号模块（注册、登录、会话刷新、退出），并按最小扩展结构拆分。
+- 当前进度：已完成并验证。
+- 有效文件：`实习项目/PulseFrame/frontend/` 下的 `vite.config.js`、`src/main.js`、`src/api.js`、`src/auth.js`、`src/validate.js`、`src/App.vue`、`src/views/`（LoginView、RegisterView、HomeView）、`src/test/validate.spec.js`、`src/style.css`、`README.md`；删除 TS 相关文件（tsconfig.json、main.ts、vite.config.ts、App.spec.ts）。
+- 功能对应：`POST /api/register`、`POST /api/login`、`POST /api/refresh`、`POST /api/logout`；`src/api.js` 统一附带访问令牌，401 时自动刷新会话并重试。
+- 依赖说明：因本机 Node 为 18，将 vite 降为 ^5、vitest 降为 ^2，@vitejs/plugin-vue 降为 ^5，engines 改为 >=18。
+- 验证情况：`npm test` 1 个测试文件 4 个用例通过；`npm run build` 通过（vite 5.4.21）；开发服务启动后 127.0.0.1:5173 返回 200，`/api` 代理指向 127.0.0.1:8080。
+- 未解决问题：刷新 Cookie 标记 Secure，本地 HTTP 开发下浏览器拒绝保存该 Cookie；完整“登录后自动续期”需在后端前配置 HTTPS 或调整后端 Cookie 与 AllowedOrigin 配置。
+- 下一步：后端业务接口扩展后，可在 `src/views/` 增加视图并扩展 `src/api.js` 端点。
+- 归档位置：本次改动提交为 `52c4ab5`，提交信息为 `[update] 前端改用 JavaScript 并实现账号模块（登录/注册/刷新/退出）`。
