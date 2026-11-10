@@ -20,3 +20,10 @@ __pycache__/
 /agent测评/原始资料/ai-agents-in-action/
 /agent测评/原始资料/agentic-design-patterns/
 /skills/offerlens-jobs/
+
+# 实习项目中仅保留自有项目与参考文档，其余目录不纳入版本控制
+/实习项目/*
+!/实习项目/PulseFrame/
+!/实习项目/EvoAgent/
+!/实习项目/参考项目功能模块.md
+!/实习项目/参考项目模块并集.md
