@@ -1,0 +1,43 @@
+:root {
+  --main-bg: rgb(21, 23, 36);
+  --active-main-bg: rgb(31, 37, 52);
+  --second-text-color: rgb(186, 186, 187);
+  --line-color: rgb(37, 45, 66);
+  --primary-btn-color: rgb(252, 47, 86);
+  --disable-primary-btn-color: rgba(252, 47, 86, 0.5);
+  --home-header-height: 44px;
+  --footer-height: 56px;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background: var(--main-bg);
+}
+
+body {
+  font-family: 'PingFang SC', 'HarmonyOS Sans SC', system-ui, sans-serif;
+  color: #fff;
+  overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+}
+
+input {
+  font-family: inherit;
+}

@@ -1,6 +1,6 @@
 # PulseFrame Web
 
-Vue 3 + JavaScript 前端，当前实现账号模块（注册、登录、会话刷新、退出），并保留清晰的扩展结构。
+Vue 3 + TypeScript + Pinia + vue-router 前端，采用移动端短视频风格（参考 douyin 视觉与交互），当前实现账号模块（注册、登录、会话刷新、退出），并保留可扩展结构。
 
 需要 Node.js 18 及以上版本。
 
@@ -20,13 +20,16 @@ npm test
 npm run build
 ```
 
+`npm run build` 先执行 `vue-tsc` 类型检查，再执行 `vite build`。
+
 ## 目录结构
 
-- `src/api.js`：统一请求封装，自动附加令牌，401 时自动刷新会话并重试。
-- `src/auth.js`：登录状态与注册、登录、恢复、退出操作。
-- `src/validate.js`：与后端一致的输入校验规则。
-- `src/views/`：页面视图（LoginView、RegisterView、HomeView）。
-- `src/App.vue`：应用骨架与视图切换。
+- `src/api/request.ts`：axios 请求封装，自动附加访问令牌，401 时用刷新 Cookie 换取新令牌并重试一次。
+- `src/stores/auth.ts`：Pinia 状态，管理注册、登录、恢复会话与退出。
+- `src/router/`：路由定义与登录守卫。
+- `src/utils/validate.ts`：与后端一致的输入校验规则。
+- `src/views/`：页面视图（LoginView、RegisterView、HomeView、MeView）。
+- `src/styles/global.css`：全局设计变量与基础样式，沿用 douyin 配色。
 
 ## 接口对应
 

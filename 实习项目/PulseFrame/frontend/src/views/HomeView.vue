@@ -1,16 +1,91 @@
-<script>
-export default {
-  emits: ['logout'],
-  setup(_, { emit }) {
-    return { emit }
-  },
+<template>
+  <div class="home-page">
+    <header class="home-header">
+      <span class="brand">PulseFrame</span>
+      <button class="logout" @click="onLogout">退出</button>
+    </header>
+    <main class="feed-placeholder">
+      <p class="feed-title">短视频 Feed</p>
+      <p class="hint">功能建设中，即将支持视频浏览与播放。</p>
+    </main>
+    <nav class="tabbar">
+      <button class="tab active">首页</button>
+      <button class="tab" @click="goMe">我的</button>
+    </nav>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+const router = useRouter()
+
+async function onLogout() {
+  await auth.logout()
+  void router.push('/login')
+}
+
+function goMe() {
+  void router.push('/me')
 }
 </script>
 
-<template>
-  <section class="home">
-    <h2>已登录</h2>
-    <p>访问令牌由浏览器安全保存，会话刷新在后台自动完成。</p>
-    <button type="button" @click="emit('logout')">退出登录</button>
-  </section>
-</template>
+<style scoped>
+.home-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--main-bg);
+}
+.home-header {
+  height: var(--home-header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line-color);
+}
+.brand {
+  font-weight: 600;
+  font-size: 17px;
+}
+.logout {
+  color: var(--second-text-color);
+  background: transparent;
+  font-size: 14px;
+}
+.feed-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.feed-title {
+  font-size: 18px;
+  margin: 0;
+}
+.hint {
+  color: var(--second-text-color);
+  font-size: 14px;
+  margin: 0;
+}
+.tabbar {
+  height: var(--footer-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  border-top: 1px solid var(--line-color);
+}
+.tab {
+  background: transparent;
+  color: var(--second-text-color);
+  font-size: 15px;
+}
+.tab.active {
+  color: #fff;
+}
+</style>
