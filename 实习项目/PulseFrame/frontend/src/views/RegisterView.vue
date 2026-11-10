@@ -1,27 +1,36 @@
 <template>
   <main class="auth-page">
-    <h1 class="brand">PulseFrame</h1>
-    <p class="subtitle">注册新账号</p>
-    <form class="form" @submit.prevent="onSubmit">
-      <input v-model="username" placeholder="用户名" autocomplete="username" />
-      <input
-        v-model="password"
-        type="password"
-        placeholder="密码（6-30 位）"
-        autocomplete="new-password"
-      />
-      <input
-        v-model="confirmPassword"
-        type="password"
-        placeholder="再次输入密码"
-        autocomplete="new-password"
-      />
-      <p v-if="auth.error" class="error">{{ auth.error }}</p>
-      <button class="primary" type="submit" :disabled="auth.loading">
-        {{ auth.loading ? '注册中…' : '注册' }}
-      </button>
-      <a class="link" @click.prevent="goLogin">已有账号？去登录</a>
-    </form>
+    <div class="auth-card">
+      <h1 class="brand">PulseFrame</h1>
+      <p class="subtitle">注册新账号</p>
+      <form @submit.prevent="onSubmit">
+        <LoginInput v-model="username" placeholder="用户名" autocomplete="username" />
+        <LoginInput
+          v-model="password"
+          type="password"
+          placeholder="密码（6-30 位）"
+          autocomplete="new-password"
+        />
+        <LoginInput
+          v-model="confirmPassword"
+          type="password"
+          placeholder="再次输入密码"
+          autocomplete="new-password"
+        />
+        <p v-if="auth.error" class="error">{{ auth.error }}</p>
+        <BaseButton
+          type="primary"
+          block
+          :loading="auth.loading"
+          :disabled="!username || !password || !confirmPassword || auth.loading"
+        >
+          {{ auth.loading ? '注册中' : '注册' }}
+        </BaseButton>
+        <BaseButton type="text" block class="switch" @click="goLogin">
+          已有账号？去登录
+        </BaseButton>
+      </form>
+    </div>
   </main>
 </template>
 
@@ -30,6 +39,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { validatePassword, validateUsername } from '@/utils/validate'
+import BaseButton from '@/components/BaseButton.vue'
+import LoginInput from '@/components/LoginInput.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -66,57 +77,38 @@ function goLogin() {
 .auth-page {
   height: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 0 28px;
   background: var(--main-bg);
 }
+.auth-card {
+  width: 100%;
+  max-width: 360px;
+}
 .brand {
-  font-size: 30px;
-  margin: 0 0 8px;
+  margin: 0;
+  font-size: 34px;
+  text-align: center;
+  letter-spacing: 1px;
 }
 .subtitle {
+  margin: 8px 0 36px;
   color: var(--second-text-color);
-  margin: 0 0 28px;
+  font-size: 14px;
+  text-align: center;
 }
-.form {
-  width: 100%;
-  max-width: 340px;
+.auth-card form {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-.form input {
-  height: 48px;
-  padding: 0 16px;
-  border-radius: 10px;
-  border: 1px solid var(--line-color);
-  background: var(--active-main-bg);
-  color: #fff;
-  font-size: 15px;
-  outline: none;
-}
-.primary {
-  height: 48px;
-  border-radius: 10px;
-  background: var(--primary-btn-color);
-  color: #fff;
-  font-size: 16px;
-}
-.primary:disabled {
-  background: var(--disable-primary-btn-color);
-}
 .error {
+  margin: 0;
   color: var(--primary-btn-color);
   font-size: 13px;
-  margin: 0;
 }
-.link {
-  text-align: center;
-  color: var(--second-text-color);
-  font-size: 14px;
-  margin-top: 6px;
-  cursor: pointer;
+.switch {
+  margin-top: 4px;
 }
 </style>
