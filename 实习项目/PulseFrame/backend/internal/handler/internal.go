@@ -19,7 +19,7 @@ const (
 	usernameMinLength = 3   // 用户名最短长度。
 	usernameMaxLength = 24  // 用户名最长长度。
 	passwordMinRunes  = 6   // 密码最短字符数。
-	passwordMaxRunes  = 128 // 密码最长字符数。
+	passwordMaxRunes  = 30  // 密码最长字符数。
 	passwordMaxBytes  = 512 // 密码 UTF-8 编码最大字节数。
 	sessionIDBytes    = 16  // 会话标识随机字节数。
 	refreshTokenBytes = 48  // 刷新令牌随机字节数。

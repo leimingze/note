@@ -7,7 +7,13 @@
       <input
         v-model="password"
         type="password"
-        placeholder="密码（12-128 位）"
+        placeholder="密码（6-30 位）"
+        autocomplete="new-password"
+      />
+      <input
+        v-model="confirmPassword"
+        type="password"
+        placeholder="再次输入密码"
         autocomplete="new-password"
       />
       <p v-if="auth.error" class="error">{{ auth.error }}</p>
@@ -29,12 +35,17 @@ const auth = useAuthStore()
 const router = useRouter()
 const username = ref('')
 const password = ref('')
+const confirmPassword = ref('')
 
 async function onSubmit() {
   const usernameError = validateUsername(username.value)
   const passwordError = validatePassword(password.value)
   if (usernameError || passwordError) {
     auth.error = usernameError || passwordError || ''
+    return
+  }
+  if (password.value !== confirmPassword.value) {
+    auth.error = '两次输入的密码不一致'
     return
   }
   try {
