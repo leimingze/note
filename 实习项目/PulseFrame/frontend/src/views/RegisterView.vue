@@ -25,6 +25,7 @@
         <BaseButton
           type="primary"
           block
+          submit
           :loading="auth.loading"
           :disabled="!username || !password || !confirmPassword || auth.loading"
         >

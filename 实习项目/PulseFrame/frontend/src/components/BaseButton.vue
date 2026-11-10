@@ -3,7 +3,7 @@
     class="base-button"
     :class="[`btn-${type}`, { block, disabled }]"
     :disabled="disabled"
-    type="button"
+    :type="submit ? 'submit' : 'button'"
     @click="onClick"
   >
     <span v-if="loading" class="spinner" aria-hidden="true"></span>
@@ -19,12 +19,14 @@ withDefaults(
   defineProps<{
     type?: 'primary' | 'ghost' | 'text'
     block?: boolean
+    submit?: boolean
     disabled?: boolean
     loading?: boolean
   }>(),
   {
     type: 'primary',
     block: false,
+    submit: false,
     disabled: false,
     loading: false,
   },
