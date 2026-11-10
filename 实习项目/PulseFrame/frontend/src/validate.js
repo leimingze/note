@@ -4,7 +4,7 @@
 const USERNAME_PATTERN = /^[A-Za-z0-9_]+$/
 export const USERNAME_MIN = 3
 export const USERNAME_MAX = 24
-export const PASSWORD_MIN = 12
+export const PASSWORD_MIN = 6
 export const PASSWORD_MAX = 128
 
 export function validUsername(username) {

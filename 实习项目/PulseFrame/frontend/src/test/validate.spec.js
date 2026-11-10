@@ -17,11 +17,11 @@ describe('validUsername', () => {
 
 describe('validPassword', () => {
   it('接受满足最少字符数的密码', () => {
-    expect(validPassword('x'.repeat(12))).toBe(true)
+    expect(validPassword('x'.repeat(6))).toBe(true)
   })
 
   it('拒绝过短或过长密码', () => {
-    expect(validPassword('x'.repeat(11))).toBe(false)
+    expect(validPassword('x'.repeat(5))).toBe(false)
     expect(validPassword('x'.repeat(129))).toBe(false)
   })
 })

@@ -18,7 +18,7 @@ import (
 const (
 	usernameMinLength = 3   // 用户名最短长度。
 	usernameMaxLength = 24  // 用户名最长长度。
-	passwordMinRunes  = 12  // 密码最短字符数。
+	passwordMinRunes  = 6   // 密码最短字符数。
 	passwordMaxRunes  = 128 // 密码最长字符数。
 	passwordMaxBytes  = 512 // 密码 UTF-8 编码最大字节数。
 	sessionIDBytes    = 16  // 会话标识随机字节数。
@@ -58,7 +58,7 @@ func validUsername(username string) bool {
 // 输入：password，待校验的密码。
 // 输出：字符数与字节数合法时返回 true。
 // 功能：限制密码长度，避免超长输入滥用资源。
-// 例如12个 Unicode 字符返回 true，仅1字符返回 false。
+// 例如6个 Unicode 字符返回 true，仅1字符返回 false。
 func validPassword(password string) bool {
 	runes := utf8.RuneCountInString(password)                 // 统计字符数
 	if runes < passwordMinRunes || runes > passwordMaxRunes { // 字符数越界

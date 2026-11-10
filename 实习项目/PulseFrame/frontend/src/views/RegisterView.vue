@@ -16,7 +16,7 @@ export default {
         return
       }
       if (!validPassword(form.password)) {
-        error.value = '密码至少 12 个字符'
+        error.value = '密码至少 6 个字符'
         return
       }
       error.value = ''
