@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-开发服务默认监听 http://127.0.0.1:5173 ，并将 `/api` 请求代理到本地后端 `http://127.0.0.1:8080`，避免开发期跨域。
+开发服务默认监听 http://127.0.0.1:5173 ，并将 `/api` 请求代理到本地后端 `http://127.0.0.1:8081`，避免开发期跨域。
 
 ## 检查
 
@@ -30,6 +30,17 @@ npm run build
 - `src/utils/validate.ts`：与后端一致的输入校验规则。
 - `src/views/`：页面视图（LoginView、RegisterView、HomeView、MeView）。
 - `src/styles/global.css`：全局设计变量与基础样式，沿用 douyin 配色。
+
+## 核心链路（最少需要理解）
+
+依次看这四个文件就能把握整个前端：
+
+- `src/main.ts`：应用入口，把 App 挂载到页面。
+- `src/App.vue`：根组件，会话未就绪时显示加载中，就绪后显示当前页面。
+- `src/router/`：定义页面路径，并拦截未登录访问，跳回登录页。
+- `src/views/`：每个页面一个文件，登录、注册、首页、我的。
+
+页面内部只调用 `src/stores/auth.ts` 里的操作，真正的网络请求集中在 `src/api/request.ts`，改接口只需动这两个文件。
 
 ## 接口对应
 
