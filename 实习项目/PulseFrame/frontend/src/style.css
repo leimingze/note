@@ -1,12 +1,15 @@
-/* 全局文字与尺寸规则：例如统一使用 border-box，使内边距计入元素宽度。 */
+/* 全局文字与尺寸规则：统一使用 border-box，并定义品牌色板。 */
 :root {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: #202c28;
   background: #f3f4ef;
+  --brand: #1e342c;
+  --accent: #b63f31;
+  --line: #d8ddd6;
+  --muted: #5f6f66;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
@@ -14,30 +17,33 @@
 }
 
 body {
-  min-width: 320px;
-  min-height: 100vh;
   margin: 0;
+  min-height: 100vh;
 }
 
-/* 桌面布局：项目介绍和配图并排展示；配图列允许收缩，避免图片撑宽页面。 */
-.foundation-shell {
+/* 页面骨架：左侧介绍与右侧功能区分栏，窄屏时上下堆叠。 */
+.shell {
   display: grid;
-  grid-template-columns: minmax(390px, 0.88fr) minmax(0, 1.12fr);
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
   min-height: 100vh;
 }
 
-.project-panel {
+.panel {
+  padding: 34px clamp(24px, 5vw, 64px);
+}
+
+.intro {
   display: flex;
-  min-height: 100vh;
   flex-direction: column;
-  padding: 34px clamp(28px, 6vw, 88px) 24px;
+  gap: 32px;
+  background: #e7ebe4;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 11px;
-  color: #1e342c;
+  color: var(--brand);
   font-size: 18px;
   font-weight: 700;
 }
@@ -48,138 +54,111 @@ body {
   height: 31px;
   place-items: center;
   border-radius: 8px;
-  background: #b63f31;
+  background: var(--accent);
   color: #fff;
-  font-size: 17px;
 }
 
-/* 项目信息：正文自动分配上下空白，底部信息保持在介绍区域下方。 */
-.project-content {
-  width: min(100%, 450px);
-  margin: auto;
-  padding: 54px 0;
+.intro-body {
+  margin: auto 0;
 }
 
-.eyebrow {
-  margin: 0 0 14px;
-  color: #b94935;
-  font-size: 13px;
-  font-weight: 700;
+.intro h1 {
+  margin: 0 0 8px;
+  font-size: 40px;
 }
 
-h1 {
-  margin: 0;
-  color: #202c28;
-  font-size: 42px;
-  font-weight: 650;
-  line-height: 1.2;
-}
-
-.intro {
-  max-width: 420px;
-  margin: 16px 0 34px;
-  color: #5f6d66;
-  font-size: 16px;
-  line-height: 1.7;
-}
-
-.foundation-list {
-  margin: 0;
-  border-top: 1px solid #ccd2cc;
-}
-
-.foundation-list div {
+.meta {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: 18px;
-  padding: 15px 0;
-  border-bottom: 1px solid #ccd2cc;
+  gap: 10px;
+  margin: 28px 0 0;
 }
 
-.foundation-list dt,
-.foundation-list dd {
-  margin: 0;
-  font-size: 13px;
-}
-
-.foundation-list dt {
-  color: #768078;
-}
-
-.foundation-list dd {
-  color: #263b32;
-  font-weight: 600;
-}
-
-.panel-footer {
+.meta div {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: #68746d;
-  font-size: 11px;
+  gap: 10px;
 }
 
-/* 配图区域：图片填满可用区域，说明文字占据独立高度。 */
-.visual-panel {
-  position: relative;
+.meta dt {
+  width: 56px;
+  color: var(--muted);
+}
+
+.stage {
   display: flex;
-  min-height: 100vh;
-  flex-direction: column;
-  overflow: hidden;
-  background: #20342c;
+  align-items: flex-start;
 }
 
-.visual-image {
+.auth-form,
+.home {
+  width: min(100%, 360px);
+  margin: auto;
+}
+
+.auth-form h2,
+.home h2 {
+  margin-top: 0;
+}
+
+.auth-form label {
   display: block;
+  margin-bottom: 14px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.auth-form input {
   width: 100%;
-  min-height: 0;
-  flex: 1;
-  object-fit: cover;
-  object-position: center;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
 }
 
-.visual-caption {
-  display: flex;
-  min-height: 62px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 0 28px;
-  color: #edf0eb;
-  font-size: 12px;
+.auth-form button,
+.home button {
+  width: 100%;
+  margin-top: 6px;
+  padding: 11px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
 }
 
-.visual-caption span:last-child {
-  color: #b5c2b9;
-  font-size: 10px;
+.auth-form button:disabled,
+.home button:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
-/* 宽度不超过760px时改为上下布局，例如手机上先展示项目介绍，再展示配图。 */
-@media (max-width: 760px) {
-  .foundation-shell {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.error {
+  color: #a93226;
+}
 
-  .project-panel {
-    min-height: 70vh;
-    padding: 26px 24px 20px;
-  }
+.notice {
+  color: var(--brand);
+}
 
-  .project-content {
-    margin: 44px auto;
-    padding: 22px 0;
-  }
+.switch {
+  margin-top: 16px;
+  font-size: 14px;
+  text-align: center;
+}
 
-  .visual-panel {
-    min-height: 30vh;
-  }
+.switch a {
+  color: var(--accent);
+}
 
-  .visual-image {
-    min-height: 226px;
-  }
+.status {
+  color: var(--muted);
+}
 
-  .visual-caption {
-    min-height: 54px;
-    padding: 0 20px;
+@media (max-width: 720px) {
+  .shell {
+    grid-template-columns: 1fr;
   }
 }

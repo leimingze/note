@@ -1,49 +1,60 @@
+<script>
+import { onMounted, ref } from 'vue'
+import { useAuth, restore, logout } from './auth'
+import LoginView from './views/LoginView.vue'
+import RegisterView from './views/RegisterView.vue'
+import HomeView from './views/HomeView.vue'
+
+export default {
+  components: { LoginView, RegisterView, HomeView },
+  setup() {
+    const auth = useAuth()
+    const view = ref('login')
+    const notice = ref('')
+
+    onMounted(restore)
+
+    return { auth, view, notice, logout }
+  },
+}
+</script>
+
 <template>
-  <!-- 页面由项目信息和摄影配图组成；例如桌面端并排显示，窄屏时按上下顺序显示。 -->
-  <main class="foundation-shell">
-    <section class="project-panel" aria-labelledby="page-title">
+  <main class="shell">
+    <section class="panel intro" aria-labelledby="page-title">
       <header class="brand">
         <span class="brand-symbol" aria-hidden="true">P</span>
         <span>PulseFrame</span>
       </header>
-
-      <div class="project-content">
-        <p class="eyebrow">工程基座</p>
+      <div class="intro-body">
         <h1 id="page-title">PulseFrame</h1>
-        <p class="intro">
-          当前保留网页工程与后端运行基础，后续业务模块将按需求逐步加入。
-        </p>
-
-        <!-- 用名称与对应值展示前端、后端和当前状态，便于逐项阅读。 -->
-        <dl class="foundation-list">
+        <p>账号系统前端，基于 Vue 3 与 JavaScript。</p>
+        <dl class="meta">
           <div>
             <dt>Web</dt>
-            <dd>Vue 3 + TypeScript</dd>
+            <dd>Vue 3 + JS</dd>
           </div>
           <div>
             <dt>API</dt>
             <dd>Go + Gin</dd>
           </div>
-          <div>
-            <dt>状态</dt>
-            <dd>基座可用</dd>
-          </div>
         </dl>
       </div>
-
-      <footer class="panel-footer">
-        <span>© 2026 PulseFrame</span>
-        <span>Foundation</span>
-      </footer>
     </section>
 
-    <!-- 图片来自 public 目录；加载失败或使用屏幕阅读器时，可通过 alt 文字了解图片内容。 -->
-    <aside class="visual-panel" aria-label="创作者户外摄影现场">
-      <img class="visual-image" src="/creator-capture.jpg" alt="创作者在山脊上记录户外景色" />
-      <div class="visual-caption">
-        <span>创作者现场</span>
-        <span>01 / PULSEFRAME</span>
-      </div>
-    </aside>
+    <section class="panel stage">
+      <p v-if="!auth.ready" class="status">加载中……</p>
+      <LoginView
+        v-else-if="!auth.signedIn && view === 'login'"
+        :notice="notice"
+        @to-register="view = 'register'"
+      />
+      <RegisterView
+        v-else-if="!auth.signedIn && view === 'register'"
+        @to-login="view = 'login'"
+        @registered="notice = '注册成功，请登录'; view = 'login'"
+      />
+      <HomeView v-else @logout="logout" />
+    </section>
   </main>
 </template>
