@@ -16,7 +16,7 @@
 
 验证：三份设计文档、docs/README.md 与本状态文件已完成互链和术语核对；`git diff --check` 通过。本轮只改设计文档，未编写或运行代码。
 
-下一步：按实施路线 P0 建表与存储接口，先验证 CHECK、生成列、双桶同步和 outbox 领取。
+下一步：按实施路线 P0 继续实现对象存储接口（MinIO 与内存实现）、CDN 接口与媒体探测。
 
 ## 当前任务
 
@@ -73,11 +73,16 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 - backend/config/、backend/logging/、backend/middleware/、backend/response/、backend/server/：基础能力。
 - backend/controller/.gitkeep、backend/service/.gitkeep、backend/dao/.gitkeep：业务目录占位。
 - backend/test/：基座测试，其中 scaffold_test.go 验证路由集合与原注册路径的 404 响应。
+- backend/internal/model/video.go、backend/internal/model/review_task.go：内容发布模块 video 与 review_task 两表的 gorm 模型。
+- backend/internal/migration/migrate.go：迁移登记 video 与 review_task 两表，并使用 InnoDB 与 utf8mb4。
+- backend/test/migration_video_test.go：验证建表、索引、唯一约束、字符集与迁移可重放。
 - backend/README.md：启动、配置与生命周期说明。
 - backend/go.mod、backend/go.sum：依赖清单。
 - frontend/：前端基础工程。
 
 ## 验证情况
+
+内容与发布建表（2026-11-11）：本地 MySQL 8.0.44（数据目录 .agent/work/mysql-pool，端口 13316）运行 TestMigrationVideoTables 通过，重复执行迁移结果稳定；既有 TestMySQL* 连接池测试仍通过。审查 build 与 go vet 通过，改动文件已 gofmt。
 
 测试目录整理（2026-11-03）：go test -timeout=60s ./...、go test -race -tags=mysqlintegration -timeout=60s ./...、go vet -tags=mysqlintegration ./... 均通过；测试使用本机13316端口的独立 MySQL 8.0.44 和 pulseframe_pool_test 数据库，测试实例已关闭。核对8份后端测试文件均位于 backend/test，相关索引无旧路径，修改文件的 gofmt 和 git diff --check 通过。既有测试场景保留，入口通过 app.Run 调用相同启动流程。
 
@@ -108,7 +113,7 @@ Redis 连接池实现（2026-11-04）：config/redis.go 读取并校验 Redis �
 
 ## 下一步
 
-先依据 docs/设计/日志与指标设计.md 确定日志公共字段和指标采集方式，再进入指标配置、HTTP 指标中间件和连接池采集代码实现；外部 HTTP 客户端按既定计划后期再做。
+P0 建表已完成，下一步实现对象存储接口（PresignPost/Head/Copy/Move/DeletePrefix/SignedURL，MinIO 与内存两个实现）、CDN 接口（SignURL/Purge）与媒体探测（ffprobe）。
 
 ## 归档位置
 
