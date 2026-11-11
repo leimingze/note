@@ -55,6 +55,7 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 - docs/README.md：项目设计与学习笔记的统一入口。
 - docs/设计/业务模块设计/内容与发布/内容与发布.md：上传、草稿、审核、下架、删除与播放地址的主方案。
 - docs/设计/业务模块设计/内容与发布/内容与发布-数据结构.md：upload、video、video_stat、review_task 四张表及 Redis key-value。
+- docs/设计/业务模块设计/内容与发布/内容与发布-字段设计说明.md：video 与 review_task 各字段及取值的设计理由。
 - docs/设计/业务模块设计/内容与发布/内容与发布-实施路线.md：P0–P5 分期交付与阶段验收。
 - docs/设计/服务可用性与高并发治理.md：职责与进度表，引用 MySQL 和 Redis 文件索引。
 - docs/设计/日志与指标设计.md：结构化日志字段、敏感信息规则、Prometheus 指标和后续实现职责。
