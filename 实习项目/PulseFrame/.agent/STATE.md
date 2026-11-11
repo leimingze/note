@@ -77,11 +77,16 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 - backend/internal/model/video.go、backend/internal/model/review_task.go：内容发布模块 video 与 review_task 两表的 gorm 模型。
 - backend/internal/migration/migrate.go：迁移登记 video 与 review_task 两表，并使用 InnoDB 与 utf8mb4。
 - backend/test/migration_video_test.go：验证建表、索引、唯一约束、字符集与迁移可重放。
+- backend/internal/platform/storage/storage.go、memory.go、s3.go：对象存储接口、内存实现与 minio-go（S3 兼容）实现。
+- backend/internal/platform/storage/storage_test.go、s3_integration_test.go：内存实现一致性测试与真实 S3 集成测试（s3integration 标签）。
+- backend/internal/platform/cdn/cdn.go、cdn_test.go：CDN 接口本地实现与测试。
 - backend/README.md：启动、配置与生命周期说明。
 - backend/go.mod、backend/go.sum：依赖清单。
 - frontend/：前端基础工程。
 
 ## 验证情况
+
+内容与发布存储接口（2026-11-12）：对象存储接口与内存、S3 双实现落地；内存实现一致性测试、CDN 测试、go build、go vet（含 s3integration 标签）通过。依赖新增 github.com/minio/minio-go/v7 v7.4.1。SeaweedFS 4.42 已在服务器 120.48.147.164 以 Docker Compose 部署，S3 端点映射宿主端口 30057（master 9333、volume 8080）。
 
 内容与发布建表（2026-11-11）：本地 MySQL 8.0.44（数据目录 .agent/work/mysql-pool，端口 13316）运行 TestMigrationVideoTables 通过，重复执行迁移结果稳定；既有 TestMySQL* 连接池测试仍通过。审查 build 与 go vet 通过，改动文件已 gofmt。
 
@@ -114,7 +119,7 @@ Redis 连接池实现（2026-11-04）：config/redis.go 读取并校验 Redis �
 
 ## 下一步
 
-P0 建表已完成，下一步实现对象存储接口（PresignPost/Head/Copy/Move/DeletePrefix/SignedURL，MinIO 与内存两个实现）、CDN 接口（SignURL/Purge）与媒体探测（ffprobe）。
+P0 建表与对象存储、CDN 接口代码已完成（内存测试通过）。下一步：在服务器 SeaweedFS S3 端点（120.48.147.164:30057）上运行 s3integration 集成测试，并实现媒体探测（ffprobe）及样本验证。
 
 ## 归档位置
 
