@@ -6,12 +6,12 @@
 
 本轮确定的约束：
 
-- 草稿使用 `video.status=0`；提交、通过、驳回、下架分别为 1/2/3/4。状态与时间字段用 7 条 CHECK 约束，草稿、待审核、已发布、已驳回、已下架不能任意组合。
+- 草稿使用 `video.status=0`；提交、通过、驳回、下架分别为 1/2/3/4。video 用 7 条状态/时间 CHECK，review_task 用 5 条终态/租约 CHECK，草稿、待审核、已发布、已驳回、已下架不能任意组合。
 - 媒体先落 `upload` 凭证再创建视频，数据库存对象键；原始字节哈希 `source_sha256` 用于去重与幂等，faststart/remux 后的最终哈希 `sha256` 用于对象键与完整性校验。
-- 公开桶副本与数据库状态分离：`is_public` 表示业务期望，`public_object_present` 表示副本就绪，`is_playable` 供列表与播放接口过滤；复制与删除由对账任务收敛，接受分钟级窗口。
+- 公开桶副本与数据库状态分离：`is_public` 表示业务期望，`public_object_present` 表示公开对象真实存在，`is_playable` 供列表与播放接口过滤。公开 key 按 `public/videos/{videoId}/` 隔离，复制与删除由对账任务收敛，接受分钟级窗口。
 - 送审任务为 outbox：提交事务只插入 `review_task`，worker 用原子 UPDATE 加租约领取，外部调用在事务外；投递带稳定幂等键，租约覆盖整批最坏耗时。
-- 撤回与删除把当前轮任务 1/2/3 置 7；回调任务 3 时按 `status=1 AND review_round=? AND deleted_at IS NULL` 条件更新视频，任务 7 只写任务结论。恢复待审核视频退回草稿。
-- 封面凭证由 `video.cover_upload_id` 引用并加唯一索引；换封面时旧凭证置 3 后回收。
+- 撤回与删除把当前轮任务 1/2/3 置 7；回调允许任务 2/3/7，任务 2/3 按 `status=1 AND review_round=? AND deleted_at IS NULL` 条件更新视频，任务 7 只写任务结论。恢复待审核视频退回草稿。
+- 封面凭证由 `video.cover_upload_id` 引用并加唯一索引；换独立封面凭证时旧凭证置 3 后回收，换自动抽帧封面时清空主媒体 upload.cover_key。
 - 幂等键在 Redis 记录请求指纹与响应，multipart 指纹按语义字段与 `source_sha256` 拼接；字节配额按 Content-Length 预留。
 
 验证：三份设计文档、docs/README.md 与本状态文件已完成互链和术语核对；`git diff --check` 通过。本轮只改设计文档，未编写或运行代码。
