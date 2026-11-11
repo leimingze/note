@@ -1,5 +1,23 @@
 # 任务状态索引
 
+## 内容与发布设计（2026-11-11）
+
+任务：内容与发布模块数据结构与功能边界评审后的修订。设计文件为 docs/设计/业务模块设计/内容与发布/ 下的主文档、数据结构与实施路线。
+
+本轮确定的约束：
+
+- 草稿使用 `video.status=0`；提交、通过、驳回、下架分别为 1/2/3/4。状态与时间字段用 7 条 CHECK 约束，草稿、待审核、已发布、已驳回、已下架不能任意组合。
+- 媒体先落 `upload` 凭证再创建视频，数据库存对象键；原始字节哈希 `source_sha256` 用于去重与幂等，faststart/remux 后的最终哈希 `sha256` 用于对象键与完整性校验。
+- 公开桶副本与数据库状态分离：`is_public` 表示业务期望，`public_object_present` 表示副本就绪，`is_playable` 供列表与播放接口过滤；复制与删除由对账任务收敛，接受分钟级窗口。
+- 送审任务为 outbox：提交事务只插入 `review_task`，worker 用原子 UPDATE 加租约领取，外部调用在事务外；投递带稳定幂等键，租约覆盖整批最坏耗时。
+- 撤回与删除把当前轮任务 1/2/3 置 7；回调任务 3 时按 `status=1 AND review_round=? AND deleted_at IS NULL` 条件更新视频，任务 7 只写任务结论。恢复待审核视频退回草稿。
+- 封面凭证由 `video.cover_upload_id` 引用并加唯一索引；换封面时旧凭证置 3 后回收。
+- 幂等键在 Redis 记录请求指纹与响应，multipart 指纹按语义字段与 `source_sha256` 拼接；字节配额按 Content-Length 预留。
+
+验证：三份设计文档、docs/README.md 与本状态文件已完成互链和术语核对；`git diff --check` 通过。本轮只改设计文档，未编写或运行代码。
+
+下一步：按实施路线 P0 建表与存储接口，先验证 CHECK、生成列、双桶同步和 outbox 领取。
+
 ## 当前任务
 
 TASK-2026-11-04-REDIS-POOL，10份后端测试文件统一保存在 backend/test；启动逻辑和依赖管理位于 backend/internal/app，main.go 保留入口。Redis 配置、客户端创建和依赖生命周期已实现，真实 MySQL 8.4 与 Redis 7 服务验证已通过。
@@ -35,6 +53,9 @@ refresh:{tokenDigest} 使用 Redis String 直接保存 sessionId。轮换时原�
 ## 有效文件
 
 - docs/README.md：项目设计与学习笔记的统一入口。
+- docs/设计/业务模块设计/内容与发布/内容与发布.md：上传、草稿、审核、下架、删除与播放地址的主方案。
+- docs/设计/业务模块设计/内容与发布/内容与发布-数据结构.md：upload、video、video_stat、review_task 四张表及 Redis key-value。
+- docs/设计/业务模块设计/内容与发布/内容与发布-实施路线.md：P0–P5 分期交付与阶段验收。
 - docs/设计/服务可用性与高并发治理.md：职责与进度表，引用 MySQL 和 Redis 文件索引。
 - docs/设计/日志与指标设计.md：结构化日志字段、敏感信息规则、Prometheus 指标和后续实现职责。
 - docs/设计/MySQL连接池-文件索引.md：仅列 MySQL 连接池配置、创建、启动管理及依赖清单相关文件与职责；Agent 执行时的测试和文档维护要求不列入表格。
