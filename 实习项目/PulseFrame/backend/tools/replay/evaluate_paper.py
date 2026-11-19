@@ -76,7 +76,7 @@ def main() -> None:
     parser.add_argument("--sample-id", action="append", required=True)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--base-url", default="http://127.0.0.1:8000/v1")
-    parser.add_argument("--model", default="qwen2.5-vl-3b")
+    parser.add_argument("--model", default="Qwen/Qwen3.5-9B")  # 默认使用服务器上的 9B 多模态模型。
     args = parser.parse_args()
     with args.samples.open(encoding="utf-8") as source:
         by_id = {row["sample_id"]: row for row in map(json.loads, filter(str.strip, source))}
