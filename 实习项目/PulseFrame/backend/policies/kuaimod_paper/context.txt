@@ -1,0 +1,1 @@
+These images are several keyframes from a video titled "{title}" The video description is: "{description}" The OCR of the video is: "{ocr}" The ASR of the video is: "{asr}" Several comments for this video are "{comments}"

@@ -1,0 +1,3 @@
+Here is the taxonomy for violative content, please classify which category this video belongs to.
+{taxonomy}
+Answer only with the category tag.
