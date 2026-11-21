@@ -105,14 +105,14 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// Review 是审核流程的运行参数。默认值对应流程设计附录 F：机审故障间隔 1、2、4 分钟重试，最多 3 次。
+// Review 配置审核队列、基础服务与审核规则。
 type Review struct {
 	MediaRoot        string        // 原文件根目录，media_key 相对它定位（本地目录代替私有桶）
 	WorkDir          string        // 挑帧、转写的临时目录，每个任务一个子目录
 	WorkerURL        string        // Python worker 地址
 	PromptPath       string        // 观察项提示词文件
 	Workers          int           // 同时处理的任务数
-	MaxAttempts      int           // 机审故障最多尝试次数，超过后转人审
+	RetryMax         time.Duration // 持续故障时同一任务重试间隔的上限
 	RetryBase        time.Duration // 机审重试的首次间隔，之后翻倍
 	Lease            time.Duration // 领取任务后的租约，进程崩溃时租约到期可被重新领取
 	CallbackBase     time.Duration // 回调失败后的首次重试间隔，之后翻倍
@@ -132,18 +132,11 @@ func LoadReview() (Review, error) {
 		PolicyTable:      getEnv("POLICY_TABLE", "default"),
 		MaxVideoDuration: 20,
 	}
-	ints := []struct {
-		key      string
-		fallback string
-		target   *int
-	}{{"REVIEW_WORKERS", "2", &cfg.Workers}, {"REVIEW_MAX_ATTEMPTS", "3", &cfg.MaxAttempts}}
-	for _, item := range ints {
-		value, err := strconv.Atoi(getEnv(item.key, item.fallback))
-		if err != nil || value <= 0 {
-			return cfg, fmt.Errorf("invalid %s", item.key)
-		}
-		*item.target = value
+	workers, err := strconv.Atoi(getEnv("REVIEW_WORKERS", "2"))
+	if err != nil || workers <= 0 {
+		return cfg, fmt.Errorf("invalid REVIEW_WORKERS")
 	}
+	cfg.Workers = workers
 	for key, spec := range map[string]struct {
 		fallback string
 		target   *time.Duration
@@ -162,6 +155,10 @@ func LoadReview() (Review, error) {
 	}
 	if cfg.PolicyTable != "default" && cfg.PolicyTable != "strict" {
 		return cfg, fmt.Errorf("POLICY_TABLE must be default or strict")
+	}
+	cfg.RetryMax, err = time.ParseDuration(getEnv("REVIEW_RETRY_MAX", max(cfg.RetryBase, 4*time.Minute).String()))
+	if err != nil || cfg.RetryMax < cfg.RetryBase {
+		return cfg, fmt.Errorf("REVIEW_RETRY_MAX must be at least REVIEW_RETRY_BASE")
 	}
 	if cfg.PolicyTable == "strict" {
 		expire, err := time.Parse(time.RFC3339, os.Getenv("POLICY_STRICT_EXPIRE_AT"))

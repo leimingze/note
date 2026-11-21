@@ -32,7 +32,7 @@ type Task struct {
 	Detail           string     `gorm:"size:500;not null;default:''"` // 复审触发依据
 	Status           string     `gorm:"size:20;not null;index:idx_claim,priority:1"`
 	NextAttemptAt    time.Time  `gorm:"type:datetime(3);not null;index:idx_claim,priority:2"` // 下次可领取时间
-	Attempts         int        `gorm:"not null;default:0"`                                   // 机审已尝试次数（故障重试最多 3 次）
+	Attempts         int        `gorm:"not null;default:0"`                                   // 任务已领取次数，用于退避和识别当前领取者
 	LastError        string     `gorm:"size:500;not null;default:''"`                         // 最近一次机审故障
 	Result           string     `gorm:"size:20;not null;default:''"`                          // pass / limit / reject
 	Reason           string     `gorm:"size:500;not null;default:''"`                         // 结论原因（回调里的 reason）

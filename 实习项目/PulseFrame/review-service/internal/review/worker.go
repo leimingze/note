@@ -2,7 +2,6 @@ package review
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -59,20 +58,23 @@ func (w *Worker) reviewLoop(ctx context.Context, index int) {
 	}
 }
 
-// handleFailure 机审故障：间隔 1、2、4 分钟重试，最多 3 次；仍失败转人审，内容保持不公开（附录 F）。
+// 输入：本次领取的任务和执行错误。
+// 输出：记录故障并将本次领取的任务排回机审队列。
+// 功能：服务故障期间保留待审状态，例如第三次超时后仍由机审重试。
 func (w *Worker) handleFailure(task *internal.Task, runErr error) {
 	ctx := context.Background()
 	cfg := w.service.cfg
-	if task.Attempts >= cfg.MaxAttempts {
-		reason := fmt.Sprintf("机审 %d 次均失败：%v", task.Attempts, runErr)
-		err := w.repo.SaveOutcome(ctx, task.ID, Outcome{Status: internal.TaskHumanReview, HumanReason: reason}, time.Now().UTC())
-		slog.Error("task moved to human review after retries", "task_id", task.TaskID, "error", runErr, "save_error", err)
+	delay := cfg.RetryBase
+	for i := 1; i < task.Attempts && delay < cfg.RetryMax; i++ {
+		delay += min(delay, cfg.RetryMax-delay) // 间隔逐次翻倍，在配置上限处停止增长。
+	}
+	next := time.Now().UTC().Add(delay)
+	if err := w.repo.RetryLater(ctx, task, next, runErr.Error()); err != nil {
+		slog.Error("could not reschedule task", "task_id", task.TaskID, "attempt", task.Attempts, "error", err)
 		return
 	}
-	next := time.Now().UTC().Add(cfg.RetryBase << (task.Attempts - 1))
-	err := w.repo.RetryLater(ctx, task.ID, next, runErr.Error())
 	slog.Warn("task failed, will retry", "task_id", task.TaskID, "attempt", task.Attempts, "next", next,
-		"error", runErr, "save_error", err)
+		"error", runErr)
 }
 
 // callbackLoop 把有结论的任务回调给内容模块；失败按退避重试直到成功（1s、2s、4s……最长 5 分钟）。

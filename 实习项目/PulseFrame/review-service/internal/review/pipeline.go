@@ -183,14 +183,14 @@ func (s *Service) finish(ctx context.Context, task *internal.Task, result *TaskR
 	}
 	slog.InfoContext(ctx, "task decided", "task_id", task.TaskID, "action", verdict.Action, "level", verdict.Level,
 		"reused", result.Reused, "total_ms", result.TimingsMS["total"])
-	return s.repo.SaveOutcome(ctx, task.ID, outcome, time.Now().UTC())
+	return s.repo.SaveOutcome(ctx, task, outcome, time.Now().UTC())
 }
 
 // finishReject 媒体不合规时直接拒绝发布并回调原因（流程设计附录 F 第一行）。
 func (s *Service) finishReject(ctx context.Context, task *internal.Task, result *TaskResult, reason string) error {
 	result.Action, result.Reasons = string(policy.ActionReject), []string{reason}
 	data, _ := json.Marshal(result)
-	return s.repo.SaveOutcome(ctx, task.ID, Outcome{Status: internal.TaskCompleted, Result: string(policy.ActionReject),
+	return s.repo.SaveOutcome(ctx, task, Outcome{Status: internal.TaskCompleted, Result: string(policy.ActionReject),
 		Reason: reason, FileHash: result.FileHash, ResultJSON: string(data)}, time.Now().UTC())
 }
 
@@ -306,6 +306,10 @@ func (s *Service) probeMedia(ctx context.Context, path string) (float64, error) 
 	out, err := exec.CommandContext(ctx, "ffprobe", "-v", "error", "-show_entries",
 		"format=duration:stream=codec_type", "-of", "json", path).Output()
 	if err != nil {
+		var exit *exec.ExitError
+		if !errors.As(err, &exit) || exit.ExitCode() < 0 {
+			return 0, fmt.Errorf("run ffprobe: %w", err)
+		}
 		return 0, errRejectMedia{"无法解析媒体文件"}
 	}
 	var probe struct {

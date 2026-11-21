@@ -1,5 +1,10 @@
 # 任务状态索引
 
+## REVIEW-RETRY 机审故障排队
+
+- 故障任务持续重试，默认间隔为 1、2、4 分钟，此后每 4 分钟再试。模型格式补采耗尽时转人审。
+- 代码及验证见 `review-service/internal/review/worker.go`、`repository.go` 与 `retry_mysql_test.go`。本地 MySQL 验证六次故障、租约接手和结论写回。带 mysqlintegration 标签的全套 Go 测试与 go vet 通过。测试目录 `.agent/work/review-retry/` 已归档。
+
 ## REVIEW-TWO 内容审核时间分批与两次判定
 
 - 设计见仓库根目录 `内容审核/流程设计.md` 附录 A、G。所有选中帧按时间分批参与主审，每批两次判定。插帧计数及年龄不单独触发处置，涉及未成年人的具体行为按标签处理。

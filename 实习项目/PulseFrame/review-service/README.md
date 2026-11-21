@@ -71,7 +71,7 @@ review-service/
 | `WORK_DIR` | /tmp/pulseframe-review | 帧图片和音频的工作目录，人审时回看 |
 | `WORKER_URL` | http://127.0.0.1:8090 | Python worker |
 | `PROMPT_PATH` | policies/observation/system_prompt.txt | |
-| `REVIEW_WORKERS` / `REVIEW_MAX_ATTEMPTS` / `REVIEW_RETRY_BASE` / `REVIEW_LEASE` | 2 / 3 / 1m / 10m | 机审故障按 1、2、4 分钟重试，3 次失败转人审 |
+| `REVIEW_WORKERS` / `REVIEW_RETRY_BASE` / `REVIEW_RETRY_MAX` / `REVIEW_LEASE` | 2 / 1m / 4m / 10m | 故障任务留在机审队列。重试间隔翻倍至上限；领取进程中断后，租约到期即可接手 |
 | `CALLBACK_RETRY_BASE` / `CALLBACK_RETRY_MAX` | 1s / 5m | |
 | `POLICY_TABLE` / `POLICY_STRICT_EXPIRE_AT` | default / 空 | 启动时用的规则表 |
 

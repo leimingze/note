@@ -83,8 +83,8 @@ func (r *Repository) ClaimTask(ctx context.Context, now time.Time, lease time.Du
 }
 
 // RetryLater 机审故障后放回队列，next_attempt_at 之后再领取。
-func (r *Repository) RetryLater(ctx context.Context, id uint64, at time.Time, cause string) error {
-	return r.db.WithContext(ctx).Model(&internal.Task{}).Where("id = ? AND status = ?", id, internal.TaskRunning).
+func (r *Repository) RetryLater(ctx context.Context, task *internal.Task, at time.Time, cause string) error {
+	return r.db.WithContext(ctx).Model(&internal.Task{}).Where("id = ? AND status = ? AND attempts = ?", task.ID, internal.TaskRunning, task.Attempts).
 		Updates(map[string]any{"status": internal.TaskPending, "next_attempt_at": at, "last_error": truncate(cause, 500)}).Error
 }
 
@@ -102,7 +102,7 @@ type Outcome struct {
 
 // SaveOutcome 写入结论。completed 的任务同时进入待回调状态；human_review 不回调，等人审结论。
 // 只更新仍在机审中的任务，进程崩溃后被别的 worker 重新领取并已写过结论时不会覆盖。
-func (r *Repository) SaveOutcome(ctx context.Context, id uint64, outcome Outcome, now time.Time) error {
+func (r *Repository) SaveOutcome(ctx context.Context, task *internal.Task, outcome Outcome, now time.Time) error {
 	updates := map[string]any{
 		"status": outcome.Status, "result": outcome.Result, "reason": truncate(outcome.Reason, 500),
 		"human_reason": truncate(outcome.HumanReason, 500), "level": outcome.Level,
@@ -114,7 +114,7 @@ func (r *Repository) SaveOutcome(ctx context.Context, id uint64, outcome Outcome
 		updates["callback_state"] = internal.CallbackPending
 		updates["next_callback_at"] = now
 	}
-	return r.db.WithContext(ctx).Model(&internal.Task{}).Where("id = ? AND status = ?", id, internal.TaskRunning).
+	return r.db.WithContext(ctx).Model(&internal.Task{}).Where("id = ? AND status = ? AND attempts = ?", task.ID, internal.TaskRunning, task.Attempts).
 		Updates(updates).Error
 }
 
