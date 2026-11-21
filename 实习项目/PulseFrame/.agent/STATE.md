@@ -1,5 +1,11 @@
 # 任务状态索引
 
+## M2-CPU100 挑帧配对评估（2026-11-21）
+
+- 新版挑帧及复现脚本在 `review-service/worker/framesel/{select_frames,paired_eval}.py`。沿用 `rs-fulltest/m3/thresholds.json`，按固定种子从历史评估集抽 100 个原视频，默认启用每条最多一帧的补选。服务器输入在 `/root/autodl-tmp/rs-fulltest/m3`，运行目录为同级 `m2-paired-100`。
+- 旧版 533/600，新版 548/600，等帧数覆盖对照 533/600。正常视频平均 8.81 → 9.17 帧。证据见 `review-service/reports/data/m2-paired-100/paired.jsonl.gz` 和仓库根目录 `内容审核/结论.md`。
+- 本机与服务器各通过 10 项挑帧测试。原始 MP4 样本 `3x4rtskqqw2sz8i/fade_30` 导出 11 帧，第 80 帧命中可见区间 77–83。跨来源泛化与下游审核效果尚未评估。过程目录 `.agent/work/m2-cpu100/` 已归档。
+
 ## 内容与发布设计（2026-11-11）
 
 任务：内容与发布模块数据结构与功能边界评审后的修订。设计文件为 docs/设计/业务模块设计/内容与发布/ 下的主文档、数据结构与实施路线。
