@@ -1,0 +1,7 @@
+{
+  "mode": "random",
+  "sample_percent": 5,
+  "window_seconds": 3600,
+  "minimum_increase": 100,
+  "growth_factor": 2
+}

@@ -12,6 +12,7 @@ type Frame struct {
 
 // Sample 表示一次审核判定使用的结构化输入（一个批次）。
 type Sample struct {
+	ScreenEvidence   string  // 小模型的可疑线索，供强模型核对。
 	SampleID         string  // 回放样本编号；在线任务用 task_id 加批次号。
 	Title            string  // 视频标题。
 	OCR              string  // 画面文字，按时间逐行。
@@ -57,7 +58,7 @@ type Inference interface {
 	Complete(ctx context.Context, sample Sample, prompt string) (string, Usage, error)
 }
 
-// Decision 表示两次采样汇总后的判定。
+// Decision 表示观察项回放的判定，也可读取历史记录。
 type Decision struct {
 	SampleID          string        `json:"sample_id"`           // 判定对应样本编号。
 	Version           string        `json:"version"`             // 识别版本。

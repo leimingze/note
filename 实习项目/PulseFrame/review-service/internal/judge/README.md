@@ -11,7 +11,7 @@ internal/judge/
 ├── client_test.go        # 客户端测试
 ├── config.go             # 配置管理（环境变量加载）
 ├── config_test.go        # 配置测试
-├── engine.go             # 判定引擎（两次采样与校验）
+├── engine.go             # 单次观察项回放与跨批汇总
 ├── parser.go             # 输出解析与校验
 ├── parser_test.go        # 解析器测试
 ├── scoring.go            # 评分与汇总逻辑

@@ -83,7 +83,7 @@ type Service struct {
 	content *ContentClient
 	worker  *WorkerClient
 	engine  judge.Engine
-	judging judge.Policy  // 识别版本对应的提示词与投票阈值
+	judging judge.Policy  // 强模型复核使用的提示词及输出定义。
 	cfg     config.Review // 运行参数
 
 	mu      sync.RWMutex
@@ -155,7 +155,8 @@ func (s *Service) HumanDecision(ctx context.Context, taskID uint64, req HumanDec
 	}
 	if req.Observation != nil && task.FileHash != "" {
 		corrected := *req.Observation
-		corrected.Paired = nil // 人工修正已取代原始两票，即使客户端回传详情也以修正结果为准。
+		corrected.Paired = nil // 人工修正取代此前的识别结果。
+		corrected.InvalidAnswer = ""
 		data, _ := json.Marshal(corrected)
 		if err := s.repo.CorrectFileRecord(ctx, task.FileHash, s.judging.Version, string(data), req.Reviewer); err != nil {
 			slog.ErrorContext(ctx, "correct file record failed", "task_id", taskID, "error", err)

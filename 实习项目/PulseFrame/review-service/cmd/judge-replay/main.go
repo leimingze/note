@@ -1,11 +1,11 @@
-// judge-replay 用线上同一套判定代码（提示词拼装、两次采样、严格校验、投票）离线回放样本，
+// judge-replay 使用整片复核的观察项提示词和单次回答校验回放样本。
 // 用于诊断实验，例如把挑中的插入帧单独送审，对比放在整批帧里时的认出率。
 //
 // 输入 JSONL 每行：{"sample_id": "...", "title": "", "ocr": "", "asr": "",
 //
 //	"frames": [{"path": "...", "timestamp": 7.6, "type": "brief_insertion", "crop_path": ""}]}
 //
-// 输出 JSONL 每行：{"sample_id": "...", "decision": {...含两次采样原始输出...}, "error": ""}
+// 输出 JSONL 每行包含样本编号、观察结果及错误信息。
 //
 // 用法：VLM_BASE_URL=... VLM_MODEL=... judge-replay --input samples.jsonl --output decisions.jsonl \
 //

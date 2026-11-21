@@ -22,6 +22,10 @@ import (
 // Observation 是一个文件在某个识别版本下的观察结果，存在 file_record 里供复用。
 // 只记"看到了什么"：等级由程序按分级规则算，处置由当前规则表算，换表不用重跑模型（流程设计第 4 节）。
 type Observation struct {
+	Findings      []LocatedFinding `json:"findings,omitempty"`       // 可随缓存回看的初筛原话和位置。
+	FlowVersion   int              `json:"flow_version,omitempty"`   // 机审流程版本。
+	Title         string           `json:"screened_title,omitempty"` // 初筛使用的标题，避免跨标题复用。
+	InvalidAnswer string           `json:"invalid_answer,omitempty"` // 两个阶段格式重试耗尽的原因。
 	// Paired 保存各批两份主审回答，换表后仍能逐票计算处置。
 	Paired            *pairedEvidence     `json:"paired,omitempty"`
 	Observations      []judge.Observation `json:"observations"`        // 低俗观察项（类型 + 时间点）
@@ -38,21 +42,23 @@ type Observation struct {
 
 // TaskResult 是一次审核的完整记录，存在 task.result_json，供人审回看和实验统计。
 type TaskResult struct {
-	TaskID         uint64           `json:"task_id"`
-	FileHash       string           `json:"file_hash"`
-	Reused         bool             `json:"reused"`          // 复用了文件审核记录，没有重新跑模型
-	HumanCorrected bool             `json:"human_corrected"` // 复用的是人工修正过的观察结果
-	Duration       float64          `json:"duration"`
-	Frames         *FrameResult     `json:"frames,omitempty"`
-	Text           *TextResult      `json:"text,omitempty"`
-	Batches        []judge.Decision `json:"batches,omitempty"`
-	Observation    Observation      `json:"observation"`
-	Level          string           `json:"level"`
-	PolicyVersion  string           `json:"policy_version"`
-	Action         string           `json:"action"`
-	Reasons        []string         `json:"reasons"`
-	HumanReasons   []string         `json:"human_reasons"`
-	TimingsMS      map[string]int64 `json:"timings_ms"`
+	Screens        []BatchScreen                    `json:"screens,omitempty"` // 分批初筛的可定位证据。
+	Strong         *judge.StageResult[judge.Output] `json:"strong,omitempty"`  // 单个整片复核记录。
+	TaskID         uint64                           `json:"task_id"`
+	FileHash       string                           `json:"file_hash"`
+	Reused         bool                             `json:"reused"`          // 复用了文件审核记录，没有重新跑模型
+	HumanCorrected bool                             `json:"human_corrected"` // 复用的是人工修正过的观察结果
+	Duration       float64                          `json:"duration"`
+	Frames         *FrameResult                     `json:"frames,omitempty"`
+	Text           *TextResult                      `json:"text,omitempty"`
+
+	Observation   Observation      `json:"observation"`
+	Level         string           `json:"level"`
+	PolicyVersion string           `json:"policy_version"`
+	Action        string           `json:"action"`
+	Reasons       []string         `json:"reasons"`
+	HumanReasons  []string         `json:"human_reasons"`
+	TimingsMS     map[string]int64 `json:"timings_ms"`
 }
 
 // errRejectMedia 表示媒体本身不合规（超时长、无法解码），直接拒绝，不重试。
@@ -60,8 +66,9 @@ type errRejectMedia struct{ reason string }
 
 func (e errRejectMedia) Error() string { return e.reason }
 
-// ProcessTask 完整处理一个审核任务：读原文件 → 校验 → 挑帧 → 转写与画面文字 → VLM 两次采样判定 →
-// 定级 → 查规则表 → 写结论。基础设施故障返回 error，由 worker 按退避重试；媒体不合规直接拒绝。
+// 输入：上下文及队列中领取的任务。
+// 输出：保存模型证据和审核结论，服务故障返回错误供队列重试。
+// 功能：发布前按批初筛并汇总复核，发布后抽查直接使用强模型。
 func (s *Service) ProcessTask(ctx context.Context, task *internal.Task) error {
 	started := time.Now()
 	timings := map[string]int64{}
@@ -94,7 +101,7 @@ func (s *Service) ProcessTask(ctx context.Context, task *internal.Task) error {
 	if err != nil {
 		return fmt.Errorf("find file record: %w", err)
 	}
-	if record != nil && record.Done && json.Unmarshal([]byte(record.ObservationJSON), &result.Observation) == nil && (record.HumanCorrected || (result.Observation.Paired != nil && result.Observation.Paired.Version == mainReviewVersion)) {
+	if task.Kind != "rereview" && record != nil && record.Done && json.Unmarshal([]byte(record.ObservationJSON), &result.Observation) == nil && (record.HumanCorrected || (result.Observation.FlowVersion == funnelVersion && result.Observation.Title == task.Title && result.Observation.InvalidAnswer == "")) {
 		// 同一文件、同一识别版本已审过：复用观察结果，只按当前规则表重新算处置。
 		result.Reused, result.HumanCorrected = true, record.HumanCorrected
 	} else if err := s.observe(ctx, task, mediaPath, &result); err != nil {
@@ -135,30 +142,14 @@ func (s *Service) observe(ctx context.Context, task *internal.Task, mediaPath st
 	result.Text = text
 
 	step = time.Now()
-	decisions := make([]judge.Decision, 0, len(frames.Batches))
-	for index, batch := range frames.Batches {
-		sample := judge.Sample{
-			SampleID: fmt.Sprintf("%d-b%d", task.TaskID, index), Title: task.Title,
-			OCR: text.OCRText, ASR: text.ASRText, Frames: toJudgeFrames(batch),
-		}
-		decision, err := s.engine.Judge(ctx, sample, s.judging)
-		if err != nil {
-			return fmt.Errorf("judge batch %d: %w", index, err)
-		}
-		decisions = append(decisions, decision)
+	if err := s.runFunnel(ctx, task, result); err != nil {
+		return err
 	}
 	result.TimingsMS["vlm"] = time.Since(step).Milliseconds()
-	result.Batches = decisions
-	merged := judge.MergeBatches(decisions)
-	result.Observation = Observation{
-		Paired:       collectPair(decisions),
-		Observations: merged.Observations, ViolenceDetected: merged.ViolenceDetected, OtherLabels: merged.OtherLabels,
-		IsSwimwearProduct: merged.IsSwimwearProduct,
-		NeedHumanReview:   merged.NeedHumanReview, HumanReasons: merged.HumanReasons, Evidence: merged.Evidence,
-		TextHits: text.TextHits, Injection: FindInjection(task.Title, text.OCRText, text.ASRText),
-		FrameCounts: frames.Counts,
+	data, err := json.Marshal(result.Observation)
+	if err != nil {
+		return err
 	}
-	data, _ := json.Marshal(result.Observation)
 	if err := s.repo.SaveFileRecord(ctx, result.FileHash, s.judging.Version, string(data)); err != nil {
 		return fmt.Errorf("save file record: %w", err)
 	}
@@ -205,6 +196,9 @@ type Verdict struct {
 // Decide 汇总各路结果取最严的处置（流程设计 2.1、2.2）：
 // 文字规则命中 → 拦截；注入特征词、模型没把握 → 人审；其余按规则表处置。纯函数，换表预演也用它。
 func Decide(obs Observation, active *policy.Policy) Verdict {
+	if obs.InvalidAnswer != "" {
+		return Verdict{Action: policy.ActionHuman, HumanReasons: []string{obs.InvalidAnswer}, Reasons: []string{obs.InvalidAnswer}}
+	}
 	if obs.Paired != nil {
 		return obs.Paired.decide(obs, active)
 	}

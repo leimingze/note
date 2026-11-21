@@ -10,11 +10,12 @@
 - 故障任务持续重试，默认间隔为 1、2、4 分钟，此后每 4 分钟再试。模型格式补采耗尽时转人审。
 - 代码及验证见 `review-service/internal/review/worker.go`、`repository.go` 与 `retry_mysql_test.go`。本地 MySQL 验证六次故障、租约接手和结论写回。带 mysqlintegration 标签的全套 Go 测试与 go vet 通过。测试目录 `.agent/work/review-retry/` 已归档。
 
-## REVIEW-TWO 内容审核时间分批与两次判定
+## REVIEW-FUNNEL 发布前分批初筛与发布后抽查
 
-- 设计见仓库根目录 `内容审核/流程设计.md` 附录 A、G。所有选中帧按时间分批参与主审，每批两次判定。插帧计数及年龄不单独触发处置，涉及未成年人的具体行为按标签处理。
-- 代码见 `review-service/worker/framesel/select_frames.py`、`review-service/internal/judge/engine.go`、`review-service/internal/review/paired.go`。旧版机审缓存在下次使用时按当前主审版本重新识别，人工修正保留。
-- 验证入口为 `go test -timeout 60s ./...` 与 `python3 -m pytest -q worker/framesel/test_select_frames.py`。两票与五票在新批次输入上的准确率差异仍待模型评估。
+- 小 VLM 每批查四类线索并保留 ASR、OCR 的来源与时间。强 VLM 汇总各批命中及相邻帧复核一次，按活动规则表处置。
+- 发布后由内容模块投递已发布候选，支持随机或曝光增长抽查。抽中后跳过机审缓存，强模型直接审核原始抽帧与全片文字。
+- 设计见仓库根目录 `内容审核/流程设计.md` 附录 G。有效代码及配置为 `review-service/internal/review/funnel.go`、`published.go`、`internal/judge/funnel.go` 和 `policies/published_sampling.json`（均在审核服务内）。
+- `go test -race -timeout 60s ./...` 与 `go vet ./...` 通过。双模型部署、真实视频效果和 KuaiRand 曝光数据回放待验证。
 
 ## M2-CPU100 挑帧配对评估（2026-11-21）
 

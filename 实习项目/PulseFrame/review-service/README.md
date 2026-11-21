@@ -6,7 +6,7 @@
 
 ```
 内容模块投递任务 → 读取原文件并校验（1 路视频流、≤20 秒）→ 挑帧 → 语音转写 + 画面文字 → 文字规则
-  → VLM 每批两次采样、按规则表比较两份处置→ 定级 L0–L3 → 查规则表 → 回调内容模块
+  → 小 VLM 每批一次初筛 → 有可疑线索时整片交强 VLM 复核 → 定级并查规则表 → 回调内容模块
 ```
 
 - 模型只输出"看到了什么"（观察项），等级由程序算，处置查规则表；换表不重跑模型。
@@ -21,7 +21,7 @@ review-service/
 ├── cmd/judge-replay/        # 用线上判定代码离线回放样本（诊断实验用）
 ├── internal/
 │   ├── review/              # 任务队列、流水线、回调、人审与规则表接口、插帧规则
-│   ├── judge/               # VLM 调用、严格校验、双次采样与回答校验
+│   ├── judge/               # 两阶段 VLM 客户端、证据及回答校验
 │   ├── grading/             # 观察项 → 低俗等级
 │   ├── policy/              # 平时表、严查表
 │   ├── platform/            # 配置、日志、数据库、HTTP 响应
@@ -54,7 +54,9 @@ review-service/
 | `POST /internal/review/tasks/{task_id}/decision` | 人审结论 `{result, reason, reviewer, observation?}`，只接受等人审的任务，否则 409 |
 | `POST /internal/review/policy` | 按配置中的表名切换；临时表可在配置或请求的 `expire_at` 中指定到期时间 |
 
-审核服务 → 内容模块：`POST /internal/review/callback`（`{task_id, result, reason}`，失败按 1 秒起指数退避、最长 5 分钟，直到成功），以及 `offline`、`limit`（seq 按视频递增）、`rereview`。
+发布后由内容模块向 `POST /internal/review/published-candidates` 投递已发布视频，提供 `video_id`、`media_key`、标题和独立的复审 `task_id`。同一次抽查机会重投使用相同编号。响应含 `selected`，入选时返回任务并沿用审核回调。随机模式对全部候选按比例抽取。曝光模式额外提交 `window_seconds`、`previous_exposures`、`current_exposures`，计数来自连续两个等长窗口。抽中后绕过初筛与机审缓存。
+
+审核服务通过 `POST /internal/review/callback` 返回处置，失败时从 1 秒起退避重试，最长间隔 5 分钟。
 
 ## 配置（环境变量）
 
@@ -64,7 +66,9 @@ review-service/
 | `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_USER` / `MYSQL_PASSWORD` / `MYSQL_DATABASE` | 127.0.0.1 / 3306 / 必填 / 必填 / 必填 | 启动时自动建表 |
 | `SERVICE_KEY` | 必填 | 内容模块调用审核服务的密钥 |
 | `CONTENT_MODULE_BASE_URL` / `CONTENT_MODULE_SERVICE_KEY` | http://127.0.0.1:8080 / 必填 | 回调内容模块 |
-| `VLM_BASE_URL` / `VLM_MODEL` | 必填 | OpenAI 兼容接口，例如 `http://127.0.0.1:8000/v1`、`qwen3.5-9b` |
+| `VLM_BASE_URL` / `VLM_MODEL` | 必填 | 小 VLM 初筛服务地址与模型名称 |
+| `STRONG_VLM_BASE_URL` / `STRONG_VLM_MODEL` | 必填 | 整片复核服务，须支持提交的全部复核图片（含局部放大图）。可用同前缀设置 API_KEY、TIMEOUT、MAX_RETRIES、MAX_TOKENS、DISABLE_THINKING |
+| `SAMPLING_FILE` | `policies/published_sampling.json` | 发布后抽查模式、抽取百分比、曝光窗口及两个增长门槛 |
 | `VLM_TIMEOUT` / `VLM_MAX_RETRIES` / `VLM_MAX_TOKENS` / `VLM_DISABLE_THINKING` | 60（秒）/ 3 / 1024 / true | |
 | `IDENT_VERSION` | 必填 | 识别版本（模型 + 提示词 + 观察项定义），文件审核记录按它复用，改了任何一项都要换 |
 | `MEDIA_ROOT` | /data/media | 原文件根目录（对象存储挂载点），media_key 相对于它解析，不能越界 |

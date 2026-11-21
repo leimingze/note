@@ -107,6 +107,7 @@ func getEnv(key, fallback string) string {
 
 // Review 配置审核队列、基础服务与审核规则。
 type Review struct {
+	Sampling         Sampling      // 发布后抽查配置。
 	MediaRoot        string        // 原文件根目录，media_key 相对它定位（本地目录代替私有桶）
 	WorkDir          string        // 挑帧、转写的临时目录，每个任务一个子目录
 	WorkerURL        string        // Python worker 地址
@@ -137,6 +138,10 @@ func LoadReview() (Review, error) {
 	workers, err := strconv.Atoi(getEnv("REVIEW_WORKERS", "2"))
 	if err != nil || workers <= 0 {
 		return cfg, fmt.Errorf("invalid REVIEW_WORKERS")
+	}
+	cfg.Sampling, err = LoadSampling(getEnv("SAMPLING_FILE", "policies/published_sampling.json"))
+	if err != nil {
+		return cfg, fmt.Errorf("load sampling config: %w", err)
 	}
 	cfg.Workers = workers
 	for key, spec := range map[string]struct {

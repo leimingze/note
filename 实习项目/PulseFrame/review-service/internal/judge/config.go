@@ -22,55 +22,61 @@ type Config struct {
 // LoadConfigFromEnv 从环境变量加载配置。
 // 输出：完整配置；必需参数缺失时返回错误。
 // 功能：支持 VLM_BASE_URL、VLM_MODEL、VLM_API_KEY、VLM_TIMEOUT、VLM_MAX_RETRIES 环境变量。
-func LoadConfigFromEnv() (Config, error) {
-	baseURL := os.Getenv("VLM_BASE_URL")
+func LoadConfigFromEnv() (Config, error) { return LoadModelConfig("VLM_") }
+
+// 输入：角色的环境变量前缀。
+// 输出：独立的模型参数，必填配置缺失时返回错误。
+// 功能：分别读取初筛和复核模型地址，例如 STRONG_VLM_MODEL 指定复核模型。
+func LoadModelConfig(prefix string) (Config, error) {
+	get := func(name string) string { return os.Getenv(prefix + name) }
+	baseURL := get("BASE_URL")
 	if baseURL == "" {
-		return Config{}, fmt.Errorf("VLM_BASE_URL is required")
+		return Config{}, fmt.Errorf("%sBASE_URL is required", prefix)
 	}
 
-	model := os.Getenv("VLM_MODEL")
+	model := get("MODEL")
 	if model == "" {
-		return Config{}, fmt.Errorf("VLM_MODEL is required")
+		return Config{}, fmt.Errorf("%sMODEL is required", prefix)
 	}
 
 	config := Config{
 		BaseURL:         baseURL,
 		Model:           model,
-		APIKey:          os.Getenv("VLM_API_KEY"), // 可选
-		Timeout:         60 * time.Second,         // 默认 60 秒
-		MaxRetries:      3,                        // 默认重试 3 次
+		APIKey:          get("API_KEY"),   // 可选
+		Timeout:         60 * time.Second, // 默认 60 秒
+		MaxRetries:      3,                // 默认重试 3 次
 		MaxTokens:       defaultMaxTokens,
-		DisableThinking: os.Getenv("VLM_DISABLE_THINKING") != "false",
+		DisableThinking: get("DISABLE_THINKING") != "false",
 	}
 
-	if tokensStr := os.Getenv("VLM_MAX_TOKENS"); tokensStr != "" {
+	if tokensStr := get("MAX_TOKENS"); tokensStr != "" {
 		tokens, err := strconv.Atoi(tokensStr)
 		if err != nil || tokens <= 0 {
-			return Config{}, fmt.Errorf("invalid VLM_MAX_TOKENS: %q", tokensStr)
+			return Config{}, fmt.Errorf("invalid %sMAX_TOKENS: %q", prefix, tokensStr)
 		}
 		config.MaxTokens = tokens
 	}
 
 	// 解析可选的超时配置
-	if timeoutStr := os.Getenv("VLM_TIMEOUT"); timeoutStr != "" {
+	if timeoutStr := get("TIMEOUT"); timeoutStr != "" {
 		timeoutSec, err := strconv.Atoi(timeoutStr)
 		if err != nil {
-			return Config{}, fmt.Errorf("invalid VLM_TIMEOUT: %w", err)
+			return Config{}, fmt.Errorf("invalid %sTIMEOUT: %w", prefix, err)
 		}
 		if timeoutSec <= 0 {
-			return Config{}, fmt.Errorf("VLM_TIMEOUT must be positive, got %d", timeoutSec)
+			return Config{}, fmt.Errorf("%sTIMEOUT must be positive, got %d", prefix, timeoutSec)
 		}
 		config.Timeout = time.Duration(timeoutSec) * time.Second
 	}
 
 	// 解析可选的重试次数配置
-	if retriesStr := os.Getenv("VLM_MAX_RETRIES"); retriesStr != "" {
+	if retriesStr := get("MAX_RETRIES"); retriesStr != "" {
 		retries, err := strconv.Atoi(retriesStr)
 		if err != nil {
-			return Config{}, fmt.Errorf("invalid VLM_MAX_RETRIES: %w", err)
+			return Config{}, fmt.Errorf("invalid %sMAX_RETRIES: %w", prefix, err)
 		}
 		if retries < 0 {
-			return Config{}, fmt.Errorf("VLM_MAX_RETRIES must be non-negative, got %d", retries)
+			return Config{}, fmt.Errorf("%sMAX_RETRIES must be non-negative, got %d", prefix, retries)
 		}
 		config.MaxRetries = retries
 	}

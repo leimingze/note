@@ -17,7 +17,7 @@ import (
 
 const (
 	defaultMaxTokens  = 1024 // 单次判定的输出上限，足以容纳观察项、标签和证据。
-	sampleTemperature = 1.0  // 采样温度大于零，用于获得两次回答的差异（附录 G）。
+	sampleTemperature = 1.0  // 模型生成回答时的采样温度。
 )
 
 // OpenAIClient 调用 OpenAI 兼容的多模态 chat completions 接口。
@@ -199,9 +199,7 @@ func parseResponse(reader io.Reader) (usageResponse, error) {
 		return usageResponse{}, fmt.Errorf("inference returned no choices")
 	}
 	content := strings.TrimSpace(payload.Choices[0].Message.Content)
-	if content == "" {
-		return usageResponse{}, fmt.Errorf("inference returned empty content")
-	}
+	// 服务已返回一份回答，空文本由阶段格式校验处理。
 	return usageResponse{
 		text:  content,
 		Usage: Usage{TokensIn: payload.Usage.PromptTokens, TokensOut: payload.Usage.CompletionTokens},
@@ -232,6 +230,9 @@ func buildContent(sample Sample) ([]any, error) {
 		"语音转写（ASR，按起止时间）：\n" + orNone(sample.ASR) + "\n" +
 		"可疑声音：" + orNone(sample.SuspiciousSounds) + "\n" +
 		fmt.Sprintf("关键帧：共 %d 帧，按时间顺序排列，每帧前标有序号、时间和挑帧类型。", len(sample.Frames))
+	if sample.ScreenEvidence != "" {
+		header += "\n待核对的初筛线索（仅供定位，请按原材料独立判断）：\n" + sample.ScreenEvidence
+	}
 	content := []any{map[string]any{"type": "text", "text": header}}
 	for index, frame := range sample.Frames {
 		label := fmt.Sprintf("第 %d 帧", index+1)

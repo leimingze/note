@@ -7,24 +7,13 @@ import (
 	"pulseframe-review/internal/policy"
 )
 
-// mainReviewVersion 标识当前主审提示词和观察字段，供旧机审缓存重新识别。
-const mainReviewVersion = 2
+// historicalVotes 是旧文件记录中每批保存的回答数，仅供历史处置回看。
+const historicalVotes = 2
 
 // pairedEvidence 保存重新按规则表计算所需的两份独立证据。
 type pairedEvidence struct {
 	Version int              `json:"version"` // 主审流程版本。
 	Batches [][]judge.Output `json:"batches"` // 按视频时间保存各批有效回答。
-}
-
-// 输入：各批主审判定。
-// 输出：可随观察记录保存的配对证据。
-// 功能：保留每票的依据，例如切换严查表后重新比较两份处置。
-func collectPair(batches []judge.Decision) *pairedEvidence {
-	p := &pairedEvidence{Version: mainReviewVersion}
-	for _, batch := range batches {
-		p.Batches = append(p.Batches, batch.Samples)
-	}
-	return p
 }
 
 // 输入：两份处置、可定位的分歧说明。
@@ -42,13 +31,13 @@ func compareVerdicts(a, b Verdict, reason string) Verdict {
 // 输出：整条视频的处置，并给出引起分歧的批次。
 // 功能：逐批比较两票，再合并跨批观察定级，例如同一回答序列的两次特写可累计成 L2。
 func (p *pairedEvidence) decide(shared Observation, table *policy.Policy) Verdict {
-	var lanes [judge.SampleCount][]judge.Decision
+	var lanes [historicalVotes][]judge.Decision
 	var conflicts []string
 	for i, batch := range p.Batches {
-		if len(batch) != judge.SampleCount {
+		if len(batch) != historicalVotes {
 			return incompletePair(fmt.Sprintf("主审第 %d 批未取得两份有效回答", i+1))
 		}
-		var local [judge.SampleCount]Verdict
+		var local [historicalVotes]Verdict
 		for j, out := range batch {
 			d := judge.FromOutput(out)
 			lanes[j] = append(lanes[j], d)

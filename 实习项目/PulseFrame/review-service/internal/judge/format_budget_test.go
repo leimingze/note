@@ -2,15 +2,23 @@ package judge
 
 import "testing"
 
-// 输入：Go 测试上下文。
-// 输出：有效票数或预算边界错误时报告失败。
-// 功能：检查不同的格式错误出现顺序；例如首轮只缺一票且首次补采也失败时，仍能继续补采。
-func TestFormatBudget(t *testing.T) {
-	for _, tc := range []struct{ valid, attempted, next int }{
-		{0, 0, 2}, {1, 2, 1}, {1, 3, 1}, {1, 4, 0}, {0, 2, 2}, {2, 2, 0},
+// 输入：包含有效和无效来源编号的初筛回答。
+// 输出：错误放行、缺失字段或原文引用失效时报告失败。
+// 功能：验证格式失败与无命中有明确区别，例如空对象无法放行。
+func TestScreenValidation(t *testing.T) {
+	refs := map[string]bool{"OCR1": true}
+	for _, tc := range []struct {
+		raw   string
+		valid bool
+	}{
+		{`{"findings":[]}`, true}, {`{}`, false}, {`{"findings":null}`, false},
+		{`{"findings":[{"category":"营销与交易","frame":1,"evidence":"出现站外收款指引","references":["OCR1"]}]}`, true},
+		{`{"findings":[{"category":"营销与交易","frame":1,"evidence":"出现站外收款指引","references":["ASR1"]}]}`, false},
+		{`{"findings":[{"category":"营销与交易","frame":2,"evidence":"超出范围","references":[]}]}`, false},
 	} {
-		if got := nextRoundSize(tc.valid, tc.attempted); got != tc.next {
-			t.Errorf("valid=%d attempted=%d next=%d want=%d", tc.valid, tc.attempted, got, tc.next)
+		_, err := ParseFindings(tc.raw, 1, refs)
+		if (err == nil) != tc.valid {
+			t.Errorf("%s: %v", tc.raw, err)
 		}
 	}
 }

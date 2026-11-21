@@ -162,6 +162,7 @@ func (h *Handler) writeError(w http.ResponseWriter, r *http.Request, err error) 
 
 // RegisterRoutes 注册审核模块的路由。
 func RegisterRoutes(mux *http.ServeMux, handler *Handler) {
+	mux.HandleFunc("POST /internal/review/published-candidates", handler.HandlePublished)
 	mux.HandleFunc("POST /internal/review/tasks", handler.HandleSubmit)
 	mux.HandleFunc("GET /internal/review/tasks/{task_id}", handler.HandleQuery)
 	mux.HandleFunc("GET /internal/review/tasks/{task_id}/detail", handler.HandleDetail)

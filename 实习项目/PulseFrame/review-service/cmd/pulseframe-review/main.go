@@ -31,6 +31,8 @@ func main() {
 	must(err, "load review config")
 	vlmCfg, err := judge.LoadConfigFromEnv()
 	must(err, "load VLM config")
+	strongCfg, err := judge.LoadModelConfig("STRONG_VLM_")
+	must(err, "load strong VLM config")
 	serviceKey := os.Getenv("SERVICE_KEY")
 	if serviceKey == "" {
 		logging.Fatal("SERVICE_KEY is required", nil)
@@ -47,7 +49,7 @@ func main() {
 	must(migration.Migrate(db), "migrate database")
 
 	repo := review.NewRepository(db)
-	engine := judge.Engine{Inference: judge.NewClientFromConfig(vlmCfg)}
+	engine := judge.Engine{Inference: judge.NewClientFromConfig(vlmCfg), Strong: judge.NewClientFromConfig(strongCfg)}
 	judging := judge.Policy{Version: identVersion, AllowedLabels: judge.AllowedLabels, SystemPrompt: string(prompt)}
 	service, err := review.NewService(repo, review.NewContentClient(contentCfg), review.NewWorkerClient(reviewCfg.WorkerURL),
 		engine, judging, reviewCfg)

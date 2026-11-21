@@ -49,12 +49,20 @@ type TextHits struct {
 	ShouldReject bool       `json:"should_reject"`
 }
 
-// TextResult 是语音转写和画面文字识别的结果。
+// TranscriptLine 保存一条原文的时间位置。
+type TranscriptLine struct {
+	Start     float64 `json:"start"`         // 口播起点，单位为秒。
+	End       float64 `json:"end,omitempty"` // 口播终点，单位为秒。
+	Timestamp float64 `json:"timestamp"`     // 帧在视频中的位置，单位为秒。
+	Text      string  `json:"text"`          // ASR 或 OCR 原文。
+}
+
+// TextResult 包含全片文字与带时间的逐条记录。
 type TextResult struct {
 	Audio       bool             `json:"audio"`
-	ASRSegments []map[string]any `json:"asr_segments"`
+	ASRSegments []TranscriptLine `json:"asr_segments"`
 	ASRText     string           `json:"asr_text"`
-	OCR         []map[string]any `json:"ocr"`
+	OCR         []TranscriptLine `json:"ocr"`
 	OCRText     string           `json:"ocr_text"`
 	TextHits    TextHits         `json:"text_hits"`
 	TimingsMS   map[string]int64 `json:"timings_ms"`
