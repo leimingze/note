@@ -118,8 +118,9 @@ type Review struct {
 	CallbackBase     time.Duration // 回调失败后的首次重试间隔，之后翻倍
 	CallbackMax      time.Duration // 回调重试间隔上限
 	PollInterval     time.Duration // 没有任务时的轮询间隔
-	PolicyTable      string        // 启动时的规则表：default 平时表 / strict 严查表
-	StrictExpireAt   time.Time     // 严查表到期时间，到期自动回到平时表
+	PolicyFile       string        // 审核策略 JSON 文件路径。
+	PolicyTable      string        // 启动表名，空值使用配置文件中的默认表。
+	PolicyExpireAt   time.Time     // 启动表的到期时间，零值使用规则文件设置。
 	MaxVideoDuration float64       // 视频时长上限（秒），兜底校验
 }
 
@@ -129,7 +130,8 @@ func LoadReview() (Review, error) {
 		WorkDir:          getEnv("WORK_DIR", "/tmp/pulseframe-review"),
 		WorkerURL:        getEnv("WORKER_URL", "http://127.0.0.1:8090"),
 		PromptPath:       getEnv("PROMPT_PATH", "policies/observation/system_prompt.txt"),
-		PolicyTable:      getEnv("POLICY_TABLE", "default"),
+		PolicyTable:      os.Getenv("POLICY_TABLE"),
+		PolicyFile:       getEnv("POLICY_FILE", "policies/moderation.json"),
 		MaxVideoDuration: 20,
 	}
 	workers, err := strconv.Atoi(getEnv("REVIEW_WORKERS", "2"))
@@ -153,19 +155,16 @@ func LoadReview() (Review, error) {
 		}
 		*spec.target = value
 	}
-	if cfg.PolicyTable != "default" && cfg.PolicyTable != "strict" {
-		return cfg, fmt.Errorf("POLICY_TABLE must be default or strict")
-	}
 	cfg.RetryMax, err = time.ParseDuration(getEnv("REVIEW_RETRY_MAX", max(cfg.RetryBase, 4*time.Minute).String()))
 	if err != nil || cfg.RetryMax < cfg.RetryBase {
 		return cfg, fmt.Errorf("REVIEW_RETRY_MAX must be at least REVIEW_RETRY_BASE")
 	}
-	if cfg.PolicyTable == "strict" {
-		expire, err := time.Parse(time.RFC3339, os.Getenv("POLICY_STRICT_EXPIRE_AT"))
+	if raw := getEnv("POLICY_EXPIRE_AT", os.Getenv("POLICY_STRICT_EXPIRE_AT")); raw != "" && cfg.PolicyTable != "" {
+		expire, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
-			return cfg, fmt.Errorf("POLICY_STRICT_EXPIRE_AT must be RFC3339 when POLICY_TABLE=strict")
+			return cfg, fmt.Errorf("invalid policy expiration: expected RFC3339")
 		}
-		cfg.StrictExpireAt = expire
+		cfg.PolicyExpireAt = expire
 	}
 	return cfg, nil
 }

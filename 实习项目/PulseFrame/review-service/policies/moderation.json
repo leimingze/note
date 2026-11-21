@@ -1,0 +1,61 @@
+{
+  "default_table": "default",
+  "tables": [
+    {
+      "name": "default",
+      "version": "default-v1",
+      "requires_expiry": false,
+      "rules": [
+        {"vulgarity_level":"L0","action":"pass"},
+        {"vulgarity_level":"L1","action":"pass"},
+        {"vulgarity_level":"L2","action":"limit"},
+        {"vulgarity_level":"L3","action":"reject"},
+        {"label":"暴力","action":"reject"},
+        {"label":"危险","action":"human"},
+        {"label":"冒犯","action":"human"},
+        {"label":"违法犯罪","action":"reject"},
+        {"label":"出售违禁品","action":"reject"},
+        {"label":"危害未成年人身心健康","action":"reject"},
+        {"label":"未成年不适当行为","action":"reject"},
+        {"label":"涉政不当言行","action":"reject"},
+        {"label":"历史虚无主义","action":"reject"},
+        {"label":"辱骂、引战、宣扬仇恨","action":"human"},
+        {"label":"不实信息","action":"human"},
+        {"label":"夸大商品功效","action":"human"},
+        {"label":"虚假承诺福利","action":"human"},
+        {"label":"炒作卖货","action":"human"},
+        {"label":"引导私下交易","action":"reject"},
+        {"label":"未添加AI标识","action":"human"},
+        {"label":"盗用抄袭作品","action":"human"}
+      ]
+    },
+    {
+      "name": "strict",
+      "version": "strict-v1",
+      "requires_expiry": true,
+      "rules": [
+        {"vulgarity_level":"L0","action":"pass"},
+        {"vulgarity_level":"L1","action":"pass"},
+        {"vulgarity_level":"L2","action":"reject"},
+        {"vulgarity_level":"L3","action":"reject"},
+        {"label":"暴力","action":"reject"},
+        {"label":"危险","action":"reject"},
+        {"label":"冒犯","action":"human"},
+        {"label":"违法犯罪","action":"reject"},
+        {"label":"出售违禁品","action":"reject"},
+        {"label":"危害未成年人身心健康","action":"reject"},
+        {"label":"未成年不适当行为","action":"reject"},
+        {"label":"涉政不当言行","action":"reject"},
+        {"label":"历史虚无主义","action":"reject"},
+        {"label":"辱骂、引战、宣扬仇恨","action":"reject"},
+        {"label":"不实信息","action":"human"},
+        {"label":"夸大商品功效","action":"human"},
+        {"label":"虚假承诺福利","action":"human"},
+        {"label":"炒作卖货","action":"human"},
+        {"label":"引导私下交易","action":"reject"},
+        {"label":"未添加AI标识","action":"human"},
+        {"label":"盗用抄袭作品","action":"human"}
+      ]
+    }
+  ]
+}

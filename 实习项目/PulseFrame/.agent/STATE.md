@@ -1,5 +1,10 @@
 # 任务状态索引
 
+## REVIEW-POLICY 审核策略配置
+
+- 规则文件为 `review-service/policies/moderation.json`，启动时由 `POLICY_FILE` 指定。已加载的策略可按名称启用，到期时使用配置中的默认表。
+- 读取、启动切换及到期验证见 `review-service/internal/policy/catalog.go` 与 `review-service/internal/review/decide_test.go`。
+
 ## REVIEW-RETRY 机审故障排队
 
 - 故障任务持续重试，默认间隔为 1、2、4 分钟，此后每 4 分钟再试。模型格式补采耗尽时转人审。

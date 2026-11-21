@@ -52,7 +52,7 @@ review-service/
 | `GET /internal/review/tasks/{task_id}` | 有结论返回 `{status: pass\|limit\|reject, result, reason}`，机审中、人审中都返回 `status: "审核中"` |
 | `GET /internal/review/tasks/{task_id}/detail` | 人审页面用：内部状态、转人审原因、完整机审记录（选中的帧、转写、画面文字、观察项、等级、规则表版本） |
 | `POST /internal/review/tasks/{task_id}/decision` | 人审结论 `{result, reason, reviewer, observation?}`，只接受等人审的任务，否则 409 |
-| `POST /internal/review/policy` | 切换规则表 `{table: default\|strict, expire_at}`，严查表必须带到期时间 |
+| `POST /internal/review/policy` | 按配置中的表名切换；临时表可在配置或请求的 `expire_at` 中指定到期时间 |
 
 审核服务 → 内容模块：`POST /internal/review/callback`（`{task_id, result, reason}`，失败按 1 秒起指数退避、最长 5 分钟，直到成功），以及 `offline`、`limit`（seq 按视频递增）、`rereview`。
 
@@ -73,7 +73,8 @@ review-service/
 | `PROMPT_PATH` | policies/observation/system_prompt.txt | |
 | `REVIEW_WORKERS` / `REVIEW_RETRY_BASE` / `REVIEW_RETRY_MAX` / `REVIEW_LEASE` | 2 / 1m / 4m / 10m | 故障任务留在机审队列。重试间隔翻倍至上限；领取进程中断后，租约到期即可接手 |
 | `CALLBACK_RETRY_BASE` / `CALLBACK_RETRY_MAX` | 1s / 5m | |
-| `POLICY_TABLE` / `POLICY_STRICT_EXPIRE_AT` | default / 空 | 启动时用的规则表 |
+| `POLICY_FILE` | `policies/moderation.json` | 规则文件。编辑标签处置或增加策略后，重启服务加载 |
+| `POLICY_TABLE` / `POLICY_EXPIRE_AT` | 空 / 空 | 启动表名和到期时间；空表名使用文件的 `default_table`。兼容 `POLICY_STRICT_EXPIRE_AT` |
 
 ## 运行
 

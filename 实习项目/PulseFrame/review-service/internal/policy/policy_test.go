@@ -8,7 +8,7 @@ import (
 )
 
 func TestDefaultPolicy_Evaluate(t *testing.T) {
-	p := DefaultPolicy()
+	p := testTable(t, "default", time.Time{})
 
 	tests := []struct {
 		name             string
@@ -70,7 +70,7 @@ func TestDefaultPolicy_Evaluate(t *testing.T) {
 
 func TestStrictPolicy_L2拦截(t *testing.T) {
 	expireAt := time.Now().UTC().Add(24 * time.Hour)
-	p := StrictPolicy(expireAt)
+	p := testTable(t, "strict", expireAt)
 
 	action := p.Evaluate(grading.L2, false, nil, false)
 	if action != ActionReject {
@@ -153,8 +153,8 @@ func TestPolicy_IsExpired(t *testing.T) {
 
 func TestEvaluateWithDefault_临时规则到期自动切换(t *testing.T) {
 	now := time.Now().UTC()
-	defaultP := DefaultPolicy()
-	strictP := StrictPolicy(now.Add(-1 * time.Hour)) // 已过期
+	defaultP := testTable(t, "default", time.Time{})
+	strictP := testTable(t, "strict", now.Add(-1*time.Hour)) // 已过期
 
 	action, active := EvaluateWithDefault(strictP, defaultP, grading.L2, false, nil, false)
 
@@ -167,7 +167,7 @@ func TestEvaluateWithDefault_临时规则到期自动切换(t *testing.T) {
 }
 
 func TestShouldKeepInLibrary(t *testing.T) {
-	defaultP := DefaultPolicy()
+	defaultP := testTable(t, "default", time.Time{})
 
 	tests := []struct {
 		name     string
@@ -205,4 +205,20 @@ func TestShouldKeepInLibrary(t *testing.T) {
 
 func ptrTime(t time.Time) *time.Time {
 	return &t
+}
+
+// 输入：测试上下文、已配置表名和到期时间。
+// 输出：从随服务交付的 JSON 读取的规则表，配置错误时终止用例。
+// 功能：使用正式规则检查判定，例如读取平时表并验证危险标签的处置。
+func testTable(t *testing.T, name string, expiry time.Time) *Policy {
+	t.Helper()
+	catalog, err := LoadCatalog("../../policies/moderation.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	table, err := catalog.Select(name, expiry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return table
 }

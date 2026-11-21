@@ -7,11 +7,12 @@ import (
 
 	"pulseframe-review/internal/grading"
 	"pulseframe-review/internal/judge"
+	"pulseframe-review/internal/platform/config"
 	"pulseframe-review/internal/policy"
 )
 
 func TestDecide(t *testing.T) {
-	strict := policy.StrictPolicy(time.Now().Add(time.Hour))
+	strict := testTable(t, "strict", time.Now().Add(time.Hour))
 	closeups := []judge.Observation{{Type: "body_part_closeup", Timestamp: 2}, {Type: "body_part_closeup", Timestamp: 6}}
 	cases := []struct {
 		name   string
@@ -20,21 +21,21 @@ func TestDecide(t *testing.T) {
 		action policy.Action
 		level  grading.VulgarityLevel
 	}{
-		{"无观察项放行", Observation{}, policy.DefaultPolicy(), policy.ActionPass, grading.L0},
-		{"特写两次平时表限流", Observation{Observations: closeups}, policy.DefaultPolicy(), policy.ActionLimit, grading.L2},
+		{"无观察项放行", Observation{}, testTable(t, "default", time.Time{}), policy.ActionPass, grading.L0},
+		{"特写两次平时表限流", Observation{Observations: closeups}, testTable(t, "default", time.Time{}), policy.ActionLimit, grading.L2},
 		{"同一观察结果严查表拦截", Observation{Observations: closeups}, strict, policy.ActionReject, grading.L2},
-		{"暴力拦截", Observation{ViolenceDetected: true}, policy.DefaultPolicy(), policy.ActionReject, grading.L0},
+		{"暴力拦截", Observation{ViolenceDetected: true}, testTable(t, "default", time.Time{}), policy.ActionReject, grading.L0},
 		{"文字规则命中拦截", Observation{TextHits: TextHits{Contacts: [][]string{{"微信", "abc123456"}}, ShouldReject: true}},
-			policy.DefaultPolicy(), policy.ActionReject, grading.L0},
+			testTable(t, "default", time.Time{}), policy.ActionReject, grading.L0},
 
-		{"注入特征词转人审", Observation{Injection: []string{"忽略以上"}}, policy.DefaultPolicy(), policy.ActionHuman, grading.L0},
+		{"注入特征词转人审", Observation{Injection: []string{"忽略以上"}}, testTable(t, "default", time.Time{}), policy.ActionHuman, grading.L0},
 		{"模型没把握转人审", Observation{NeedHumanReview: true, HumanReasons: []string{"暴力只有 2/5 次检出"}},
-			policy.DefaultPolicy(), policy.ActionHuman, grading.L0},
+			testTable(t, "default", time.Time{}), policy.ActionHuman, grading.L0},
 		{"没把握但文字命中仍拦截（取最严）", Observation{NeedHumanReview: true,
-			TextHits: TextHits{RedlineWords: []string{"冰毒"}, ShouldReject: true}}, policy.DefaultPolicy(), policy.ActionReject, grading.L0},
-		{"有具体危害未成年人行为", Observation{OtherLabels: []string{"危害未成年人身心健康"}}, policy.DefaultPolicy(), policy.ActionReject, grading.L0},
+			TextHits: TextHits{RedlineWords: []string{"冰毒"}, ShouldReject: true}}, testTable(t, "default", time.Time{}), policy.ActionReject, grading.L0},
+		{"有具体危害未成年人行为", Observation{OtherLabels: []string{"危害未成年人身心健康"}}, testTable(t, "default", time.Time{}), policy.ActionReject, grading.L0},
 		{"过期严查表回到平时表由调用方处理，这里直接按传入表", Observation{OtherLabels: []string{"不实信息"}},
-			policy.DefaultPolicy(), policy.ActionHuman, grading.L0},
+			testTable(t, "default", time.Time{}), policy.ActionHuman, grading.L0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -72,7 +73,7 @@ func TestPairedDisposition(t *testing.T) {
 		{"missing main answer", pairedEvidence{Batches: [][]judge.Output{{pass}}}, policy.ActionHuman},
 	}
 	for _, tc := range tests {
-		got := Decide(Observation{Paired: &tc.pair}, policy.DefaultPolicy())
+		got := Decide(Observation{Paired: &tc.pair}, testTable(t, "default", time.Time{}))
 		if got.Action != tc.want {
 			t.Errorf("%s: got %s want %s", tc.name, got.Action, tc.want)
 		}
@@ -88,7 +89,54 @@ func TestIgnoreLegacyInsertionAndAge(t *testing.T) {
 	if err := json.Unmarshal([]byte(raw), &obs); err != nil {
 		t.Fatal(err)
 	}
-	if v := Decide(obs, policy.DefaultPolicy()); v.Action != policy.ActionPass || v.Level != grading.L1 {
+	if v := Decide(obs, testTable(t, "default", time.Time{})); v.Action != policy.ActionPass || v.Level != grading.L1 {
 		t.Fatalf("unexpected verdict: %+v", v)
+	}
+}
+
+// 输入：测试上下文、已配置表名和到期时间。
+// 输出：从随服务交付的 JSON 读取的规则表，配置错误时终止用例。
+// 功能：使用正式规则检查判定，例如读取平时表并验证危险标签的处置。
+func testTable(t *testing.T, name string, expiry time.Time) *policy.Policy {
+	t.Helper()
+	catalog, err := policy.LoadCatalog("../../policies/moderation.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	table, err := catalog.Select(name, expiry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return table
+}
+
+// 输入：正式配置文件与可控的到期时刻。
+// 输出：验证启动、切换、非法切换和到期后的选择。
+// 功能：启用临时策略后，在到期时刻恢复配置中的默认表。
+func TestConfiguredPolicyLifecycle(t *testing.T) {
+	cfg := config.Review{PolicyFile: "../../policies/moderation.json"}
+	svc, err := NewService(nil, nil, nil, judge.Engine{}, judge.Policy{}, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	until := now.Add(time.Hour)
+	if got := svc.activePolicy(now); got.Version != "default-v1" {
+		t.Fatal(got.Version)
+	}
+	if _, err := svc.SwitchPolicy("strict", time.Time{}); err == nil {
+		t.Fatal("missing expiry accepted")
+	}
+	if _, err := svc.SwitchPolicy("strict", until); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.SwitchPolicy("unknown", until); err == nil {
+		t.Fatal("unknown table accepted")
+	}
+	if got := svc.activePolicy(now); got.Version != "strict-v1" {
+		t.Fatal(got.Version)
+	}
+	if got := svc.activePolicy(until); got.Version != "default-v1" {
+		t.Fatal(got.Version)
 	}
 }

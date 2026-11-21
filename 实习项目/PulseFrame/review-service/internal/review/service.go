@@ -87,16 +87,32 @@ type Service struct {
 	cfg     config.Review // 运行参数
 
 	mu      sync.RWMutex
-	current *policy.Policy // 当前规则表；临时表到期后自动回到平时表
+	catalog *policy.Catalog // 启动时加载的所有规则表。
+	base    *policy.Policy  // 临时规则到期后的默认表。
+	current *policy.Policy  // 当前规则表；临时表到期后自动回到平时表
 }
 
+// 输入：审核依赖及运行配置，其中 PolicyFile 指向规则表文件。
+// 输出：初始化后的服务或配置错误。
+// 功能：启动时读取规则并选定活动策略，例如未指定表名时启用配置中的默认表。
 func NewService(repo *Repository, content *ContentClient, worker *WorkerClient, engine judge.Engine,
-	judging judge.Policy, cfg config.Review) *Service {
-	current := policy.DefaultPolicy()
-	if cfg.PolicyTable == "strict" {
-		current = policy.StrictPolicy(cfg.StrictExpireAt)
+	judging judge.Policy, cfg config.Review) (*Service, error) {
+	catalog, err := policy.LoadCatalog(cfg.PolicyFile)
+	if err != nil {
+		return nil, err
 	}
-	return &Service{repo: repo, content: content, worker: worker, engine: engine, judging: judging, cfg: cfg, current: current}
+	base, err := catalog.Select(catalog.Default, time.Time{})
+	if err != nil {
+		return nil, err
+	}
+	current := base
+	if cfg.PolicyTable != "" {
+		current, err = catalog.Select(cfg.PolicyTable, cfg.PolicyExpireAt)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &Service{repo: repo, content: content, worker: worker, engine: engine, judging: judging, cfg: cfg, catalog: catalog, base: base, current: current}, nil
 }
 
 // SubmitTask 处理任务投递，重复的 task_id 返回已有任务、不新建（流程设计 2.5）。
@@ -149,19 +165,16 @@ func (s *Service) HumanDecision(ctx context.Context, taskID uint64, req HumanDec
 	return toResponse(task), nil
 }
 
-// SwitchPolicy 整版切换规则表；严查表必须带到期时间，到期后自动回到平时表（流程设计第 4 节）。
+// 输入：配置中的表名和可选到期时间。
+// 输出：已启用的策略；名称或期限无效时返回错误。
+// 功能：切换后续审核使用的表，例如临时表到期后再使用默认表。
 func (s *Service) SwitchPolicy(table string, expireAt time.Time) (*policy.Policy, error) {
-	var next *policy.Policy
-	switch table {
-	case "default":
-		next = policy.DefaultPolicy()
-	case "strict":
-		if !expireAt.After(time.Now()) {
-			return nil, fmt.Errorf("%w: strict table needs a future expire_at", ErrInvalidRequest)
-		}
-		next = policy.StrictPolicy(expireAt)
-	default:
-		return nil, fmt.Errorf("%w: unknown table %q", ErrInvalidRequest, table)
+	next, err := s.catalog.Select(table, expireAt)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidRequest, err)
+	}
+	if next.IsExpired(time.Now()) {
+		return nil, fmt.Errorf("%w: expire_at must be in the future", ErrInvalidRequest)
 	}
 	s.mu.Lock()
 	s.current = next
@@ -175,7 +188,7 @@ func (s *Service) activePolicy(now time.Time) *policy.Policy {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if s.current.IsExpired(now) {
-		return policy.DefaultPolicy()
+		return s.base
 	}
 	return s.current
 }

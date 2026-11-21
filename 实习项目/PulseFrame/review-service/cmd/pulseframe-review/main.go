@@ -49,8 +49,9 @@ func main() {
 	repo := review.NewRepository(db)
 	engine := judge.Engine{Inference: judge.NewClientFromConfig(vlmCfg)}
 	judging := judge.Policy{Version: identVersion, AllowedLabels: judge.AllowedLabels, SystemPrompt: string(prompt)}
-	service := review.NewService(repo, review.NewContentClient(contentCfg), review.NewWorkerClient(reviewCfg.WorkerURL),
+	service, err := review.NewService(repo, review.NewContentClient(contentCfg), review.NewWorkerClient(reviewCfg.WorkerURL),
 		engine, judging, reviewCfg)
+	must(err, "load moderation policies")
 
 	mux := http.NewServeMux()
 	review.RegisterRoutes(mux, review.NewHandler(service, serviceKey))

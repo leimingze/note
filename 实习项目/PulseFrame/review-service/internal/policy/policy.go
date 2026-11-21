@@ -102,69 +102,7 @@ func (p *Policy) IsExpired(now time.Time) bool {
 	if p.ExpireAt == nil {
 		return false
 	}
-	return now.After(*p.ExpireAt)
-}
-
-// DefaultPolicy 平时规则表
-func DefaultPolicy() *Policy {
-	return &Policy{
-		Version:   "default-v1",
-		IsDefault: true,
-		Rules: []Rule{
-			{VulgarityLevel: grading.L0, Action: ActionPass},
-			{VulgarityLevel: grading.L1, Action: ActionPass},
-			{VulgarityLevel: grading.L2, Action: ActionLimit},
-			{VulgarityLevel: grading.L3, Action: ActionReject},
-			{Label: "暴力", Action: ActionReject},
-			{Label: "危险", Action: ActionHuman},
-			{Label: "冒犯", Action: ActionHuman},
-			{Label: "违法犯罪", Action: ActionReject},
-			{Label: "出售违禁品", Action: ActionReject},
-			{Label: "危害未成年人身心健康", Action: ActionReject},
-			{Label: "未成年不适当行为", Action: ActionReject},
-			{Label: "涉政不当言行", Action: ActionReject},
-			{Label: "历史虚无主义", Action: ActionReject},
-			{Label: "辱骂、引战、宣扬仇恨", Action: ActionHuman},
-			{Label: "不实信息", Action: ActionHuman},
-			{Label: "夸大商品功效", Action: ActionHuman},
-			{Label: "虚假承诺福利", Action: ActionHuman},
-			{Label: "炒作卖货", Action: ActionHuman},
-			{Label: "引导私下交易", Action: ActionReject},
-			{Label: "未添加AI标识", Action: ActionHuman},
-			{Label: "盗用抄袭作品", Action: ActionHuman},
-		},
-	}
-}
-
-// StrictPolicy 严查规则表示例
-func StrictPolicy(expireAt time.Time) *Policy {
-	return &Policy{
-		Version:  "strict-v1",
-		ExpireAt: &expireAt,
-		Rules: []Rule{
-			{VulgarityLevel: grading.L0, Action: ActionPass},
-			{VulgarityLevel: grading.L1, Action: ActionPass},
-			{VulgarityLevel: grading.L2, Action: ActionReject}, // 严查期拦截
-			{VulgarityLevel: grading.L3, Action: ActionReject},
-			{Label: "暴力", Action: ActionReject},
-			{Label: "危险", Action: ActionReject}, // 严查期拦截
-			{Label: "冒犯", Action: ActionHuman},
-			{Label: "违法犯罪", Action: ActionReject},
-			{Label: "出售违禁品", Action: ActionReject},
-			{Label: "危害未成年人身心健康", Action: ActionReject},
-			{Label: "未成年不适当行为", Action: ActionReject},
-			{Label: "涉政不当言行", Action: ActionReject},
-			{Label: "历史虚无主义", Action: ActionReject},
-			{Label: "辱骂、引战、宣扬仇恨", Action: ActionReject}, // 严查期拦截
-			{Label: "不实信息", Action: ActionHuman},
-			{Label: "夸大商品功效", Action: ActionHuman},
-			{Label: "虚假承诺福利", Action: ActionHuman},
-			{Label: "炒作卖货", Action: ActionHuman},
-			{Label: "引导私下交易", Action: ActionReject},
-			{Label: "未添加AI标识", Action: ActionHuman},
-			{Label: "盗用抄袭作品", Action: ActionHuman},
-		},
-	}
+	return !now.Before(*p.ExpireAt)
 }
 
 // EvaluateWithDefault 评估处置时自动处理临时规则到期
