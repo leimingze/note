@@ -28,7 +28,7 @@ func ParseOutput(raw string, allowedLabels []string) (Output, error) {
 	if err := json.Unmarshal([]byte(raw), &values); err != nil {
 		return Output{}, fmt.Errorf("json decode failed: %w", err)
 	}
-	for _, name := range []string{"observations", "violence_detected", "other_labels", "need_human_review", "evidence", "is_swimwear_product", "has_suspected_minor"} {
+	for _, name := range []string{"observations", "violence_detected", "other_labels", "need_human_review", "evidence", "is_swimwear_product"} {
 		if value, exists := values[name]; !exists || bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
 			return Output{}, fmt.Errorf("required output field missing or null: %s", name)
 		}

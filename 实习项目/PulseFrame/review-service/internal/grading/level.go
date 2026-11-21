@@ -24,7 +24,6 @@ type Observation struct {
 // Flags 额外标记
 type Flags struct {
 	IsSwimwearProduct bool `json:"is_swimwear_product"` // 内衣泳装商品展示
-	HasSuspectedMinor bool `json:"has_suspected_minor"` // 疑似未成年人
 }
 
 // VulgarityLevel 低俗等级
@@ -39,18 +38,8 @@ const (
 
 // ComputeLevel 根据观察项和标记计算低俗等级
 func ComputeLevel(observations []Observation, flags Flags) VulgarityLevel {
-	if len(observations) == 0 && !flags.HasSuspectedMinor {
+	if len(observations) == 0 {
 		return L0
-	}
-
-	// 疑似未成年 + 任何性化表现（部位特写、性暗示动作、性意味声音、性行为、私密部位）→ L3，
-	// 标签标准："涉及未成年人的任何性化内容一律 L3"。无关场景的泳装内衣出镜本身不算性化，按常规规则定级。
-	if flags.HasSuspectedMinor {
-		for _, obs := range observations {
-			if obs.Type != ObsSwimwearOffContext {
-				return L3
-			}
-		}
 	}
 
 	// 统计各类型出现次数和累计时长

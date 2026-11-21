@@ -61,7 +61,7 @@ func TestOpenAIClient_Complete_Success(t *testing.T) {
 			"choices": []map[string]any{
 				{
 					"message": map[string]string{
-						"content": `{"observations": [], "violence_detected": false, "other_labels": [], "need_human_review": false, "evidence": [], "is_swimwear_product": false, "has_suspected_minor": false}`,
+						"content": `{"observations": [], "violence_detected": false, "other_labels": [], "need_human_review": false, "evidence": [], "is_swimwear_product": false}`,
 					},
 				},
 			},

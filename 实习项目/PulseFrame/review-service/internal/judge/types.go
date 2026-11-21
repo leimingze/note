@@ -42,7 +42,6 @@ type Output struct {
 	NeedHumanReview   bool          `json:"need_human_review"`   // 模型判定转人审
 	Evidence          []string      `json:"evidence"`            // 证据
 	IsSwimwearProduct bool          `json:"is_swimwear_product"` // 内衣泳装商品展示
-	HasSuspectedMinor bool          `json:"has_suspected_minor"` // 疑似未成年人
 }
 
 // Usage 表示一次推理调用的资源消耗。
@@ -69,7 +68,6 @@ type Decision struct {
 	HumanReasons      []string      `json:"human_reasons"`       // 转人审原因（格式失败、模型判人审）。
 	Evidence          []string      `json:"evidence"`            // 证据。
 	IsSwimwearProduct bool          `json:"is_swimwear_product"` // 内衣泳装商品展示。
-	HasSuspectedMinor bool          `json:"has_suspected_minor"` // 疑似未成年人。
 	FormatFailures    int           `json:"format_failures"`     // 两次格式校验都失败的采样次数。
 	TokensIn          int           `json:"tokens_in"`           // 全部采样输入 token 总数。
 	TokensOut         int           `json:"tokens_out"`          // 全部采样输出 token 总数。

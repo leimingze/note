@@ -149,21 +149,6 @@ func TestComputeLevel_L3(t *testing.T) {
 			},
 			flags: Flags{},
 		},
-		{
-			name:  "疑似未成年 + 性暗示动作",
-			obs:   []Observation{{Type: ObsSexualGesture, Timestamp: 2.0}},
-			flags: Flags{HasSuspectedMinor: true},
-		},
-		{
-			name:  "疑似未成年 + 性意味声音",
-			obs:   []Observation{{Type: ObsSexualSound, Timestamp: 4.0}},
-			flags: Flags{HasSuspectedMinor: true},
-		},
-		{
-			name:  "疑似未成年 + 部位特写 1 次（成年人只算 L1）",
-			obs:   []Observation{{Type: ObsBodyPartCloseup, Timestamp: 4.0}},
-			flags: Flags{HasSuspectedMinor: true},
-		},
 	}
 
 	for _, tt := range tests {

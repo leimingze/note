@@ -123,7 +123,6 @@ func MergeBatches(decisions []Decision) Decision {
 		merged.HumanReasons = append(merged.HumanReasons, d.HumanReasons...)
 		merged.Evidence = append(merged.Evidence, d.Evidence...)
 		merged.IsSwimwearProduct = merged.IsSwimwearProduct || d.IsSwimwearProduct
-		merged.HasSuspectedMinor = merged.HasSuspectedMinor || d.HasSuspectedMinor
 		merged.FormatFailures += d.FormatFailures
 		merged.TokensIn += d.TokensIn
 		merged.TokensOut += d.TokensOut

@@ -2,7 +2,7 @@ package judge
 
 import "fmt"
 
-// SampleCount 是主审及可疑帧复核各批需要的有效回答数。
+// SampleCount 是主审每批需要的有效回答数。
 const SampleCount = 2
 
 // 输入：一次有效采样的回答。
@@ -10,7 +10,7 @@ const SampleCount = 2
 // 功能：将一次回答单独交给规则表，例如暴力证据只影响报告它的那一票。
 func FromOutput(out Output) Decision {
 	d := Decision{Observations: out.Observations, ViolenceDetected: out.ViolenceDetected,
-		OtherLabels: out.OtherLabels, IsSwimwearProduct: out.IsSwimwearProduct, HasSuspectedMinor: out.HasSuspectedMinor,
+		OtherLabels: out.OtherLabels, IsSwimwearProduct: out.IsSwimwearProduct,
 		NeedHumanReview: out.NeedHumanReview, Evidence: out.Evidence}
 	if out.NeedHumanReview {
 		d.HumanReasons = []string{"模型要求复核"}
