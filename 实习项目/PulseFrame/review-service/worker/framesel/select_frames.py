@@ -357,17 +357,17 @@ def plan_batches(events: list, times: np.ndarray, max_per_batch: int = 16) -> li
     """
     输入：events，detect 得到的事件；times，每帧时间；max_per_batch，每批帧数上限。
     输出：批次列表，每批内按时间排序；同一帧被多个检测器选中时只保留优先级最高的类型。
-    功能：按优先级把帧分到各批，第一批装最可疑的帧，超出的放下一批，不丢帧。
+    功能：按原视频帧号升序分批，例如 25 个不同帧依次分成 16 帧和 9 帧。
     """
     best = {}
     for event in events:
         old = best.get(event["index"])
         if old is None or (PRIORITY[event["type"]], event["score"]) > (PRIORITY[old["type"]], old["score"]):
             best[event["index"]] = event
-    ordered = sorted(best.values(), key=lambda e: (-PRIORITY[e["type"]], -e["score"], e["index"]))
+    ordered = sorted(best.values(), key=lambda e: e["index"])
     batches = []
     for start in range(0, len(ordered), max_per_batch):
-        chunk = sorted(ordered[start:start + max_per_batch], key=lambda e: e["index"])
+        chunk = ordered[start:start + max_per_batch]
         batches.append([dict(e, timestamp=round(float(times[e["index"]]), 3)) for e in chunk])
     return batches
 

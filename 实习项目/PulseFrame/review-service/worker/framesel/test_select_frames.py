@@ -121,11 +121,9 @@ def test_batches_keep_all_frames_and_unique_files(media):
     assert len(result["batches"]) >= 2
     paths = [f["frame_path"] for b in result["batches"] for f in b]
     assert len(paths) == len(set(paths)) and all(Path(p).is_file() for p in paths)
-    # 第一批装优先级最高的短暂插入帧；每批内按时间排序。
-    assert any(f["frame_type"] == "brief_insertion" for f in result["batches"][0])
-    for batch in result["batches"]:
-        times = [f["timestamp"] for f in batch]
-        assert times == sorted(times)
+    indices = [f["index"] for batch in result["batches"] for f in batch]
+    assert indices == sorted(set(indices))
+    assert all(len(batch) <= 2 for batch in result["batches"])
 
 
 def test_synth_labels_and_audio_free_base(media):
@@ -134,3 +132,16 @@ def test_synth_labels_and_audio_free_base(media):
     assert label["start_frame"] == 60 and label["end_frame"] == 60 + 15 - 1
     assert label["start_frame"] <= label["visible_start"] <= label["visible_end"] <= label["end_frame"]
     assert label["total_frames"] == FPS * SECONDS
+
+def test_chronological_batches_with_mixed_types():
+    """
+    输入：五种检测事件各五个，以及同一帧的一次重复标记。
+    输出：验证主审两批的顺序、大小和可疑类型。
+    功能：例如 25 个帧号只送审一次，第 17 个帧号是第二批起点。
+    """
+    kinds = list(select_frames.PRIORITY)
+    events = [{"index": i, "type": kinds[i % len(kinds)], "score": 1.0} for i in reversed(range(25))]
+    events.append({"index": 0, "type": "timed", "score": 1.0})
+    batches = select_frames.plan_batches(events, np.arange(25) / FPS)
+    assert [[f["index"] for f in b] for b in batches] == [list(range(16)), list(range(16, 25))]
+    assert batches[0][0]["type"] == "brief_insertion"

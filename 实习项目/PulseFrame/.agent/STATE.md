@@ -1,5 +1,11 @@
 # 任务状态索引
 
+## REVIEW-TWO 内容审核时间分批与两次判定
+
+- 设计见仓库根目录 `内容审核/流程设计.md` 附录 A、G。主审按帧号去重、时间分批，保留全片文字；可疑帧单独复核。
+- 代码见 `review-service/worker/framesel/select_frames.py`、`review-service/internal/judge/engine.go`、`review-service/internal/review/paired.go`。旧机审缓存缺少两票记录时重新识别，人工修正保留。
+- 验证入口为 `go test -timeout 60s ./...` 与 `python3 -m pytest -q worker/framesel/test_select_frames.py`。两票与五票在新批次输入上的准确率差异仍待模型评估。
+
 ## M2-CPU100 挑帧配对评估（2026-11-21）
 
 - 新版挑帧及复现脚本在 `review-service/worker/framesel/{select_frames,paired_eval}.py`。沿用 `rs-fulltest/m3/thresholds.json`，按固定种子从历史评估集抽 100 个原视频，默认启用每条最多一帧的补选。服务器输入在 `/root/autodl-tmp/rs-fulltest/m3`，运行目录为同级 `m2-paired-100`。

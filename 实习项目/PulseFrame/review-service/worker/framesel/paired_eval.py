@@ -76,7 +76,9 @@ def main() -> None:
                 control = baseline["select_hit"]
                 if not control and candidate["select_frames"] > baseline["select_frames"] and variant != "clean":
                     control = coverage_hit(label, signals, old)  # 同一条视频使用相同补选额度。
-            if baseline != reference[name, variant]:
+            # 首批随分批策略改变；总命中、帧数、事件等指标仍须与历史基准逐条一致。
+            expected = reference[name, variant]
+            if any(value != expected[key] for key, value in baseline.items() if key != "first_batch_hit"):
                 raise ValueError(f"baseline mismatch: {stem}")
             rows.append({"id": name, "variant": variant, "old": baseline, "new": candidate, "coverage_hit": control})
     args.output.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
