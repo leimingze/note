@@ -1,0 +1,10 @@
+2026-11-23T11:18:03+08:00
+name, memory.total [MiB], memory.used [MiB], memory.free [MiB]
+NVIDIA GeForce RTX 3090, 49152 MiB, 41254 MiB, 7300 MiB
+pid, process_name, used_gpu_memory [MiB]
+4112, VLLM::EngineCore, 26196 MiB
+28288, VLLM::EngineCore, 11908 MiB
+38615, /root/autodl-tmp/qwen35-env/bin/python, 3130 MiB
+{"object":"list","data":[{"id":"qwen3.5-9b","object":"model","created":1795403883,"owned_by":"vllm","root":"/root/autodl-tmp/models/Qwen3.5-9B","parent":null,"max_model_len":16384,"permission":[{"id":"modelperm-82d97b6f83565cac","object":"model_permission","created":1795403883,"allow_create_engine":false,"allow_sampling":true,"allow_logprobs":true,"allow_search_indices":false,"allow_view":true,"allow_fine_tuning":false,"organization":"*","group":null,"is_blocking":false}]}]}
+{"object":"list","data":[{"id":"qwen2.5-vl-3b","object":"model","created":1795403883,"owned_by":"vllm","root":"/root/autodl-tmp/models/Qwen2.5-VL-3B-Instruct","parent":null,"max_model_len":16384,"permission":[{"id":"modelperm-a0af52893f9e4627","object":"model_permission","created":1795403883,"allow_create_engine":false,"allow_sampling":true,"allow_logprobs":true,"allow_search_indices":false,"allow_view":true,"allow_fine_tuning":false,"organization":"*","group":null,"is_blocking":false}]}]}
+{"ok": true, "asr_loaded": true, "ocr_loaded": true, "clip_loaded": true, "bge_loaded": true, "ast_loaded": true, "m3_loaded": true}

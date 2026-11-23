@@ -1,0 +1,455 @@
+{
+  "passed": true,
+  "records": [
+    {
+      "uid": "km:226",
+      "source": "kuaimod",
+      "offline": 0.9799069166183472,
+      "online": 0.97989,
+      "error": 1.691661834712921e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:661",
+      "source": "kuaimod",
+      "offline": 0.12529003620147705,
+      "online": 0.12525,
+      "error": 4.003620147705056e-05,
+      "offline_pass": true,
+      "online_pass": true
+    },
+    {
+      "uid": "chsv:3xat9vd2uqehr6i",
+      "source": "chsv",
+      "offline": 0.4917786121368408,
+      "online": 0.49176,
+      "error": 1.8612136840845395e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:570",
+      "source": "kuaimod",
+      "offline": 0.30964773893356323,
+      "online": 0.30941,
+      "error": 0.00023773893356321407,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:424",
+      "source": "kuaimod",
+      "offline": 0.7862487435340881,
+      "online": 0.78652,
+      "error": 0.00027125646591186214,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:262",
+      "source": "kuaimod",
+      "offline": 0.14184442162513733,
+      "online": 0.14182,
+      "error": 2.4421625137327485e-05,
+      "offline_pass": true,
+      "online_pass": true
+    },
+    {
+      "uid": "km:109",
+      "source": "kuaimod",
+      "offline": 0.2574693560600281,
+      "online": 0.25747,
+      "error": 6.439399719004868e-07,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "chsv:3xwy863vfb9binc",
+      "source": "chsv",
+      "offline": 0.9909408688545227,
+      "online": 0.99094,
+      "error": 8.688545226620548e-07,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "chsv:3xrz5geu6hbezjm",
+      "source": "chsv",
+      "offline": 0.961267352104187,
+      "online": 0.96131,
+      "error": 4.2647895812986114e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:799",
+      "source": "kuaimod",
+      "offline": 0.15956898033618927,
+      "online": 0.1596,
+      "error": 3.1019663810721854e-05,
+      "offline_pass": true,
+      "online_pass": true
+    },
+    {
+      "uid": "chsv:3xa7db7ybuymkk4",
+      "source": "chsv",
+      "offline": 0.4957137107849121,
+      "online": 0.49499,
+      "error": 0.0007237107849121238,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "chsv:3xdbdv88v9scsq9",
+      "source": "chsv",
+      "offline": 0.9792909026145935,
+      "online": 0.9793,
+      "error": 9.097385406442449e-06,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:544",
+      "source": "kuaimod",
+      "offline": 0.06789115816354752,
+      "online": 0.0679,
+      "error": 8.841836452486151e-06,
+      "offline_pass": true,
+      "online_pass": true
+    },
+    {
+      "uid": "chsv:3xmqgavd4g8egh4",
+      "source": "chsv",
+      "offline": 0.06652075797319412,
+      "online": 0.06654,
+      "error": 1.924202680587961e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:490",
+      "source": "kuaimod",
+      "offline": 0.5886636972427368,
+      "online": 0.58922,
+      "error": 0.0005563027572631496,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:693",
+      "source": "kuaimod",
+      "offline": 0.25979673862457275,
+      "online": 0.25992,
+      "error": 0.00012326137542723048,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "chsv:3xi69hkq59fi4bk",
+      "source": "chsv",
+      "offline": 0.9875687956809998,
+      "online": 0.98757,
+      "error": 1.2043190001920223e-06,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:845",
+      "source": "kuaimod",
+      "offline": 0.21421001851558685,
+      "online": 0.21427,
+      "error": 5.998148441313522e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:509",
+      "source": "kuaimod",
+      "offline": 0.1042446419596672,
+      "online": 0.10442,
+      "error": 0.00017535804033279312,
+      "offline_pass": true,
+      "online_pass": true
+    },
+    {
+      "uid": "km:421",
+      "source": "kuaimod",
+      "offline": 0.1806093007326126,
+      "online": 0.18063,
+      "error": 2.069926738740291e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:051",
+      "source": "kuaimod",
+      "offline": 0.1027325764298439,
+      "online": 0.10268,
+      "error": 5.257642984390909e-05,
+      "offline_pass": true,
+      "online_pass": true
+    },
+    {
+      "uid": "km:378",
+      "source": "kuaimod",
+      "offline": 0.09698295593261719,
+      "online": 0.09709,
+      "error": 0.00010704406738280825,
+      "offline_pass": true,
+      "online_pass": true
+    },
+    {
+      "uid": "km:660",
+      "source": "kuaimod",
+      "offline": 0.3168860375881195,
+      "online": 0.31707,
+      "error": 0.00018396241188051166,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "chsv:3xv855y68qvuuwg",
+      "source": "chsv",
+      "offline": 0.6161112189292908,
+      "online": 0.61596,
+      "error": 0.00015121892929081948,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:407",
+      "source": "kuaimod",
+      "offline": 0.9565080404281616,
+      "online": 0.95659,
+      "error": 8.195957183843028e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:755",
+      "source": "kuaimod",
+      "offline": 0.20960703492164612,
+      "online": 0.20973,
+      "error": 0.0001229650783538816,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:649",
+      "source": "kuaimod",
+      "offline": 0.8046436309814453,
+      "online": 0.80485,
+      "error": 0.00020636901855464185,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:093",
+      "source": "kuaimod",
+      "offline": 0.7909014225006104,
+      "online": 0.79091,
+      "error": 8.577499389650356e-06,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "chsv:3xxr5ashrddf9ek",
+      "source": "chsv",
+      "offline": 0.893854022026062,
+      "online": 0.89403,
+      "error": 0.00017597797393797965,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "chsv:3xb7kmjwkfyp3ne",
+      "source": "chsv",
+      "offline": 0.930872917175293,
+      "online": 0.93062,
+      "error": 0.000252917175292966,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "chsv:3xys45c87ki4cp2",
+      "source": "chsv",
+      "offline": 0.9753527641296387,
+      "online": 0.97535,
+      "error": 2.764129638621604e-06,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:985",
+      "source": "kuaimod",
+      "offline": 0.8941283226013184,
+      "online": 0.89409,
+      "error": 3.8322601318308e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:778",
+      "source": "kuaimod",
+      "offline": 0.28272274136543274,
+      "online": 0.2827,
+      "error": 2.274136543273242e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:086",
+      "source": "kuaimod",
+      "offline": 0.9895961880683899,
+      "online": 0.9896,
+      "error": 3.8119316101425937e-06,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:857",
+      "source": "kuaimod",
+      "offline": 0.9258440136909485,
+      "online": 0.92554,
+      "error": 0.000304013690948457,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "chsv:3xqv8e4pdsyvbh4",
+      "source": "chsv",
+      "offline": 0.9815222024917603,
+      "online": 0.98154,
+      "error": 1.7797508239714155e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:241",
+      "source": "kuaimod",
+      "offline": 0.21338346600532532,
+      "online": 0.21331,
+      "error": 7.346600532531777e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:352",
+      "source": "kuaimod",
+      "offline": 0.1527462601661682,
+      "online": 0.15285,
+      "error": 0.00010373983383180074,
+      "offline_pass": true,
+      "online_pass": true
+    },
+    {
+      "uid": "chsv:3xwyv47beczxhtc",
+      "source": "chsv",
+      "offline": 0.9449793100357056,
+      "online": 0.94494,
+      "error": 3.931003570556424e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:425",
+      "source": "kuaimod",
+      "offline": 0.9682221412658691,
+      "online": 0.96818,
+      "error": 4.214126586910005e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:272",
+      "source": "kuaimod",
+      "offline": 0.4052572548389435,
+      "online": 0.40448,
+      "error": 0.0007772548389434752,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:409",
+      "source": "kuaimod",
+      "offline": 0.9609430432319641,
+      "online": 0.96112,
+      "error": 0.00017695676803586302,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "km:762",
+      "source": "kuaimod",
+      "offline": 0.16011713445186615,
+      "online": 0.16013,
+      "error": 1.2865548133844662e-05,
+      "offline_pass": true,
+      "online_pass": true
+    },
+    {
+      "uid": "chsv:3xuzf8j2nderfwm",
+      "source": "chsv",
+      "offline": 0.4667496383190155,
+      "online": 0.46736,
+      "error": 0.0006103616809844947,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "chsv:3xtkzumqzpbihpk",
+      "source": "chsv",
+      "offline": 0.15437676012516022,
+      "online": 0.15416,
+      "error": 0.0002167601251602258,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "chsv:3xfnkdh6yesn5sc",
+      "source": "chsv",
+      "offline": 0.1954742819070816,
+      "online": 0.19549,
+      "error": 1.57180929183931e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "chsv:3xdzteqr58wc5bu",
+      "source": "chsv",
+      "offline": 0.12578976154327393,
+      "online": 0.12584,
+      "error": 5.0238456726081626e-05,
+      "offline_pass": true,
+      "online_pass": true
+    },
+    {
+      "uid": "chsv:3xgngkhq68ihj9q",
+      "source": "chsv",
+      "offline": 0.23630253970623016,
+      "online": 0.23621,
+      "error": 9.253970623016028e-05,
+      "offline_pass": false,
+      "online_pass": false
+    },
+    {
+      "uid": "chsv:3xnzupgyr4spy6y",
+      "source": "chsv",
+      "offline": 0.09284219890832901,
+      "online": 0.09275,
+      "error": 9.21989083290109e-05,
+      "offline_pass": true,
+      "online_pass": true
+    },
+    {
+      "uid": "chsv:3xw4ammsw6j3p29",
+      "source": "chsv",
+      "offline": 0.17170089483261108,
+      "online": 0.17173,
+      "error": 2.910516738890978e-05,
+      "offline_pass": false,
+      "online_pass": false
+    }
+  ]
+}
