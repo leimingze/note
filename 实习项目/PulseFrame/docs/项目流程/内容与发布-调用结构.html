@@ -280,7 +280,7 @@ const cards = [
 const cardMap=Object.fromEntries(cards.map(c=>[c.id,c]));
 const inCount={};
 cards.forEach(c=>c.steps.forEach(s=>{if(s.to)inCount[s.to]=(inCount[s.to]||0)+1;}));
-const W=3300,H=1800,NW=270;
+const W=4600,H=2800,NW=270;
 const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
 svg.setAttribute("class","grid"); svg.setAttribute("width",W); svg.setAttribute("height",H);
 const canvas=document.getElementById("canvas");
