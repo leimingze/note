@@ -1,5 +1,18 @@
 # 当前任务
 
+- 任务编号：20261124-resume-font-match
+- 当前方案：将无照片 LaTeX 简历的分区标题文字由蓝色改为黑色；中文使用本机 SimHei 类 `Heiti SC Medium`，英文与数字使用 `Times New Roman`，其余正文、字号、间距和分页参数保持不变。
+- 当前进度：已完成并验证。
+- 有效文件：`简历/28 届-可实习 6 个月-雷明泽-LaTeX版.tex`、`简历/28 届-可实习 6 个月-雷明泽-LaTeX版.pdf`。
+- 输出版本：LaTeX 源文件 SHA-256 为 `9580a76a1b0a2ef7da7fe916523512c9a735c7693710fb0acf2a50d4edfd7207`；PDF 为单页 A4，SHA-256 为 `78812232592c8aaed420fa615d24dbe97c18ca899799927cb4418e5c691aaa3b`。
+- 验证情况：`latexmk -xelatex` 编译通过；`pdffonts` 确认实际嵌入 `STHeitiSC-Medium` 与 `Times New Roman`；PDF 为 1 页 A4，日志无 overfull、underfull、缺字或错误；渲染检查确认分区标题文字为 `rgb(0%, 0%, 0%)`，蓝色分隔线仍保持原样。
+- 内容保护：源文件差异仅限于字体声明和标题文字颜色；正文文字、栏目顺序、字号、边距、行距和分页参数未修改。
+- 未解决问题：本机未安装 Windows 的 `SimHei`，使用同类简体黑体 `Heiti SC Medium` 作为替代；字体文件路径为本机 macOS 系统字体路径。
+- 下一步：无。
+- 归档位置：未新增过程文件；字体与颜色校验结果保存在 `.agent/work/20261124-resume-latex/`。
+
+# 已完成任务：20261124-remove-asu-resume
+
 - 任务编号：20261124-remove-asu-resume
 - 当前方案：按用户确认删除 ASu 版简历的 HTML、PDF 和 LaTeX 文件，保留原始 PDF、无照片 LaTeX 版及其 PDF，并保留已安装的 ASu Skills。
 - 当前进度：已完成并验证。

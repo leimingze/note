@@ -7,13 +7,19 @@
 \usepackage{enumitem}
 \usepackage{hyperref}
 
-\setmainfont{Helvetica Neue}[Ligatures=TeX]
-\setCJKmainfont{Hiragino Sans GB}[AutoFakeBold=2.4]
-\setsansfont{Helvetica Neue}
+\setmainfont{Times New Roman}[Ligatures=TeX]
+\setCJKmainfont[
+  Path=/System/Library/Fonts/,
+  Extension=.ttc,
+  FontIndex=1,
+  AutoFakeBold=1.6
+]{STHeiti Medium}
+\setsansfont{Times New Roman}
 
 \definecolor{ink}{HTML}{333333}
 \definecolor{muted}{HTML}{666666}
 \definecolor{accent}{HTML}{23577A}
+\definecolor{accenttext}{HTML}{000000}
 
 \hypersetup{
   colorlinks=true,
@@ -38,7 +44,7 @@
 
 \newcommand{\cvsection}[1]{%
   \vspace{24pt}
-  {\color{accent}\bfseries\fontsize{14}{17}\selectfont #1\par}%
+  {\color{accenttext}\bfseries\fontsize{14}{17}\selectfont #1\par}%
   \vspace{1pt}
   {\color{accent!45}\hrule height 0.5pt}%
   \vspace{6pt}
