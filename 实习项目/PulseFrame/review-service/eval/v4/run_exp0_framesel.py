@@ -130,7 +130,13 @@ def evaluate(jobs: list[dict[str, Any]], signals: dict, thresholds: Thresholds, 
     precision = tp / max(1, tp + fp)
     f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
     hard = [value for name in HARD_VARIANTS for value in by_variant[name]]
-    pip_fade = [value for name in ("pip", "fade_30", "fade_50") for value in by_variant[name]]
+    pip = by_variant["pip"]
+    fade = [value for name in ("fade_30", "fade_50") for value in by_variant[name]]
+    pip_fade = pip + fade
+    hard_recall = float(np.mean(hard))
+    pip_recall = float(np.mean(pip))
+    fade_recall = float(np.mean(fade))
+    balanced_min_recall = min(hard_recall, pip_recall, fade_recall)
     return {
         "partition": partition,
         "benign_count": len(benign_flags),
@@ -139,7 +145,10 @@ def evaluate(jobs: list[dict[str, Any]], signals: dict, thresholds: Thresholds, 
         "circuit_breaker_fpr": round(float(np.mean(cb_flags)), 4),
         "benign_max_evasion_count": max(evasion_counts, default=0),
         "benign_p95_evasion_count": round(float(np.percentile(evasion_counts, 95)), 2),
-        "hard_insertion_recall": round(float(np.mean(hard)), 4),
+        "hard_insertion_recall": round(hard_recall, 4),
+        "pip_recall": round(pip_recall, 4),
+        "fade_recall": round(fade_recall, 4),
+        "balanced_min_recall": round(balanced_min_recall, 4),
         "pip_fade_recall": round(float(np.mean(pip_fade)), 4),
         "overall_attack_recall": round(recall, 4),
         "overall_precision": round(precision, 4),
@@ -152,8 +161,8 @@ def evaluate(jobs: list[dict[str, Any]], signals: dict, thresholds: Thresholds, 
 def select_best(candidates: list[dict[str, Any]], max_fpr: float = 0.20) -> dict[str, Any]:
     """
     输入：candidates，调参集网格结果；max_fpr，正常误触上限。
-    输出：满足硬插召回和熔断约束后按总体 F1 排序的第一组。
-    功能：保持 v3 的选优规则不变，确保 v4 只改变分区规模和评测数据。
+    输出：满足硬插召回和熔断约束后，三类最低召回最高的阈值。
+    功能：避免容易识别的硬插样本主导总体 F1；例如画中画和渐变中较低的一类会优先抬高。
     """
     eligible = [
         item for item in candidates
@@ -165,7 +174,12 @@ def select_best(candidates: list[dict[str, Any]], max_fpr: float = 0.20) -> dict
         raise RuntimeError("没有阈值同时满足正常误触、熔断和硬插召回约束")
     return sorted(
         eligible,
-        key=lambda item: (item["tune"]["overall_f1"], item["tune"]["pip_fade_recall"], -item["tune"]["benign_fpr"]),
+        key=lambda item: (
+            item["tune"]["balanced_min_recall"],
+            item["tune"]["pip_fade_recall"],
+            item["tune"]["overall_f1"],
+            -item["tune"]["benign_fpr"],
+        ),
         reverse=True,
     )[0]
 
@@ -233,6 +247,7 @@ def main() -> None:
         }
     report = {
         "version": "v4",
+        "selection_metric": "balanced_min_recall",
         "elapsed_sec": round(time.time() - started, 1),
         "dataset_counts": {
             "tune": sum(job["partition"] == "tune" for job in jobs),
@@ -243,7 +258,12 @@ def main() -> None:
         "v3_thresholds_replayed": fixed,
         "top10_tune": sorted(
             candidates,
-            key=lambda item: (item["tune"]["overall_f1"], item["tune"]["pip_fade_recall"], -item["tune"]["benign_fpr"]),
+            key=lambda item: (
+                item["tune"]["balanced_min_recall"],
+                item["tune"]["pip_fade_recall"],
+                item["tune"]["overall_f1"],
+                -item["tune"]["benign_fpr"],
+            ),
             reverse=True,
         )[:10],
     }
