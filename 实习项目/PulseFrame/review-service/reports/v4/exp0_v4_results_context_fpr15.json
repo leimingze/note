@@ -1,0 +1,643 @@
+{
+  "version": "v4",
+  "selection_metric": "balanced_min_recall",
+  "max_tune_fpr": 0.15,
+  "elapsed_sec": 83.4,
+  "dataset_counts": {
+    "tune": 298,
+    "holdout": 298
+  },
+  "grid_size": 432,
+  "selected": {
+    "thresholds": {
+      "cut": 0.15,
+      "back": 0.04,
+      "back_ratio": 0.6,
+      "brief_window": 0.5,
+      "fade": 0.1,
+      "block": 0.18,
+      "quiet": 0.08,
+      "max_blocks": 1,
+      "evasion_count": 15,
+      "local_fade_peak": false
+    },
+    "tune": {
+      "partition": "tune",
+      "benign_count": 228,
+      "attack_count": 60,
+      "benign_fpr": 0.1404,
+      "circuit_breaker_fpr": 0.0,
+      "benign_max_evasion_count": 5,
+      "benign_p95_evasion_count": 2.0,
+      "mean_boundary_context": 1.211,
+      "hard_insertion_recall": 1.0,
+      "pip_recall": 0.9,
+      "fade_recall": 0.3,
+      "balanced_min_recall": 0.3,
+      "pip_fade_recall": 0.5,
+      "overall_attack_recall": 0.75,
+      "overall_precision": 0.5625,
+      "overall_f1": 0.6429,
+      "variant_rates": {
+        "clean": 0.3,
+        "fade_30": 0.4,
+        "fade_50": 0.2,
+        "hard_1": 1.0,
+        "hard_10": 1.0,
+        "hard_3": 1.0,
+        "pip": 0.9
+      },
+      "confusion": {
+        "tp": 45,
+        "fn": 15,
+        "fp": 35,
+        "tn": 203
+      }
+    },
+    "holdout": {
+      "partition": "holdout",
+      "benign_count": 228,
+      "attack_count": 60,
+      "benign_fpr": 0.2105,
+      "circuit_breaker_fpr": 0.0,
+      "benign_max_evasion_count": 7,
+      "benign_p95_evasion_count": 2.0,
+      "mean_boundary_context": 1.846,
+      "hard_insertion_recall": 1.0,
+      "pip_recall": 0.7,
+      "fade_recall": 0.25,
+      "balanced_min_recall": 0.25,
+      "pip_fade_recall": 0.4,
+      "overall_attack_recall": 0.7,
+      "overall_precision": 0.4565,
+      "overall_f1": 0.5526,
+      "variant_rates": {
+        "clean": 0.2,
+        "fade_30": 0.1,
+        "fade_50": 0.4,
+        "hard_1": 1.0,
+        "hard_10": 1.0,
+        "hard_3": 1.0,
+        "pip": 0.7
+      },
+      "confusion": {
+        "tp": 42,
+        "fn": 18,
+        "fp": 50,
+        "tn": 188
+      }
+    }
+  },
+  "v3_thresholds_replayed": {
+    "thresholds": {
+      "cut": 0.15,
+      "back": 0.04,
+      "back_ratio": 0.6,
+      "brief_window": 0.5,
+      "fade": 0.15,
+      "block": 0.18,
+      "quiet": 0.06,
+      "max_blocks": 1,
+      "evasion_count": 15,
+      "local_fade_peak": true
+    },
+    "tune": {
+      "partition": "tune",
+      "benign_count": 228,
+      "attack_count": 60,
+      "benign_fpr": 0.0702,
+      "circuit_breaker_fpr": 0.0,
+      "benign_max_evasion_count": 5,
+      "benign_p95_evasion_count": 1.0,
+      "mean_boundary_context": 1.211,
+      "hard_insertion_recall": 1.0,
+      "pip_recall": 0.8,
+      "fade_recall": 0.1,
+      "balanced_min_recall": 0.1,
+      "pip_fade_recall": 0.3333,
+      "overall_attack_recall": 0.6667,
+      "overall_precision": 0.7018,
+      "overall_f1": 0.6838,
+      "variant_rates": {
+        "clean": 0.1,
+        "fade_30": 0.0,
+        "fade_50": 0.2,
+        "hard_1": 1.0,
+        "hard_10": 1.0,
+        "hard_3": 1.0,
+        "pip": 0.8
+      },
+      "confusion": {
+        "tp": 40,
+        "fn": 20,
+        "fp": 17,
+        "tn": 221
+      }
+    },
+    "holdout": {
+      "partition": "holdout",
+      "benign_count": 228,
+      "attack_count": 60,
+      "benign_fpr": 0.136,
+      "circuit_breaker_fpr": 0.0,
+      "benign_max_evasion_count": 6,
+      "benign_p95_evasion_count": 2.0,
+      "mean_boundary_context": 1.846,
+      "hard_insertion_recall": 1.0,
+      "pip_recall": 0.6,
+      "fade_recall": 0.1,
+      "balanced_min_recall": 0.1,
+      "pip_fade_recall": 0.2667,
+      "overall_attack_recall": 0.6333,
+      "overall_precision": 0.5429,
+      "overall_f1": 0.5846,
+      "variant_rates": {
+        "clean": 0.1,
+        "fade_30": 0.0,
+        "fade_50": 0.2,
+        "hard_1": 1.0,
+        "hard_10": 1.0,
+        "hard_3": 1.0,
+        "pip": 0.6
+      },
+      "confusion": {
+        "tp": 38,
+        "fn": 22,
+        "fp": 32,
+        "tn": 206
+      }
+    }
+  },
+  "top10_tune": [
+    {
+      "thresholds": {
+        "cut": 0.2,
+        "back": 0.04,
+        "back_ratio": 0.6,
+        "brief_window": 0.5,
+        "fade": 0.02,
+        "block": 0.18,
+        "quiet": 0.08,
+        "max_blocks": 1,
+        "evasion_count": 15,
+        "local_fade_peak": false
+      },
+      "tune": {
+        "partition": "tune",
+        "benign_count": 228,
+        "attack_count": 60,
+        "benign_fpr": 0.7325,
+        "circuit_breaker_fpr": 0.0,
+        "benign_max_evasion_count": 6,
+        "benign_p95_evasion_count": 5.0,
+        "mean_boundary_context": 0.856,
+        "hard_insertion_recall": 1.0,
+        "pip_recall": 0.9,
+        "fade_recall": 0.7,
+        "balanced_min_recall": 0.7,
+        "pip_fade_recall": 0.7667,
+        "overall_attack_recall": 0.8833,
+        "overall_precision": 0.2314,
+        "overall_f1": 0.3668,
+        "variant_rates": {
+          "clean": 0.9,
+          "fade_30": 0.8,
+          "fade_50": 0.6,
+          "hard_1": 1.0,
+          "hard_10": 1.0,
+          "hard_3": 1.0,
+          "pip": 0.9
+        },
+        "confusion": {
+          "tp": 53,
+          "fn": 7,
+          "fp": 176,
+          "tn": 62
+        }
+      }
+    },
+    {
+      "thresholds": {
+        "cut": 0.2,
+        "back": 0.04,
+        "back_ratio": 0.6,
+        "brief_window": 0.5,
+        "fade": 0.02,
+        "block": 0.18,
+        "quiet": 0.08,
+        "max_blocks": 2,
+        "evasion_count": 15,
+        "local_fade_peak": false
+      },
+      "tune": {
+        "partition": "tune",
+        "benign_count": 228,
+        "attack_count": 60,
+        "benign_fpr": 0.7325,
+        "circuit_breaker_fpr": 0.0,
+        "benign_max_evasion_count": 6,
+        "benign_p95_evasion_count": 5.0,
+        "mean_boundary_context": 0.856,
+        "hard_insertion_recall": 1.0,
+        "pip_recall": 0.9,
+        "fade_recall": 0.7,
+        "balanced_min_recall": 0.7,
+        "pip_fade_recall": 0.7667,
+        "overall_attack_recall": 0.8833,
+        "overall_precision": 0.2314,
+        "overall_f1": 0.3668,
+        "variant_rates": {
+          "clean": 0.9,
+          "fade_30": 0.8,
+          "fade_50": 0.6,
+          "hard_1": 1.0,
+          "hard_10": 1.0,
+          "hard_3": 1.0,
+          "pip": 0.9
+        },
+        "confusion": {
+          "tp": 53,
+          "fn": 7,
+          "fp": 176,
+          "tn": 62
+        }
+      }
+    },
+    {
+      "thresholds": {
+        "cut": 0.2,
+        "back": 0.04,
+        "back_ratio": 0.6,
+        "brief_window": 0.5,
+        "fade": 0.02,
+        "block": 0.18,
+        "quiet": 0.1,
+        "max_blocks": 1,
+        "evasion_count": 15,
+        "local_fade_peak": false
+      },
+      "tune": {
+        "partition": "tune",
+        "benign_count": 228,
+        "attack_count": 60,
+        "benign_fpr": 0.7325,
+        "circuit_breaker_fpr": 0.0,
+        "benign_max_evasion_count": 7,
+        "benign_p95_evasion_count": 5.0,
+        "mean_boundary_context": 0.856,
+        "hard_insertion_recall": 1.0,
+        "pip_recall": 0.9,
+        "fade_recall": 0.7,
+        "balanced_min_recall": 0.7,
+        "pip_fade_recall": 0.7667,
+        "overall_attack_recall": 0.8833,
+        "overall_precision": 0.2314,
+        "overall_f1": 0.3668,
+        "variant_rates": {
+          "clean": 0.9,
+          "fade_30": 0.8,
+          "fade_50": 0.6,
+          "hard_1": 1.0,
+          "hard_10": 1.0,
+          "hard_3": 1.0,
+          "pip": 0.9
+        },
+        "confusion": {
+          "tp": 53,
+          "fn": 7,
+          "fp": 176,
+          "tn": 62
+        }
+      }
+    },
+    {
+      "thresholds": {
+        "cut": 0.2,
+        "back": 0.04,
+        "back_ratio": 0.6,
+        "brief_window": 0.5,
+        "fade": 0.02,
+        "block": 0.18,
+        "quiet": 0.1,
+        "max_blocks": 2,
+        "evasion_count": 15,
+        "local_fade_peak": false
+      },
+      "tune": {
+        "partition": "tune",
+        "benign_count": 228,
+        "attack_count": 60,
+        "benign_fpr": 0.7325,
+        "circuit_breaker_fpr": 0.0,
+        "benign_max_evasion_count": 8,
+        "benign_p95_evasion_count": 5.0,
+        "mean_boundary_context": 0.856,
+        "hard_insertion_recall": 1.0,
+        "pip_recall": 0.9,
+        "fade_recall": 0.7,
+        "balanced_min_recall": 0.7,
+        "pip_fade_recall": 0.7667,
+        "overall_attack_recall": 0.8833,
+        "overall_precision": 0.2314,
+        "overall_f1": 0.3668,
+        "variant_rates": {
+          "clean": 0.9,
+          "fade_30": 0.8,
+          "fade_50": 0.6,
+          "hard_1": 1.0,
+          "hard_10": 1.0,
+          "hard_3": 1.0,
+          "pip": 0.9
+        },
+        "confusion": {
+          "tp": 53,
+          "fn": 7,
+          "fp": 176,
+          "tn": 62
+        }
+      }
+    },
+    {
+      "thresholds": {
+        "cut": 0.2,
+        "back": 0.04,
+        "back_ratio": 0.6,
+        "brief_window": 0.5,
+        "fade": 0.02,
+        "block": 0.15,
+        "quiet": 0.08,
+        "max_blocks": 1,
+        "evasion_count": 15,
+        "local_fade_peak": false
+      },
+      "tune": {
+        "partition": "tune",
+        "benign_count": 228,
+        "attack_count": 60,
+        "benign_fpr": 0.7368,
+        "circuit_breaker_fpr": 0.0,
+        "benign_max_evasion_count": 8,
+        "benign_p95_evasion_count": 5.0,
+        "mean_boundary_context": 0.856,
+        "hard_insertion_recall": 1.0,
+        "pip_recall": 0.9,
+        "fade_recall": 0.7,
+        "balanced_min_recall": 0.7,
+        "pip_fade_recall": 0.7667,
+        "overall_attack_recall": 0.8833,
+        "overall_precision": 0.2304,
+        "overall_f1": 0.3655,
+        "variant_rates": {
+          "clean": 0.9,
+          "fade_30": 0.8,
+          "fade_50": 0.6,
+          "hard_1": 1.0,
+          "hard_10": 1.0,
+          "hard_3": 1.0,
+          "pip": 0.9
+        },
+        "confusion": {
+          "tp": 53,
+          "fn": 7,
+          "fp": 177,
+          "tn": 61
+        }
+      }
+    },
+    {
+      "thresholds": {
+        "cut": 0.2,
+        "back": 0.04,
+        "back_ratio": 0.6,
+        "brief_window": 0.5,
+        "fade": 0.02,
+        "block": 0.18,
+        "quiet": 0.08,
+        "max_blocks": 1,
+        "evasion_count": 15,
+        "local_fade_peak": true
+      },
+      "tune": {
+        "partition": "tune",
+        "benign_count": 228,
+        "attack_count": 60,
+        "benign_fpr": 0.7412,
+        "circuit_breaker_fpr": 0.0,
+        "benign_max_evasion_count": 7,
+        "benign_p95_evasion_count": 5.15,
+        "mean_boundary_context": 0.856,
+        "hard_insertion_recall": 1.0,
+        "pip_recall": 0.9,
+        "fade_recall": 0.7,
+        "balanced_min_recall": 0.7,
+        "pip_fade_recall": 0.7667,
+        "overall_attack_recall": 0.8833,
+        "overall_precision": 0.2294,
+        "overall_f1": 0.3643,
+        "variant_rates": {
+          "clean": 0.9,
+          "fade_30": 0.8,
+          "fade_50": 0.6,
+          "hard_1": 1.0,
+          "hard_10": 1.0,
+          "hard_3": 1.0,
+          "pip": 0.9
+        },
+        "confusion": {
+          "tp": 53,
+          "fn": 7,
+          "fp": 178,
+          "tn": 60
+        }
+      }
+    },
+    {
+      "thresholds": {
+        "cut": 0.2,
+        "back": 0.04,
+        "back_ratio": 0.6,
+        "brief_window": 0.5,
+        "fade": 0.02,
+        "block": 0.18,
+        "quiet": 0.08,
+        "max_blocks": 2,
+        "evasion_count": 15,
+        "local_fade_peak": true
+      },
+      "tune": {
+        "partition": "tune",
+        "benign_count": 228,
+        "attack_count": 60,
+        "benign_fpr": 0.7412,
+        "circuit_breaker_fpr": 0.0,
+        "benign_max_evasion_count": 7,
+        "benign_p95_evasion_count": 5.15,
+        "mean_boundary_context": 0.856,
+        "hard_insertion_recall": 1.0,
+        "pip_recall": 0.9,
+        "fade_recall": 0.7,
+        "balanced_min_recall": 0.7,
+        "pip_fade_recall": 0.7667,
+        "overall_attack_recall": 0.8833,
+        "overall_precision": 0.2294,
+        "overall_f1": 0.3643,
+        "variant_rates": {
+          "clean": 0.9,
+          "fade_30": 0.8,
+          "fade_50": 0.6,
+          "hard_1": 1.0,
+          "hard_10": 1.0,
+          "hard_3": 1.0,
+          "pip": 0.9
+        },
+        "confusion": {
+          "tp": 53,
+          "fn": 7,
+          "fp": 178,
+          "tn": 60
+        }
+      }
+    },
+    {
+      "thresholds": {
+        "cut": 0.2,
+        "back": 0.04,
+        "back_ratio": 0.6,
+        "brief_window": 0.5,
+        "fade": 0.02,
+        "block": 0.18,
+        "quiet": 0.1,
+        "max_blocks": 1,
+        "evasion_count": 15,
+        "local_fade_peak": true
+      },
+      "tune": {
+        "partition": "tune",
+        "benign_count": 228,
+        "attack_count": 60,
+        "benign_fpr": 0.7412,
+        "circuit_breaker_fpr": 0.0,
+        "benign_max_evasion_count": 8,
+        "benign_p95_evasion_count": 6.0,
+        "mean_boundary_context": 0.856,
+        "hard_insertion_recall": 1.0,
+        "pip_recall": 0.9,
+        "fade_recall": 0.7,
+        "balanced_min_recall": 0.7,
+        "pip_fade_recall": 0.7667,
+        "overall_attack_recall": 0.8833,
+        "overall_precision": 0.2294,
+        "overall_f1": 0.3643,
+        "variant_rates": {
+          "clean": 0.9,
+          "fade_30": 0.8,
+          "fade_50": 0.6,
+          "hard_1": 1.0,
+          "hard_10": 1.0,
+          "hard_3": 1.0,
+          "pip": 0.9
+        },
+        "confusion": {
+          "tp": 53,
+          "fn": 7,
+          "fp": 178,
+          "tn": 60
+        }
+      }
+    },
+    {
+      "thresholds": {
+        "cut": 0.2,
+        "back": 0.04,
+        "back_ratio": 0.6,
+        "brief_window": 0.5,
+        "fade": 0.02,
+        "block": 0.18,
+        "quiet": 0.1,
+        "max_blocks": 2,
+        "evasion_count": 15,
+        "local_fade_peak": true
+      },
+      "tune": {
+        "partition": "tune",
+        "benign_count": 228,
+        "attack_count": 60,
+        "benign_fpr": 0.7412,
+        "circuit_breaker_fpr": 0.0,
+        "benign_max_evasion_count": 9,
+        "benign_p95_evasion_count": 6.0,
+        "mean_boundary_context": 0.856,
+        "hard_insertion_recall": 1.0,
+        "pip_recall": 0.9,
+        "fade_recall": 0.7,
+        "balanced_min_recall": 0.7,
+        "pip_fade_recall": 0.7667,
+        "overall_attack_recall": 0.8833,
+        "overall_precision": 0.2294,
+        "overall_f1": 0.3643,
+        "variant_rates": {
+          "clean": 0.9,
+          "fade_30": 0.8,
+          "fade_50": 0.6,
+          "hard_1": 1.0,
+          "hard_10": 1.0,
+          "hard_3": 1.0,
+          "pip": 0.9
+        },
+        "confusion": {
+          "tp": 53,
+          "fn": 7,
+          "fp": 178,
+          "tn": 60
+        }
+      }
+    },
+    {
+      "thresholds": {
+        "cut": 0.2,
+        "back": 0.04,
+        "back_ratio": 0.6,
+        "brief_window": 0.5,
+        "fade": 0.02,
+        "block": 0.15,
+        "quiet": 0.08,
+        "max_blocks": 2,
+        "evasion_count": 15,
+        "local_fade_peak": false
+      },
+      "tune": {
+        "partition": "tune",
+        "benign_count": 228,
+        "attack_count": 60,
+        "benign_fpr": 0.7412,
+        "circuit_breaker_fpr": 0.0,
+        "benign_max_evasion_count": 9,
+        "benign_p95_evasion_count": 5.0,
+        "mean_boundary_context": 0.856,
+        "hard_insertion_recall": 1.0,
+        "pip_recall": 0.9,
+        "fade_recall": 0.7,
+        "balanced_min_recall": 0.7,
+        "pip_fade_recall": 0.7667,
+        "overall_attack_recall": 0.8833,
+        "overall_precision": 0.2294,
+        "overall_f1": 0.3643,
+        "variant_rates": {
+          "clean": 0.9,
+          "fade_30": 0.8,
+          "fade_50": 0.6,
+          "hard_1": 1.0,
+          "hard_10": 1.0,
+          "hard_3": 1.0,
+          "pip": 0.9
+        },
+        "confusion": {
+          "tp": 53,
+          "fn": 7,
+          "fp": 178,
+          "tn": 60
+        }
+      }
+    }
+  ]
+}

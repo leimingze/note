@@ -26,7 +26,8 @@ sys.path.insert(0, str(REVIEW_ROOT / "worker"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from dataset import build_v4_jobs  # noqa: E402
-from framesel.select_frames import EVASION_TYPES, Thresholds, compute_signals, detect  # noqa: E402
+from detect_context import detect_with_boundary_context  # noqa: E402
+from framesel.select_frames import EVASION_TYPES, Thresholds, compute_signals  # noqa: E402
 
 DEFAULT_V3_ROOT = Path("/root/autodl-tmp/rs-exp-v3")
 DEFAULT_SPLITS = DEFAULT_V3_ROOT / "work_e0/splits_materialized.json"
@@ -91,13 +92,15 @@ def evaluate(jobs: list[dict[str, Any]], signals: dict, thresholds: Thresholds, 
     输出：正常误触、分类型召回、总体召回、精确率和 F1。
     功能：只把命中真实插入时段且事件类型正确的结果算作召回；例如渐变事件落在画中画区间不会记作命中。
     """
-    benign_flags, cb_flags, evasion_counts = [], [], []
+    benign_flags, cb_flags, evasion_counts, context_counts = [], [], [], []
     by_variant: dict[str, list[bool]] = defaultdict(list)
     tp = fn = fp = tn = 0
     for job in (item for item in jobs if item["partition"] == partition):
-        found = detect(signals[job["sample_id"]], thresholds)
+        found = detect_with_boundary_context(signals[job["sample_id"]], thresholds)
         events = [event for event in found["events"] if event["type"] in EVASION_TYPES]
         count = len(events)
+        context_count = found["counts"].get("boundary_context", 0)
+        context_counts.append(context_count)
         if job["variant"] == "benign":
             triggered = count > 0
             benign_flags.append(triggered)
@@ -119,10 +122,15 @@ def evaluate(jobs: list[dict[str, Any]], signals: dict, thresholds: Thresholds, 
             raise RuntimeError(f"攻击样本缺少帧窗：{job['sample_id']}")
         start, end = window
         expected = VARIANT_TYPES[job["variant"]]
-        hit = any(
+        typed_hit = any(
             event["type"] == expected and start - 1 <= int(event["index"]) <= end + 1
             for event in events
         )
+        context_hit = any(
+            event["type"] == "boundary_context" and start <= int(event["index"]) <= end
+            for event in found["events"]
+        )
+        hit = typed_hit or context_hit
         by_variant[job["variant"]].append(hit)
         tp += int(hit)
         fn += int(not hit)
@@ -145,6 +153,7 @@ def evaluate(jobs: list[dict[str, Any]], signals: dict, thresholds: Thresholds, 
         "circuit_breaker_fpr": round(float(np.mean(cb_flags)), 4),
         "benign_max_evasion_count": max(evasion_counts, default=0),
         "benign_p95_evasion_count": round(float(np.percentile(evasion_counts, 95)), 2),
+        "mean_boundary_context": round(float(np.mean(context_counts)), 3),
         "hard_insertion_recall": round(hard_recall, 4),
         "pip_recall": round(pip_recall, 4),
         "fade_recall": round(fade_recall, 4),
@@ -198,6 +207,7 @@ def main() -> None:
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--legacy-signals", type=Path, default=DEFAULT_OUT.parent / "exp0/signals")
     parser.add_argument("--v3-thresholds", type=Path, default=DEFAULT_V3_THRESHOLDS)
+    parser.add_argument("--max-fpr", type=float, default=0.20)
     parser.add_argument("--workers", type=int, default=8)
     args = parser.parse_args()
 
@@ -230,7 +240,7 @@ def main() -> None:
             "thresholds": asdict(thresholds),
             "tune": evaluate(ok_jobs, signals, thresholds, "tune"),
         })
-    best = select_best(candidates)
+    best = select_best(candidates, max_fpr=args.max_fpr)
     best_thresholds = Thresholds(**best["thresholds"])
     selected = {
         "thresholds": best["thresholds"],
@@ -248,6 +258,7 @@ def main() -> None:
     report = {
         "version": "v4",
         "selection_metric": "balanced_min_recall",
+        "max_tune_fpr": args.max_fpr,
         "elapsed_sec": round(time.time() - started, 1),
         "dataset_counts": {
             "tune": sum(job["partition"] == "tune" for job in jobs),
