@@ -1,5 +1,17 @@
 # 当前任务
 
+- 任务编号：20261124-resume-add-photo
+- 当前方案：从原始简历 PDF 提取证件照，作为独立 PNG 资源放在简历目录，并在无照片 LaTeX 版的页眉右侧以 25 mm 正方形等比显示；其余字体、颜色、正文和分页设置保持不变。
+- 当前进度：已完成并验证。
+- 有效文件：`简历/28 届-可实习 6 个月-雷明泽-LaTeX版.tex`、`简历/28 届-可实习 6 个月-雷明泽-LaTeX版.pdf`、`简历/leimingze-photo.png`。
+- 输出版本：LaTeX 源文件 SHA-256 为 `c4b4809cf3413ff5b09ec5c1ae3680fa9d101d1ba34bc792c43913a1b010f471`；PDF 为 `b3213cc29bcd89f8f3dd7a9ac483f362f5d937530a99c0e8fc96032e0c88038b`；照片资源为 `45a6ad766f932a64aaeddfcb98ff404be35e1d1d3e1319bc7e71701a1b1e4300`。
+- 验证情况：照片与原始 PDF 提取资源校验一致；PDF 为 1 页 A4，嵌入图片为 200×200 RGB，页面显示区域为 106×106 像素，位置在右上角且未与姓名、联系方式重叠；日志无 overfull、underfull、缺字或错误。
+- 未解决问题：无。
+- 下一步：无。
+- 归档位置：`.agent/work/20261124-resume-with-photo/` 已归档并保留原位置，包含原始图片提取结果和最终页面渲染。
+
+# 已完成任务：20261124-resume-font-match
+
 - 任务编号：20261124-resume-font-match
 - 当前方案：将无照片 LaTeX 简历的分区标题文字由蓝色改为黑色；中文使用本机 SimHei 类 `Heiti SC Medium`，英文与数字使用 `Times New Roman`，其余正文、字号、间距和分页参数保持不变。
 - 当前进度：已完成并验证。

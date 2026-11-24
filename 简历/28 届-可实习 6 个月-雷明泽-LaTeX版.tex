@@ -6,6 +6,7 @@
 \usepackage{xcolor}
 \usepackage{enumitem}
 \usepackage{hyperref}
+\usepackage{graphicx}
 
 \setmainfont{Times New Roman}[Ligatures=TeX]
 \setCJKmainfont[
@@ -53,14 +54,21 @@
 \begin{document}
 \color{ink}
 
-\begin{center}
+\noindent
+\begin{minipage}[c]{\dimexpr\linewidth-28mm\relax}
+  \centering
   {\bfseries\fontsize{22}{26}\selectfont 雷明泽\par}
   \vspace{10pt}
   {\fontsize{10}{12}\selectfont
     男\quad|\quad
     \href{tel:13892553456}{13892553456}\quad|\quad
     \href{mailto:2454316259@qq.com}{2454316259@qq.com}\par}
-\end{center}
+\end{minipage}%
+\hfill
+\begin{minipage}[c]{25mm}
+  \raggedleft
+  \includegraphics[width=25mm,height=25mm,keepaspectratio]{leimingze-photo.png}
+\end{minipage}
 
 \cvsection{教育经历}
 {\bfseries\fontsize{11.5}{14}\selectfont 北京信息科技大学}\quad
