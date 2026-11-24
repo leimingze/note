@@ -1,5 +1,33 @@
 # 当前任务
 
+- 任务编号：20261124-resume-asu
+- 当前方案：使用 ASu `great-resume` 强化现有经历表达，再由 `make-resume` 默认单栏高密度模板生成可编辑 HTML、A4 PDF 和 LaTeX 源文件；沿用无照片版本，目标方向为“大模型应用 / 后端开发”。
+- 当前进度：已完成并验证。
+- 有效文件：`简历/28 届-可实习 6 个月-雷明泽-ASu版.html`、`简历/28 届-可实习 6 个月-雷明泽-ASu版.pdf`、`简历/28 届-可实习 6 个月-雷明泽-ASu版.tex`。
+- 输入文件：`.agent/work/20261124-resume-asu/resume-data.json`、`.agent/work/20261124-resume-asu/resume-content-shell.html`、`.agent/work/20261124-resume-asu/career-claim-ledger.json`。
+- 内容处理：新增岗位定位与顶部摘要，将实习工作归并为“多模态数据链路、质量治理与自动质检、轻量模型部署与评测”，保留项目中的 Feed、热榜、异步投递、缓存和内容审核事实；未提供正式实习岗位名称，因此只写公司与工作方向。
+- 输出版本：HTML SHA-256 为 `d0761046d04bf1a6b79720339fdfd8add9052059edbfd7d9f0d2555fa8554dd9`；PDF 为 `9cec366bb9ae38f3eb8e97f52d8bab4c26627815c89473e8f4afecac022dda15`；LaTeX 为 `78d03747db2686c57eedc4ba5418ae40412300f0c9fdc16ee45c56a4b9446b7c`。
+- 验证情况：HTML 无外部样式、脚本或图片引用；浏览器测量为 1 页、正文占用 86%、无溢出；PDF 为 1 页 A4，文字可提取，无工具栏、页眉或页脚；OCR 复核阅读顺序正常；LaTeX 本地 XeLaTeX 编译为 1 页且无错误。
+- 证据校验：`career-claim-ledger.json` 的 4 条主要主张通过官方校验器，强指标均限定为原简历中的合成插帧测试。
+- 未解决问题：正式实习岗位名称与重点指标的样本量未提供，当前成稿未补写这些信息。
+- 下一步：如有目标 JD，可用 `/job-match` 继续筛选并调整关键词。
+- 归档位置：`.agent/work/20261124-resume-asu/` 已归档并保留原位置，包含结构化数据、内容壳、主张—证据账本、页面测量文件及 LaTeX 编译检查。
+
+# 已完成任务：20261124-asu-skills
+
+- 任务编号：20261124-asu-skills
+- 当前方案：在当前仓库安装 ASu-skills 的 Codex 项目级入口，保留官方约定的 `.codex/skills` 目录及共享 `assets`、`references`、`scripts`。
+- 当前进度：已完成并验证。
+- 有效文件：`.codex/.asu-skills-install.json`、`.codex/skills/`、`.codex/assets/`、`.codex/references/`、`.codex/scripts/`。
+- 来源版本：GitHub 仓库 `Hisn00w/ASu-skills`，提交 `5d6592acadcd77385a884c1de042986486cfe2bc`，安装包版本 `0.4.0`。
+- 安装方式：`npx --yes github:Hisn00w/ASu-skills install --codex --project`。
+- 验证情况：官方 `doctor` 返回 `codex: 9/9 个技能可用`；9 个入口均存在 `SKILL.md`，安装清单记录 9 个技能及共享资源，目录总计约 14 MB。
+- 未解决问题：无。
+- 下一步：新建对话后可使用 `/contributor`、`/great-resume`、`/make-resume`、`/interview` 等入口。
+- 归档位置：未新增过程文件；安装内容保留在 `.codex/`。
+
+# 已完成任务：20261124-resume-latex
+
 - 任务编号：20261124-resume-latex
 - 当前方案：将原简历重建为 LaTeX 单页 A4 版本，移除右上角照片；教育经历按北京信息科技大学硕士计算机技术（2025-2028）、陕西理工大学本科计算机科学与技术（2020-2024）排列。
 - 当前进度：已完成并验证。

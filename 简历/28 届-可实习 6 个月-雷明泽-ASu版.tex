@@ -1,0 +1,97 @@
+% !TEX program = xelatex
+% 上行声明本文件用 XeLaTeX 编译。Overleaf 不读取该声明，按下方第 3 步设置。
+% ASu-skills LaTeX 简历
+%
+% 供 Overleaf 等环境继续编辑排版。
+%
+% ── Overleaf 使用步骤（无需本地安装任何 TeX 环境）─────────────────
+%   1. New Project → Blank Project，填写 Project name → Create；
+%   2. 上传本 .tex 文件；若简历使用证件照或校标，把图片一并上传到同一项目
+%      （与 .tex 同级，文件名保持一致）；
+%   3. 左上角 File → Settings：Main document 选本文件，
+%      Compiler 选 XeLaTeX（中文必需）→ Recompile。
+
+\documentclass[a4paper,10pt]{ctexart}
+
+\usepackage[top=1.5cm,bottom=1.5cm,left=1.6cm,right=1.6cm]{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+\usepackage{graphicx}
+
+% 与 assets/frame/asu/base.css 的 --blue 保持一致
+\definecolor{asublue}{HTML}{2458B8}
+
+\titleformat{\section}
+  {\normalfont\large\bfseries\color{asublue}}{}{0pt}{}
+  [{\color{asublue}\titlerule[1.2pt]}]
+\titlespacing*{\section}{0pt}{10pt}{5pt}
+
+\setlist[itemize]{leftmargin=1.3em,itemsep=1pt,parsep=0pt,topsep=2pt,partopsep=0pt}
+
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+
+\newlength{\asuphotowidth}
+\newlength{\asuheadtextwidth}
+
+\newcommand{\asuphoto}[1]{%
+  \IfFileExists{#1}%
+    {\includegraphics[width=\dimexpr\asuphotowidth-4mm\relax]{#1}}%
+    {\fbox{\parbox[c][28mm][c]{\dimexpr\asuphotowidth-4mm-2\fboxsep-2\fboxrule\relax}%
+       {\centering\footnotesize 未找到图片\\\texttt{#1}\\请一并上传}}}%
+}
+
+\newcommand{\asuname}[1]{{\LARGE\bfseries #1}\par\vspace{2pt}}
+\newcommand{\asumeta}[1]{{\small #1}\par}
+\newcommand{\asuentry}[2]{\textbf{#1}\hfill{\small #2}\par}
+
+\begin{document}
+
+\setlength{\asuphotowidth}{0pt}
+\setlength{\asuheadtextwidth}{\dimexpr\linewidth-\asuphotowidth\relax}
+
+\noindent
+\begin{minipage}[c]{\asuheadtextwidth}
+\asuname{雷明泽}
+\asumeta{13892553456 \textbar{} 2454316259@qq.com}
+\asumeta{2028 届硕士 · 大模型应用 / 后端开发 · 可实习 6 个月}
+\end{minipage}%
+
+
+\section*{教育经历}
+\asuentry{北京信息科技大学 · 计算机技术（硕士）}{2025-2028}
+\asuentry{陕西理工大学 · 计算机科学与技术（本科）}{2020-2024}
+
+\section*{实习与工作经历}
+\asuentry{科大讯飞股份有限公司 · 实习}{2026.04-至今}
+\begin{itemize}
+  \item \textbf{多模态数据链路：}基于 Data-Juicer 与脚本开发 10+ 类数据处理算子，完成协议适配、流水线编排、压测与异常排查，累计支撑千万级文本、图像、语音样本的过滤与质量评估，交付语义增强、思维链合成、问答生成和标准化导出能力。
+  \item \textbf{质量治理与自动质检：}建设合成与回流数据质检链路，覆盖格式异常、重复、语义漂移和问答不匹配；开发 10+ 项清洗、校验与打分规则，实现百万级数据批量检测。
+  \item \textbf{轻量模型部署与评测：}完成 10+ 个轻量模型及数据合成工具的本地部署与推理联调，覆盖情感语音合成、方言克隆、意图识别和情感分析；基于准确率、F1、生成成功率、语音自然度与相似度进行评测，为模型接入方案提供依据。
+\end{itemize}
+
+\section*{项目经历}
+\textbf{仿 TikTok 的短视频平台开发}\par
+面向内容社区场景，实现账号、视频、关注、点赞、评论、Feed、Top30 热榜和内容审核等核心功能。\par
+\begin{itemize}
+  \item \textbf{技术栈：}Go（Gin/GORM）、MySQL、Redis、RabbitMQ、WebSocket、vLLM。
+  \item \textbf{推拉结合 Feed：}普通作者写扩散至粉丝 Inbox，高粉作者读时拉取并合并去重，降低写扩散压力。
+  \item \textbf{热榜与异步投递：}基于 Redis ZSET 排序和快照 MD5 判变，经 Pub/Sub 通知 API 实例并通过 WebSocket 推送；点赞、评论经 RabbitMQ Worker 异步落库，视频发布使用事务 Outbox 规避 DB/MQ 双写漏发。
+  \item \textbf{高频读缓存：}视频、Feed、计数和关注列表使用 Redis；Pipeline 批量读取点赞状态，singleflight 合并高粉作者回源，缓解缓存击穿。
+  \item \textbf{多模态内容审核：}异步视频审核结合挑帧、OCR 和语音转写，识别切镜、插帧、半透明叠加与画中画；合成插帧测试中硬插帧拦截率由 27\% 提升至 93\%，初筛耗时由 1.1 s 降至 170 ms，约减少 53\% 的 9B 调用，并由 Qwen3.5-9B 输出结构化结论。
+\end{itemize}
+
+
+
+\section*{专业技能}
+\begin{itemize}
+  \item \textbf{Agent 与 RAG：}熟悉 LangChain、LangGraph，理解 ReAct、Tool Calling、Function Calling、MCP 和 Agent Harness；了解 RAG 设计与 Milvus。
+  \item \textbf{编程与后端：}熟练掌握 Python、Go，能够使用 FastAPI、Gin、GORM 开发 LLM 应用及后端接口；熟练使用 MySQL、Redis、RabbitMQ，熟悉 vLLM 部署与推理。
+  \item \textbf{工程化：}熟练使用 Docker、Docker Compose 和 Git；使用 Claude Code、Codex 等 AI 研发工具，能够完成需求拆解、实现、测试与部署排查。
+\end{itemize}
+
+
+
+\end{document}
