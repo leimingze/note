@@ -1,0 +1,99 @@
+\documentclass[10pt,a4paper,fontset=none]{ctexart}
+
+\usepackage[a4paper,top=0.95cm,bottom=0.95cm,left=1.05cm,right=1.05cm]{geometry}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+\setmainfont{Helvetica Neue}[Ligatures=TeX]
+\setCJKmainfont{Hiragino Sans GB}[AutoFakeBold=2.4]
+\setsansfont{Helvetica Neue}
+
+\definecolor{ink}{HTML}{333333}
+\definecolor{muted}{HTML}{666666}
+\definecolor{accent}{HTML}{23577A}
+
+\hypersetup{
+  colorlinks=true,
+  urlcolor=ink,
+  linkcolor=ink,
+  pdfauthor={雷明泽},
+  pdftitle={雷明泽 - 简历}
+}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\linespread{1.41}
+\setlist[itemize]{
+  leftmargin=1.25em,
+  labelsep=0.55em,
+  itemsep=2.4pt,
+  topsep=2.2pt,
+  parsep=0pt,
+  partopsep=0pt
+}
+
+\newcommand{\cvsection}[1]{%
+  \vspace{24pt}
+  {\color{accent}\bfseries\fontsize{14}{17}\selectfont #1\par}%
+  \vspace{1pt}
+  {\color{accent!45}\hrule height 0.5pt}%
+  \vspace{6pt}
+}
+
+\begin{document}
+\color{ink}
+
+\begin{center}
+  {\bfseries\fontsize{22}{26}\selectfont 雷明泽\par}
+  \vspace{10pt}
+  {\fontsize{10}{12}\selectfont
+    男\quad|\quad
+    \href{tel:13892553456}{13892553456}\quad|\quad
+    \href{mailto:2454316259@qq.com}{2454316259@qq.com}\par}
+\end{center}
+
+\cvsection{教育经历}
+{\bfseries\fontsize{11.5}{14}\selectfont 北京信息科技大学}\quad
+硕士\quad
+计算机科学与技术
+\hfill
+{\color{muted}\fontsize{9.5}{12}\selectfont 2025-2028}\par
+
+\cvsection{实习经历}
+{\bfseries\fontsize{11.5}{14}\selectfont 科大讯飞股份有限公司}
+\hfill
+{\color{muted}\fontsize{9.5}{12}\selectfont 2026.04-至今}\par
+
+\begin{itemize}
+  \item \textbf{大模型数据生产与处理}：基于 Data-Juicer 及脚本开发 10+ 类数据处理算子，完成协议适配、流水线编排、压测与异常排查，累计支撑千万级多模态样本（文本/图像/语音）的对齐过滤与质量评估，沉淀语义增强、思维链合成、问答生成、标准化导出等能力，服务指令微调与模型评测。
+  \item \textbf{数据质量治理与自动化质检}：搭建合成与回流数据质检链路，针对格式异常、重复、语义漂移、问答不匹配等问题开发 10+ 项清洗/校验/打分规则，实现百万级数据批量自动检测。
+  \item \textbf{轻量模型部署与效果评测}：完成 10+ 个轻量模型及数据合成工具的本地部署与推理联调，覆盖情感语音合成、方言克隆、意图识别、情感分析等场景；基于准确率、F1、生成成功率、语音自然度/相似度等指标开展评测对比，为模型接入方案提供依据。
+\end{itemize}
+
+\cvsection{项目经历}
+{\bfseries\fontsize{11.5}{14}\selectfont 仿 TikTok 的短视频平台开发}
+\hfill
+{\color{muted}\fontsize{9.5}{12}\selectfont 2026.06-2026.11}\par
+
+技术栈：Go（Gin/GORM）、MySQL、Redis、RabbitMQ、WebSocket、vLLM；实现账号、视频、关注、点赞、评论、Feed、Top30 热榜、内容审核等核心功能
+
+\begin{itemize}
+  \item \textbf{推拉结合 Feed}：普通作者写扩散扇出至粉丝 Inbox，高粉作者读时拉取并合并去重，降低写扩散压力。
+  \item \textbf{热榜推送}：Redis ZSET 排序 + 快照 MD5 判变，经 Pub/Sub 通知 API 实例，由 WebSocket 推送，减少轮询与重复推送。
+  \item \textbf{异步与可靠投递}：点赞/评论经 RabbitMQ Worker 异步落库，热度事件驱动排行；视频发布采用事务 Outbox，规避 DB/MQ 双写漏发。
+  \item \textbf{高频读缓存}：视频/Feed/计数/关注列表走 Redis；Pipeline 批量读点赞状态，singleflight 合并高粉作者回源，缓解缓存击穿。
+  \item \textbf{内容审核}：视频发布后异步审核。挑帧器识别切镜、插帧、半透明叠加和画中画，结合 OCR 和语音转写，在合成插帧测试中，硬插帧拦截率从 \textbf{27\%} 提升到 \textbf{93\%}。用画面、文字、声音三路特征模型做前置门控，替代 3B + 9B 双 VLM 级联。每条视频的初筛耗时从 \textbf{1.1 s} 降到 \textbf{170 ms}；约省 \textbf{53\%} 的 9B 调用。由 Qwen3.5-9B 输出结构化结论，处置与模型解耦，支持管控标准灵活，到期自动回退。
+\end{itemize}
+
+\cvsection{专业技能}
+\begin{itemize}
+  \item \textbf{Agent 与 RAG 开发}：熟悉 LangChain、LangGraph，理解 ReAct、Tool Calling / Function Calling、MCP 等核心机制；熟悉 Agent Harness 架构（如 Pi Agent 的 Harness 设计）；了解 RAG 设计，熟悉 Milvus
+  \item \textbf{编程语言与后端}：熟练掌握 Python、Go，了解常用数据结构与算法，能够使用 FastAPI、Gin、GORM 开发 LLM 应用及后端接口；熟练使用 MySQL、Redis、RabbitMQ，熟悉 vLLM 部署与推理
+  \item \textbf{工程化与工具}：熟练使用 Docker / Docker Compose、Git；熟练使用 Claude Code、Codex 等 AI 研发工具，具备 spec coding 能力
+\end{itemize}
+
+\end{document}

@@ -1,5 +1,18 @@
 # 当前任务
 
+- 任务编号：20261124-resume-latex
+- 当前方案：将原简历按既有内容重建为 LaTeX 单页 A4 版本，移除右上角照片，使用可编辑的 XeLaTeX 源文件，并保留原 PDF。
+- 当前进度：已完成并验证。
+- 有效文件：`简历/28 届-可实习 6 个月-雷明泽-LaTeX版.tex`、`简历/28 届-可实习 6 个月-雷明泽-LaTeX版.pdf`。
+- 输入版本：原 PDF `简历/28 届-可实习 6 个月-雷明泽.pdf` 的 SHA-256 为 `c95df07bebe9c492a4d9555189faad86d2e405eb968bb5a01d134bc647fee03a`。
+- 输出版本：LaTeX 源文件 SHA-256 为 `5786d2c69c509a0bc7479ba3e210b7a67a872496a8298afd77e776843f2e9e64`；PDF 为单页 A4，SHA-256 为 `3a37a9e32222a6d51176bc11fa302e61d0139c16c0ae0d76e950cc4ddf1ebb90`。
+- 验证情况：`latexmk -xelatex` 编译通过，PDF 为 1 页 A4，文字边界落在页面内，日志无 overfull、underfull、缺字或错误；`pdfimages -list` 无图片对象；`git diff --check` 通过。
+- 未解决问题：无。
+- 下一步：无。
+- 归档位置：`.agent/work/20261124-resume-latex/` 已归档并保留原位置，包含原 PDF 渲染与版式提取结果；目录由现有 Git 忽略规则忽略。
+
+# 已完成任务：20261030-ignore-body-data
+
 - 任务编号：20261030-ignore-body-data
 - 当前方案：在仓库根目录的 `.gitignore` 中使用 `/身体数据/` 忽略该目录及其内容。
 - 当前进度：已完成并验证。
