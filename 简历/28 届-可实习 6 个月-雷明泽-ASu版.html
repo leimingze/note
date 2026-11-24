@@ -101,8 +101,63 @@
     }
   </style>
   <style>
+    :root {
+      --blue: #000000;
+      --text: #000000;
+      --muted: #000000;
+      --band: #ffffff;
+    }
+    body,
+    h1,
+    .meta-row,
+    .lead,
+    .section-title,
+    .project-title,
+    .company-name,
+    .company-meta,
+    .separator,
+    .muted,
+    li {
+      color: #000000;
+    }
     .header-grid { grid-template-columns: 1fr; gap: 0; }
     .sheet { padding-bottom: 7mm; }
+    .company {
+      border-top: 1px solid #000000;
+      border-bottom: 1px solid #000000;
+      border-radius: 0;
+      background: #ffffff;
+    }
+    .resume-toolbar,
+    .resume-toolbar button,
+    .resume-toolbar select,
+    .toolbar-control,
+    .save-status,
+    .fit-status,
+    .toolbar-title {
+      color: #000000;
+    }
+    .resume-toolbar {
+      border-bottom-color: #000000;
+      box-shadow: none;
+    }
+    .resume-toolbar button,
+    .resume-toolbar select {
+      border-color: #000000;
+      background: #ffffff;
+    }
+    .resume-toolbar button:hover {
+      border-color: #000000;
+      background: #f2f2f2;
+    }
+    .resume-toolbar button[data-action=pdf],
+    .resume-toolbar button[data-action=autofit][aria-pressed=true] {
+      border-color: #000000;
+      background: #000000;
+      color: #ffffff;
+    }
+    .fit-status.warn { color: #000000; }
+    .toolbar-control input[type=color] { accent-color: #000000; }
   </style>
 </head>
 <body data-page-mode="paged">
@@ -205,6 +260,13 @@
         <li><strong>Agent 与 RAG：</strong>熟悉 LangChain、LangGraph，理解 ReAct、Tool Calling、Function Calling、MCP 和 Agent Harness；了解 RAG 设计与 Milvus。</li>
         <li><strong>编程与后端：</strong>熟练掌握 Python、Go，能够使用 FastAPI、Gin、GORM 开发 LLM 应用及后端接口；熟练使用 MySQL、Redis、RabbitMQ，熟悉 vLLM 部署与推理。</li>
         <li><strong>工程化：</strong>熟练使用 Docker、Docker Compose 和 Git；使用 Claude Code、Codex 等 AI 研发工具，能够完成需求拆解、实现、测试与部署排查。</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">获得奖项</h2>
+      <ul>
+        <li><strong>蓝桥杯：</strong>C++ B 组省一等奖。</li>
       </ul>
     </section>
   </main>
