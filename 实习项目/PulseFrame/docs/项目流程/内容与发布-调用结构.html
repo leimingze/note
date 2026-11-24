@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>内容与发布模块：调用画布</title>
+<style>
+  :root { --line:#c6cad3; --text:#2b2f36; --muted:#8a93a1; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:#f0f1f4; color:#3a3f47; }
+  #toolbar { position:fixed; inset:0 0 auto; z-index:100; min-height:48px; padding:10px 16px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:#fff; border-bottom:1px solid #d9dce3; font-size:13px; }
+  #toolbar b { font-size:15px; }
+  #viewport { position:fixed; inset:49px 0 0; overflow:hidden; cursor:grab; }
+  #viewport.panning { cursor:grabbing; }
+  #canvas { position:absolute; inset:0 auto auto 0; will-change:transform; }
+  svg.grid { display:block; background:radial-gradient(circle,#c9cdd5 1px,transparent 1px); background-size:20px 20px; }
+  .node { position:absolute; width:270px; background:#fff; border:1.5px solid var(--line); border-radius:10px; box-shadow:0 2px 8px rgba(25,35,50,.07); user-select:none; cursor:grab; }
+  .node.locked { cursor:default; }
+  .node .head { padding:7px 12px 5px; border-bottom:1px solid #eef0f4; font-size:13px; font-weight:700; line-height:1.35; }
+  .node .file,.node .grp { color:var(--muted); font-size:10px; font-weight:400; line-height:1.45; }
+  .node .step { position:relative; min-height:34px; padding:6px 28px 6px 10px; border-top:1px dashed #edf0f4; color:var(--text); font-size:11.5px; line-height:1.5; overflow-wrap:anywhere; }
+  .port { position:absolute; width:13px; height:13px; border-radius:50%; transform:translate(-50%,-50%); cursor:crosshair; }
+  .port.in { left:-2px; background:#fff; border:2px solid #ea4335; }
+  .port.out { right:-11px; background:#fff; border:2px solid #34a853; }
+  path.link { fill:none; stroke:#7a808c; stroke-width:1.6; }
+  #lockBtn,#modeBtn { padding:6px 14px; border:1.5px solid var(--line); border-radius:8px; background:#fff; color:inherit; cursor:pointer; }
+  #lockBtn.on { background:#4285f4; border-color:#4285f4; color:#fff; }
+  .legend { margin-left:auto; display:flex; gap:12px; flex-wrap:wrap; }
+  .legend span { display:inline-flex; align-items:center; gap:5px; }
+  .sw { width:11px; height:11px; border-radius:3px; display:inline-block; }
+  .essay { width:680px; cursor:default; }
+  .essay .head { border-bottom:0; }
+  .essay-body { max-height:650px; padding:8px 15px 15px; overflow:auto; color:var(--text); font-size:12.5px; line-height:1.7; }
+  .essay-body p { margin:7px 0; }
+  .essay-body .q { display:block; margin-top:12px; color:#313846; font-weight:700; }
+  body.dark { background:#14171c; color:#d4dae3; }
+  body.dark #toolbar { background:#1d222a; border-color:#2c333d; }
+  body.dark svg.grid { background:radial-gradient(circle,#3a4250 1px,transparent 1px); }
+  body.dark .node { background:#1f252e; border-color:#333c48; box-shadow:0 2px 10px rgba(0,0,0,.35); }
+  body.dark .node .head { border-color:#2c333d; color:#e6ebf2; }
+  body.dark .node .step, body.dark .essay-body { color:#d4dae3; border-color:#2a313b; }
+  body.dark .node .file, body.dark .node .grp { color:#9aa5b5; }
+  body.dark .port.in, body.dark .port.out { background:#1f252e; }
+  body.dark path.link { stroke:#98a1b0; }
+  body.dark #lockBtn, body.dark #modeBtn { background:#1f252e; border-color:#3a4452; color:#d4dae3; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <b>内容与发布模块：调用画布</b>
+  <span>空白处拖动平移</span><span>拖动卡片移动</span>
+  <button id="lockBtn">🔓 解锁</button><button id="modeBtn">🌙 夜间</button>
+  <div class="legend">
+    <span><i class="sw" style="background:#dbe6ff"></i>入口与装配</span>
+    <span><i class="sw" style="background:#ffe6c7"></i>配置与校验</span>
+    <span><i class="sw" style="background:#d3f0da"></i>业务编排</span>
+    <span><i class="sw" style="background:#f7cdcd"></i>MySQL / Redis</span>
+    <span><i class="sw" style="background:#e7defa"></i>存储 / 媒体 / 解读</span>
+  </div>
+</div>
+<div id="viewport"><div id="canvas"></div></div>
+<script>
+const cards = [
+  {id:"run",name:"app.Run 启动编排",file:"backend/internal/app/run.go",grp:"入口与装配",c:"#dbe6ff",x:40,y:360,
+   steps:[
+    {label:"读取并校验总配置",to:"config"},
+    {label:"创建 MySQL、Redis 共享依赖",to:"dep"},
+    {label:"检查系统是否可执行 ffprobe",to:"available"},
+    {label:"执行数据库迁移",to:"migrate"},
+    {label:"组装业务路由并启动 HTTP 服务",to:"runtime"},
+    {label:"退出时先停 HTTP，再关闭 MySQL 与 Redis",to:"close"}
+   ]},
+  {id:"config",name:"config.loadContent 内容配置",file:"backend/internal/platform/config/content.go",grp:"配置与校验",c:"#ffe6c7",x:420,y:40,
+   steps:[
+    {label:"存储：memory 或 s3；s3 必填端点与桶名",to:null},
+    {label:"视频 50MB、封面 5MB、时长 20 秒、分辨率不超过 1920×1080",to:null},
+    {label:"上传凭证 30 分钟、播放地址 1 小时",to:null},
+    {label:"每小时 10 次、每天 50 次上传限制",to:null},
+    {label:"详情缓存 10 分钟加随机抖动，空值 1 分钟",to:null},
+    {label:"假审核 pass / reject；非法值拒绝启动",to:null}
+   ]},
+  {id:"dep",name:"app.NewDependencies 共享依赖",file:"backend/internal/app/dependencies.go",grp:"入口与装配",c:"#dbe6ff",x:790,y:40,
+   steps:[
+    {label:"按配置创建 MySQL 连接池与 Redis 客户端",to:null},
+    {label:"分别执行启动探测；任一失败时停止启动",to:null},
+    {label:"Redis 创建失败时关闭已创建的 MySQL 连接池",to:null},
+    {label:"指标启用时挂载 SQL 观测并周期采集连接池统计",to:null}
+   ]},
+  {id:"available",name:"mediaprobe.CheckAvailable",file:"backend/internal/content/mediaprobe/mediaprobe.go",grp:"配置与校验",c:"#ffe6c7",x:420,y:250,
+   steps:[{label:"在 PATH 中查找 ffprobe；不可用时启动失败",to:null}]},
+  {id:"migrate",name:"migration.Migrate",file:"backend/internal/migration/migrate.go",grp:"入口与装配",c:"#dbe6ff",x:420,y:360,
+   steps:[{label:"收集 content.Models，自动迁移 video 表；失败时停止启动",to:null}]},
+  {id:"runtime",name:"registerModules 内容模块装配",file:"backend/internal/app/runtime.go",grp:"入口与装配",c:"#dbe6ff",x:420,y:500,
+   steps:[
+    {label:"创建 JWT 验签中间件",to:null},
+    {label:"选择内存存储或 SeaweedFS",to:"storageInit"},
+    {label:"创建 GORM 仓储与 Redis 详情缓存",to:null},
+    {label:"创建假审核器与业务服务",to:null},
+    {label:"注册 5 个公开接口和 1 个内部接口",to:"routes"}
+   ]},
+  {id:"storageInit",name:"newContentStorage",file:"backend/internal/app/runtime.go",grp:"入口与装配",c:"#dbe6ff",x:790,y:520,
+   steps:[{label:"memory 模式创建进程内存储；s3 模式创建 SeaweedFS 客户端",to:null}]},
+  {id:"routes",name:"content.RegisterRoutes",file:"backend/internal/content/routes.go",grp:"入口与装配",c:"#dbe6ff",x:790,y:660,
+   steps:[
+    {label:"创建、确认、我的作品使用必需 JWT",to:"createHandler"},
+    {label:"详情使用可选 JWT，坏 Token 返回 401",to:"detailHandler"},
+    {label:"公开作品列表允许匿名访问",to:"publicHandler"},
+    {label:"内部批量查询校验 X-Service-Key",to:"batchHandler"}
+   ]},
+  {id:"createHandler",name:"Handler.CreateVideo",file:"backend/internal/content/handler.go",grp:"入口与装配",c:"#dbe6ff",x:1140,y:40,
+   steps:[
+    {label:"绑定 title、description、cover_type；JSON 错误返回 400",to:null},
+    {label:"从登录上下文读取作者，调用业务创建",to:"createService"},
+    {label:"成功返回 201 与视频、封面两个上传凭证",to:null}
+   ]},
+  {id:"createService",name:"Service.CreateVideo",file:"backend/internal/content/service.go",grp:"业务编排",c:"#d3f0da",x:1490,y:40,
+   steps:[
+    {label:"去掉标题和简介首尾空格，按字符数校验长度",to:null},
+    {label:"封面类型转换为 image/jpeg 或 image/png",to:null},
+    {label:"检查小时与天两级上传限流",to:"rate"},
+    {label:"插入 status=0 的上传中记录",to:"repoCreate"},
+    {label:"为视频和封面分别签发直传凭证",to:"presign"}
+   ]},
+  {id:"rate",name:"Service.checkUploadRateLimit",file:"backend/internal/content/service.go",grp:"业务编排",c:"#d3f0da",x:1840,y:20,
+   steps:[
+    {label:"先检查 rate:upload:h:{userId}，再检查 rate:upload:d:{userId}",to:"redisLimit"},
+    {label:"任一额度用尽返回 429 UPLOAD_RATE_LIMITED",to:null},
+    {label:"Redis 运行期故障时记录告警并放行",to:null}
+   ]},
+  {id:"redisLimit",name:"ratelimit.Allow",file:"backend/internal/platform/ratelimit/limiter.go",grp:"MySQL / Redis",c:"#f7cdcd",x:2190,y:20,
+   steps:[{label:"Redis ZSET 加 Lua 原子清理旧记录、计数并加入当前请求",to:null}]},
+  {id:"repoCreate",name:"GormRepository.Create",file:"backend/internal/content/repository.go",grp:"MySQL / Redis",c:"#f7cdcd",x:1840,y:210,
+   steps:[{label:"向 video 表插入上传中记录并回填自增 ID",to:null}]},
+  {id:"presign",name:"Storage.PresignPost",file:"backend/internal/content/storage/s3.go",grp:"存储 / 媒体 / 解读",c:"#e7defa",x:2190,y:250,
+   steps:[
+    {label:"S3 模式生成 30 分钟 POST Policy",to:null},
+    {label:"限制对象键、大小和 Content-Type",to:null},
+    {label:"内存模式返回形状相同的假凭证",to:null}
+   ]},
+  {id:"client",name:"客户端直传对象存储",file:"外部客户端",grp:"存储 / 媒体 / 解读",c:"#e7defa",x:2540,y:250,
+   steps:[
+    {label:"使用凭证上传 video/mp4 到 upload/{id}/media.mp4",to:null},
+    {label:"上传 JPEG 或 PNG 到 upload/{id}/cover",to:null},
+    {label:"完成后调用确认接口；上传失败时视频仍保持 status=0",to:"completeHandler"}
+   ]},
+  {id:"completeHandler",name:"Handler.CompleteUpload",file:"backend/internal/content/handler.go",grp:"入口与装配",c:"#dbe6ff",x:1140,y:390,
+   steps:[
+    {label:"解析正整数 videoId，错误返回 400",to:null},
+    {label:"调用确认上传业务；业务错误交给统一错误映射",to:"completeService"},
+    {label:"成功返回视频详情和两个限时地址",to:null}
+   ]},
+  {id:"completeService",name:"Service.CompleteUpload",file:"backend/internal/content/service.go",grp:"业务编排",c:"#d3f0da",x:1490,y:390,
+   steps:[
+    {label:"读取视频并校验作者；非作者按不存在返回 404",to:"getByID"},
+    {label:"已是已发布或已驳回时直接幂等返回",to:null},
+    {label:"复制视频和封面到正式对象键",to:"copyHead"},
+    {label:"校验大小、封面类型并探测媒体",to:"probe"},
+    {label:"调用审核器得到通过或驳回结论",to:"review"},
+    {label:"条件更新 status；竞争失败时重查终态",to:"completeRepo"},
+    {label:"通过则预热缓存，驳回则删缓存；清理临时目录",to:"cacheWrite"},
+    {label:"组装可见详情并签发限时地址",to:"view"}
+   ]},
+  {id:"getByID",name:"GormRepository.GetByID",file:"backend/internal/content/repository.go",grp:"MySQL / Redis",c:"#f7cdcd",x:1840,y:400,
+   steps:[{label:"按主键查 video；未命中返回 VIDEO_NOT_FOUND",to:null}]},
+  {id:"copyHead",name:"Storage.Copy 与 Storage.Head",file:"backend/internal/content/storage/s3.go",grp:"存储 / 媒体 / 解读",c:"#e7defa",x:1840,y:500,
+   steps:[
+    {label:"服务端复制临时对象，客户端不再拥有正式键写权限",to:null},
+    {label:"读取视频和封面大小、封面 Content-Type",to:null},
+    {label:"临时对象缺失应转成 UPLOAD_OBJECT_MISSING；S3 Copy 当前仍有错误映射缺口",to:null}
+   ]},
+  {id:"probe",name:"Service.probeMedia → ProbeWithLimits",file:"backend/internal/content/mediaprobe/mediaprobe.go",grp:"存储 / 媒体 / 解读",c:"#e7defa",x:2190,y:500,
+   steps:[
+    {label:"为正式视频签 5 分钟只读地址",to:null},
+    {label:"Range 读取前 512KB 并交给 ffprobe",to:null},
+    {label:"校验 MP4、H.264、AAC 或无声、时长与分辨率",to:null},
+    {label:"媒体不合规返回 422，视频保持 status=0 可重传",to:null}
+   ]},
+  {id:"review",name:"MockReviewer.Review",file:"backend/internal/content/reviewer.go",grp:"存储 / 媒体 / 解读",c:"#e7defa",x:2190,y:760,
+   steps:[
+    {label:"pass 模式返回通过并写入 published_at",to:null},
+    {label:"reject 模式更新为驳回并保存经过截断的原因",to:null},
+    {label:"真实 review-service 属于后续需求，当前不进入该链路",to:null}
+   ]},
+  {id:"completeRepo",name:"GormRepository.CompleteUpload",file:"backend/internal/content/repository.go",grp:"MySQL / Redis",c:"#f7cdcd",x:1840,y:850,
+   steps:[
+    {label:"同时写入状态、对象键、媒体信息、发布时间或驳回原因",to:null},
+    {label:"WHERE id、author_id、status=0 保证并发确认只有一次生效",to:null},
+    {label:"影响 0 行时由业务层重查，已终态则幂等返回",to:null}
+   ]},
+  {id:"cacheWrite",name:"RedisCache.Set / Delete / DeletePrefix",file:"backend/internal/content/cache.go",grp:"MySQL / Redis",c:"#f7cdcd",x:2190,y:980,
+   steps:[
+    {label:"发布通过写入 video:{id} 并设置基础 TTL 加随机抖动",to:null},
+    {label:"驳回删除可能存在的旧详情缓存",to:null},
+    {label:"删除 upload/{id}/ 临时对象；失败只记录日志",to:null}
+   ]},
+  {id:"view",name:"Service.buildVideoView",file:"backend/internal/content/service.go",grp:"业务编排",c:"#d3f0da",x:2540,y:760,
+   steps:[
+    {label:"已发布对所有人可见，其他状态仅作者可见",to:null},
+    {label:"作者可见驳回原因，其他人不暴露该字段",to:null},
+    {label:"按对象键实时签发 1 小时视频和封面地址",to:"signedURL"}
+   ]},
+  {id:"signedURL",name:"Storage.SignedURL",file:"backend/internal/content/storage/s3.go",grp:"存储 / 媒体 / 解读",c:"#e7defa",x:2890,y:760,
+   steps:[{label:"为私有桶对象生成限时 GET 地址；失败返回依赖不可用",to:null}]},
+  {id:"detailHandler",name:"Handler.GetVideo",file:"backend/internal/content/handler.go",grp:"入口与装配",c:"#dbe6ff",x:1140,y:1040,
+   steps:[{label:"解析视频 ID，调用详情业务，成功返回统一 VideoView",to:"detailService"}]},
+  {id:"detailService",name:"Service.GetVideo",file:"backend/internal/content/service.go",grp:"业务编排",c:"#d3f0da",x:1490,y:1040,
+   steps:[
+    {label:"按单个 ID 读取详情数据",to:"cacheRead"},
+    {label:"检查可见性；不可见与不存在统一返回 404",to:null},
+    {label:"组装详情并签发地址",to:"view"}
+   ]},
+  {id:"publicHandler",name:"Handler.ListPublicVideos",file:"backend/internal/content/handler.go",grp:"入口与装配",c:"#dbe6ff",x:1140,y:1190,
+   steps:[{label:"解析 limit 与 cursor，调用公开作品列表业务",to:"publicService"}]},
+  {id:"publicService",name:"Service.ListPublicVideos",file:"backend/internal/content/service.go",grp:"业务编排",c:"#d3f0da",x:1490,y:1190,
+   steps:[
+    {label:"校验用户 ID、分页上限和游标格式",to:null},
+    {label:"查询一页公开视频 ID",to:"publicRepo"},
+    {label:"按 ID 顺序读取详情并过滤不可见数据",to:"cacheRead"},
+    {label:"返回 next_cursor；列表本身不缓存",to:null}
+   ]},
+  {id:"publicRepo",name:"GormRepository.ListPublicIDs",file:"backend/internal/content/repository.go",grp:"MySQL / Redis",c:"#f7cdcd",x:1840,y:1190,
+   steps:[{label:"按 author_id、status=2、published_at、id 倒序取 limit+1 个 ID",to:null}]},
+  {id:"batchHandler",name:"Handler.BatchGetPublicVideos",file:"backend/internal/content/handler.go",grp:"入口与装配",c:"#dbe6ff",x:1140,y:1350,
+   steps:[{label:"绑定 IDs，调用内部批量业务；失败交给统一错误响应",to:"batchService"}]},
+  {id:"batchService",name:"Service.BatchGetPublicVideos",file:"backend/internal/content/service.go",grp:"业务编排",c:"#d3f0da",x:1490,y:1350,
+   steps:[
+    {label:"拒绝超过 50 个 ID 的请求，空数组直接返回空列表",to:null},
+    {label:"去重查询，再按原请求顺序组装，跳过不可见项",to:"cacheRead"}
+   ]},
+  {id:"cacheRead",name:"Service.getVideosByIDs",file:"backend/internal/content/service.go",grp:"业务编排",c:"#d3f0da",x:1840,y:1030,
+   steps:[
+    {label:"批量读取视频详情缓存",to:"mget"},
+    {label:"只对未命中 ID 执行一次数据库批量查询",to:"getByIDs"},
+    {label:"将命中和不存在的 ID 分别回填缓存",to:"setMany"},
+    {label:"返回可继续执行可见性判断的视频数据",to:null}
+   ]},
+  {id:"mget",name:"RedisCache.MGet",file:"backend/internal/content/cache.go",grp:"MySQL / Redis",c:"#f7cdcd",x:2190,y:1030,
+   steps:[
+    {label:"使用 MGET 读取 video:{id}",to:null},
+    {label:"区分 hit、miss、empty_hit 并更新指标",to:null},
+    {label:"Redis 故障时全部按 miss 回源 MySQL",to:null}
+   ]},
+  {id:"getByIDs",name:"GormRepository.GetByIDs",file:"backend/internal/content/repository.go",grp:"MySQL / Redis",c:"#f7cdcd",x:2190,y:1180,
+   steps:[{label:"一次 WHERE id IN 查询未命中的视频元数据",to:null}]},
+  {id:"setMany",name:"RedisCache.SetMany",file:"backend/internal/content/cache.go",grp:"MySQL / Redis",c:"#f7cdcd",x:2190,y:1310,
+   steps:[
+    {label:"用 Pipeline 批量回填视频详情",to:null},
+    {label:"不存在的 ID 写入空值 {}，防止随机 ID 持续访问数据库",to:null}
+   ]},
+  {id:"mylist",name:"我的作品读链路",file:"handler.go / service.go / repository.go",grp:"业务编排",c:"#d3f0da",x:1540,y:1530,
+   steps:[
+    {label:"Handler 解析 status、limit、cursor",to:null},
+    {label:"Service 校验状态 0–3 与游标",to:null},
+    {label:"Repository 按 created_at、id 倒序取作者视频 ID",to:null},
+    {label:"复用 getVideosByIDs 和 buildVideoView",to:"cacheRead"}
+   ]},
+  {id:"errors",name:"writeError 统一错误映射",file:"backend/internal/content/handler.go",grp:"配置与校验",c:"#ffe6c7",x:790,y:1450,
+   steps:[
+    {label:"参数或游标错误 → 400；限流 → 429",to:null},
+    {label:"不可见 → 404；状态冲突 → 409",to:null},
+    {label:"对象缺失、媒体不合格 → 422",to:null},
+    {label:"数据库、存储或其他未知错误 → 503 或 500",to:null}
+   ]},
+  {id:"close",name:"Dependencies.Close",file:"backend/internal/app/dependencies.go",grp:"入口与装配",c:"#dbe6ff",x:40,y:1600,
+   steps:[{label:"sync.Once 保证只关闭一次，合并 MySQL 与 Redis 关闭错误",to:null}]},
+  {id:"interview",name:"面试讲解 · 内容与发布模块",file:"docs/设计/业务模块设计/内容与发布/内容与发布.md",grp:"存储 / 媒体 / 解读",c:"#e7defa",x:40,y:760,type:"essay",steps:[],
+   body:`<div class="essay-body">
+    <p><b>总述</b> 内容模块负责把一条短视频从“上传中”推进到“已发布”或“已驳回”，并让公开详情、个人作品和内部批量查询复用同一套可见性与缓存规则。</p>
+    <span class="q">Q1 为什么大文件不经过业务服务？</span><p>视频平均 15MB，经过业务服务会占用连接、网关与进程内存。创建视频时由服务端签发对象存储直传凭证，客户端直接上传 SeaweedFS；业务服务只处理很小的元数据和确认请求。</p>
+    <span class="q">Q2 为什么先复制再探测？</span><p>上传凭证在有效期内可以再次使用。如果先校后拷，客户端可能在校验后替换文件。服务端先把临时对象复制到客户端无权写入的正式键，再读取正式对象探测，消除了替换窗口。</p>
+    <span class="q">Q3 如何避免并发确认重复发布？</span><p>确认写入带 id、author_id、status=0 条件。两个请求同时到达时，只有一行更新成功；另一个请求重查后看到已发布或已驳回，按当前详情幂等返回。</p>
+    <span class="q">Q4 为什么列表先查 ID？</span><p>公开列表索引覆盖 author_id、status、published_at、id，先取一页 ID 的代价低；详情再统一走 Redis 批量缓存。展示字段变化不会扩大列表索引。</p>
+    <span class="q">Q5 Redis 不可用了怎么办？</span><p>缓存被当作可丢失数据。详情 MGet 失败后直接回源 MySQL；限流器运行期失败时告警并放行，避免上传全部不可用。启动阶段仍会检查 Redis，配置或启动失败直接暴露。</p>
+    <span class="q">Q6 图片和视频如何控制访问？</span><p>Bucket 保持私有，MySQL 只存对象键。接口先判断查看者能否看这条视频，再实时签发 1 小时地址；未发布内容对其他用户统一返回 404。</p>
+    <span class="q">Q7 如何处理媒体不合规？</span><p>只读取前 512KB 交给 ffprobe，检查容器、编码、时长和分辨率。失败返回 422 并保留 status=0，客户端重传合格文件后可以再次确认。</p>
+    <span class="q">Q8 为什么当前用假审核？</span><p>本期目标是先闭环发布、缓存和读取路径。Reviewer 是独立接口，默认实现直接通过，也可配置驳回；真实异步审核和回调属于后续扩展。</p>
+   </div>`}
+];
+
+const cardMap=Object.fromEntries(cards.map(c=>[c.id,c]));
+const inCount={};
+cards.forEach(c=>c.steps.forEach(s=>{if(s.to)inCount[s.to]=(inCount[s.to]||0)+1;}));
+const W=3300,H=1800,NW=270;
+const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+svg.setAttribute("class","grid"); svg.setAttribute("width",W); svg.setAttribute("height",H);
+const canvas=document.getElementById("canvas");
+canvas.style.width=W+"px"; canvas.style.height=H+"px"; canvas.appendChild(svg);
+const links=[],heads=[]; let locked=false;
+
+cards.forEach(c=>{
+  const el=document.createElement("div");
+  el.className="node"+(c.type==="essay"?" essay":"");
+  el.style.left=c.x+"px"; el.style.top=c.y+"px";
+  const head=`<div class="head" style="background:${c.c}"><div class="file">${c.file}</div><div class="grp">${c.grp}</div>${c.name}</div>`;
+  if(c.type==="essay"){
+    el.innerHTML=head+c.body; canvas.appendChild(el); heads.push({el:el.querySelector(".head"),light:c.c});
+  }else{
+    el.innerHTML=head+c.steps.map(s=>`<div class="step">${s.label}</div>`).join("");
+    canvas.appendChild(el); heads.push({el:el.querySelector(".head"),light:c.c});
+    c.el=el; el.outs=[];
+    el.querySelectorAll(".step").forEach(se=>{
+      const p=document.createElement("div"); p.className="port out";
+      const y=se.offsetTop+se.offsetHeight/2; p.style.top=y+"px"; el.appendChild(p); el.outs.push(y);
+    });
+    const count=Math.max(inCount[c.id]||0,1); el.ins=[];
+    for(let i=0;i<count;i++){
+      const p=document.createElement("div"); p.className="port in";
+      const y=el.offsetHeight*(i+1)/(count+1); p.style.top=y+"px"; el.appendChild(p); el.ins.push(y);
+    }
+  }
+  let drag=false,sx=0,sy=0,ox=0,oy=0;
+  el.addEventListener("mousedown",e=>{
+    if(locked||c.type==="essay"||e.target.classList.contains("port"))return;
+    drag=true; sx=e.clientX; sy=e.clientY; ox=c.x; oy=c.y; e.preventDefault();
+  });
+  document.addEventListener("mousemove",e=>{
+    if(!drag)return; c.x=ox+e.clientX-sx; c.y=oy+e.clientY-sy;
+    el.style.left=c.x+"px"; el.style.top=c.y+"px"; drawLinks();
+  });
+  document.addEventListener("mouseup",()=>drag=false);
+});
+
+function outPos(id,i){const c=cardMap[id];return{x:c.x+NW,y:c.y+c.el.outs[i]};}
+function inPos(id,i){const c=cardMap[id];return{x:c.x,y:c.y+c.el.ins[i]};}
+function drawLinks(){
+  links.forEach(l=>{
+    const a=outPos(l.from.id,l.from.i),b=inPos(l.to.id,l.to.i);
+    l.path.setAttribute("d",`M ${a.x} ${a.y} C ${a.x+95} ${a.y}, ${b.x-95} ${b.y}, ${b.x} ${b.y}`);
+  });
+}
+const used={};
+cards.forEach(c=>c.steps.forEach((s,i)=>{
+  if(!s.to)return;
+  const j=used[s.to]||0; used[s.to]=j+1;
+  const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+  path.setAttribute("class","link"); svg.appendChild(path);
+  links.push({path,from:{id:c.id,i},to:{id:s.to,i:j}});
+}));
+drawLinks();
+
+const viewport=document.getElementById("viewport");
+let pan=false,px=0,py=0,tx=0,ty=0,baseX=0,baseY=0;
+viewport.addEventListener("mousedown",e=>{
+  if(e.target.closest(".node"))return;
+  pan=true; px=e.clientX; py=e.clientY; baseX=tx; baseY=ty;
+  viewport.classList.add("panning"); e.preventDefault();
+});
+document.addEventListener("mousemove",e=>{
+  if(!pan)return; tx=baseX+e.clientX-px; ty=baseY+e.clientY-py;
+  canvas.style.transform=`translate(${tx}px,${ty}px)`;
+});
+document.addEventListener("mouseup",()=>{pan=false;viewport.classList.remove("panning");});
+
+const lockBtn=document.getElementById("lockBtn");
+lockBtn.addEventListener("click",()=>{
+  locked=!locked; lockBtn.textContent=locked?"🔒 已锁定":"🔓 解锁";
+  lockBtn.classList.toggle("on",locked);
+  document.querySelectorAll(".node").forEach(n=>n.classList.toggle("locked",locked));
+});
+
+const modeBtn=document.getElementById("modeBtn");
+function darken(hex){
+  const n=parseInt(hex.slice(1),16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  return `rgb(${Math.round(r*.22+18)},${Math.round(g*.22+20)},${Math.round(b*.22+28)})`;
+}
+function applyMode(dark){
+  document.body.classList.toggle("dark",dark);
+  modeBtn.textContent=dark?"☀️ 白天":"🌙 夜间";
+  heads.forEach(h=>h.el.style.background=dark?darken(h.light):h.light);
+}
+modeBtn.addEventListener("click",()=>{
+  const dark=!document.body.classList.contains("dark"); applyMode(dark);
+  try{localStorage.setItem("contentCanvasDark",dark?"1":"0");}catch(e){}
+});
+try{if(localStorage.getItem("contentCanvasDark")==="1")applyMode(true);}catch(e){}
+</script>
+</body>
+</html>
