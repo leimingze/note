@@ -21,6 +21,10 @@ __pycache__/
 /agent测评/原始资料/agentic-design-patterns/
 /skills/offerlens-jobs/
 
+# 个人面试与求职材料，不纳入版本控制。
+/面经/
+/简历/
+
 # 实习项目中仅保留自有项目与参考文档，其余目录不纳入版本控制
 /实习项目/*
 !/实习项目/PulseFrame/
