@@ -280,7 +280,8 @@ const cards = [
 const cardMap=Object.fromEntries(cards.map(c=>[c.id,c]));
 const inCount={};
 cards.forEach(c=>c.steps.forEach(s=>{if(s.to)inCount[s.to]=(inCount[s.to]||0)+1;}));
-const W=4600,H=2800,NW=270;
+let W=4600,H=2800;
+const NW=270,NODE_GAP=28;
 const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
 svg.setAttribute("class","grid"); svg.setAttribute("width",W); svg.setAttribute("height",H);
 const canvas=document.getElementById("canvas");
@@ -291,13 +292,14 @@ cards.forEach(c=>{
   const el=document.createElement("div");
   el.className="node"+(c.type==="essay"?" essay":"");
   el.style.left=c.x+"px"; el.style.top=c.y+"px";
+  c.el=el;
   const head=`<div class="head" style="background:${c.c}"><div class="file">${c.file}</div><div class="grp">${c.grp}</div>${c.name}</div>`;
   if(c.type==="essay"){
     el.innerHTML=head+c.body; canvas.appendChild(el); heads.push({el:el.querySelector(".head"),light:c.c});
   }else{
     el.innerHTML=head+c.steps.map(s=>`<div class="step">${s.label}</div>`).join("");
     canvas.appendChild(el); heads.push({el:el.querySelector(".head"),light:c.c});
-    c.el=el; el.outs=[];
+    el.outs=[];
     el.querySelectorAll(".step").forEach(se=>{
       const p=document.createElement("div"); p.className="port out";
       const y=se.offsetTop+se.offsetHeight/2; p.style.top=y+"px"; el.appendChild(p); el.outs.push(y);
@@ -319,6 +321,47 @@ cards.forEach(c=>{
   });
   document.addEventListener("mouseup",()=>drag=false);
 });
+
+/**
+ * 输入：无，读取已经渲染完成的 cards 卡片元素及其尺寸。
+ * 输出：直接调整 c.x、c.y 和卡片位置，并把画布高度扩展到内容底边之后；无返回值。
+ * 功能：从左上到右下检查卡片矩形，遇到重合时只向下移动后处理卡片；例如两张卡片在同一列上下相压时，后一张会移动到前一张下方并保留间距。
+ */
+function resolveCardOverlaps(){
+  const placed=[];
+  const ordered=[...cards].sort((a,b)=>a.x-b.x || a.y-b.y);
+  ordered.forEach(c=>{
+    const width=c.el.offsetWidth,height=c.el.offsetHeight;
+    let candidateY=c.y,moved=true;
+    while(moved){
+      moved=false;
+      placed.forEach(box=>{
+        const overlapsX=c.x<box.x+box.width+NODE_GAP && c.x+width+NODE_GAP>box.x;
+        const overlapsY=candidateY<box.y+box.height+NODE_GAP && candidateY+height+NODE_GAP>box.y;
+        if(overlapsX&&overlapsY){
+          candidateY=box.y+box.height+NODE_GAP;
+          moved=true;
+        }
+      });
+    }
+    c.y=candidateY; c.el.style.top=c.y+"px";
+    placed.push({x:c.x,y:c.y,width,height});
+  });
+  let remainingOverlaps=0;
+  for(let i=0;i<placed.length;i++){
+    for(let j=i+1;j<placed.length;j++){
+      const a=placed[i],b=placed[j];
+      const overlapsX=a.x<b.x+b.width+NODE_GAP && a.x+a.width+NODE_GAP>b.x;
+      const overlapsY=a.y<b.y+b.height+NODE_GAP && a.y+a.height+NODE_GAP>b.y;
+      if(overlapsX&&overlapsY)remainingOverlaps++;
+    }
+  }
+  canvas.dataset.cardOverlaps=String(remainingOverlaps);
+  const contentBottom=placed.reduce((bottom,box)=>Math.max(bottom,box.y+box.height),0);
+  H=Math.max(H,Math.ceil(contentBottom+120));
+  svg.setAttribute("height",H); canvas.style.height=H+"px";
+}
+resolveCardOverlaps();
 
 function outPos(id,i){const c=cardMap[id];return{x:c.x+NW,y:c.y+c.el.outs[i]};}
 function inPos(id,i){const c=cardMap[id];return{x:c.x,y:c.y+c.el.ins[i]};}
